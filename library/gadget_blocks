@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import readsnap
+
+if len(sys.argv)<2:
+   print 'The syntaxis has to be: gadget_blocks filename'
+   sys.exit()
+
+filename=sys.argv[1]
+
+if os.path.exists(filename):		
+   curfilename = filename
+elif os.path.exists(filename+".0"):
+   curfilename = filename+".0"
+else:
+   print "file not found:", filename
+   sys.exit()
+  
+head = readsnap.snapshot_header(curfilename)
+format = head.format
+swap = head.swap
+del head
+  
+print 'GADGET FORMAT ',format
+if (format != 2):
+   print "#   OFFSET   SIZE"
+else:            
+   print "#   BLOCK   OFFSET   SIZE"
+print "-------------------------"
+  
+readsnap.find_block(curfilename, format, swap, "XXXX", 0, only_list_blocks=True)
+  
+print "-------------------------"

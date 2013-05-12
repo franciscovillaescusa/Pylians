@@ -1,0 +1,4 @@
+#!/bin/bash
+
+gfortran -fno-align-commons integral0.f odeint.f -o integral0
+./integral0
