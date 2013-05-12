@@ -5,6 +5,7 @@ from mpi4py import MPI
 import numpy as np
 import scipy.weave as wv
 import sys,os
+import time
 
 ###### MPI DEFINITIONS ######
 comm=MPI.COMM_WORLD
@@ -36,7 +37,6 @@ myrank=comm.Get_rank()
 def TPCF(pos_g,pos_r,BoxSize,dims,DD_action,RR_action,DR_action,
          DD_name,RR_name,DR_name,bins,Rmin,Rmax,verbose=False):
 
-    IL=1000 #number of points that master send to the slaves
     dims2=dims**2; dims3=dims**3
 
     ##### MASTER #####
@@ -63,7 +63,7 @@ def TPCF(pos_g,pos_r,BoxSize,dims,DD_action,RR_action,DR_action,
 
         #compute galaxy-galaxy pairs
         if DD_action=='compute':
-            DD=DDR_histogram(bins,Rmin,Rmax,IL,BoxSize,dims,indexes_g,pos_g,pos2=None)
+            DD=DDR_histogram(bins,Rmin,Rmax,BoxSize,dims,indexes_g,pos_g,pos2=None)
             if verbose:
                 print DD
                 print np.sum(DD)
@@ -78,7 +78,7 @@ def TPCF(pos_g,pos_r,BoxSize,dims,DD_action,RR_action,DR_action,
 
         #compute random-random pairs
         if RR_action=='compute':
-            RR=DDR_histogram(bins,Rmin,Rmax,IL,BoxSize,dims,indexes_r,pos_r,pos2=None)   
+            RR=DDR_histogram(bins,Rmin,Rmax,BoxSize,dims,indexes_r,pos_r,pos2=None)   
             if verbose:
                 print RR
                 print np.sum(RR)
@@ -93,7 +93,7 @@ def TPCF(pos_g,pos_r,BoxSize,dims,DD_action,RR_action,DR_action,
 
         #compute galaxy-random pairs
         if DR_action=='compute':
-            DR=DDR_histogram(bins,Rmin,Rmax,IL,BoxSize,dims,indexes_r,pos_g,pos_r)
+            DR=DDR_histogram(bins,Rmin,Rmax,BoxSize,dims,indexes_r,pos_g,pos_r)
             if verbose:
                 print DR
                 print np.sum(DR)
@@ -131,13 +131,13 @@ def TPCF(pos_g,pos_r,BoxSize,dims,DD_action,RR_action,DR_action,
     ##### SLAVES #####
     else:
         if DR_action=='compute':
-            DDR_histogram(bins,Rmin,Rmax,IL,BoxSize,dims,
+            DDR_histogram(bins,Rmin,Rmax,BoxSize,dims,
                           indexes=None,pos1=None,pos2=None)                          
         if RR_action=='compute':
-            DDR_histogram(bins,Rmin,Rmax,IL,BoxSize,dims,
+            DDR_histogram(bins,Rmin,Rmax,BoxSize,dims,
                           indexes=None,pos1=None,pos2=None)                          
         if DR_action=='compute':
-            DDR_histogram(bins,Rmin,Rmax,IL,BoxSize,dims,
+            DDR_histogram(bins,Rmin,Rmax,BoxSize,dims,
                           indexes=None,pos1=None,pos2=None)                          
 ################################################################################
 
@@ -149,7 +149,7 @@ def TPCF(pos_g,pos_r,BoxSize,dims,DD_action,RR_action,DR_action,
 ################################################################################
 ####### COMPUTE THE NUMBER OF PAIRS IN A CATALOG ####### (x,y,z) very fast
 ################################################################################
-def DDR_histogram(bins,Rmin,Rmax,IL,BoxSize,dims,indexes,pos1,pos2):
+def DDR_histogram(bins,Rmin,Rmax,BoxSize,dims,indexes,pos1,pos2):
 
     #we put bins+1. The last bin is only for ocassions when r=Rmax
     total_histogram=np.zeros(bins+1,dtype=np.int64) 
@@ -169,7 +169,7 @@ def DDR_histogram(bins,Rmin,Rmax,IL,BoxSize,dims,indexes,pos1,pos2):
                 comm.send(False,dest=b,tag=2)
                 comm.send(subbox,dest=b,tag=3)
         else:          #galaxy-random case
-            i=0; number=len(pos1)
+            i=0; number=len(pos1); IL=number/(nprocs-1)
             while i<number:
                 b=comm.recv(source=MPI.ANY_SOURCE,tag=1)
                 comm.send(False,dest=b,tag=2)
@@ -488,11 +488,14 @@ if myrank==0:
     pos_g=np.random.random((points_g,3))*BoxSize
     pos_r=np.random.random((points_r,3))*BoxSize
 
+    start=time.clock()
     r,xi_r,error_xi=TPCF(pos_g,pos_r,BoxSize,dims,DD_action,RR_action,DR_action,DD_name,RR_name,DR_name,bins,Rmin,Rmax,verbose=True)
 
     print r
     print xi_r
     print error_xi
+    end=time.clock()
+    print 'time:',end-start
 else:
     pos_g=None; pos_r=None
     TPCF(pos_g,pos_r,BoxSize,dims,DD_action,RR_action,DR_action,DD_name,RR_name,DR_name,bins,Rmin,Rmax,verbose=True)
