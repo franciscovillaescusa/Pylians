@@ -1,4 +1,4 @@
-#LATEST MODIFICATION: 10/05/2013
+#LATEST MODIFICATION: 12/05/2013
 #This file contains the functions needed to compute the 2pt correlation function
 
 from mpi4py import MPI
@@ -63,8 +63,7 @@ def TPCF(pos_g,pos_r,BoxSize,dims,DD_action,RR_action,DR_action,
 
         #compute galaxy-galaxy pairs
         if DD_action=='compute':
-            DD=DDR_histogram(myrank,nprocs,comm,bins,Rmin,Rmax,IL,
-                             BoxSize,dims,indexes_g,pos_g,pos2=None)
+            DD=DDR_histogram(bins,Rmin,Rmax,IL,BoxSize,dims,indexes_g,pos_g,pos2=None)
             if verbose:
                 print DD
                 print np.sum(DD)
@@ -79,8 +78,7 @@ def TPCF(pos_g,pos_r,BoxSize,dims,DD_action,RR_action,DR_action,
 
         #compute random-random pairs
         if RR_action=='compute':
-            RR=DDR_histogram(myrank,nprocs,comm,bins,Rmin,Rmax,IL,
-                             BoxSize,dims,indexes_r,pos_r,pos2=None)
+            RR=DDR_histogram(bins,Rmin,Rmax,IL,BoxSize,dims,indexes_r,pos_r,pos2=None)   
             if verbose:
                 print RR
                 print np.sum(RR)
@@ -95,8 +93,7 @@ def TPCF(pos_g,pos_r,BoxSize,dims,DD_action,RR_action,DR_action,
 
         #compute galaxy-random pairs
         if DR_action=='compute':
-            DR=DDR_histogram(myrank,nprocs,comm,bins,Rmin,Rmax,IL,
-                             BoxSize,dims,indexes_r,pos_g,pos_r)
+            DR=DDR_histogram(bins,Rmin,Rmax,IL,BoxSize,dims,indexes_r,pos_g,pos_r)
             if verbose:
                 print DR
                 print np.sum(DR)
@@ -134,14 +131,14 @@ def TPCF(pos_g,pos_r,BoxSize,dims,DD_action,RR_action,DR_action,
     ##### SLAVES #####
     else:
         if DR_action=='compute':
-            DDR_histogram(myrank,nprocs,comm,bins,Rmin,Rmax,IL,BoxSize,
-                          dims,indexes=None,pos1=None,pos2=None)
+            DDR_histogram(bins,Rmin,Rmax,IL,BoxSize,dims,
+                          indexes=None,pos1=None,pos2=None)                          
         if RR_action=='compute':
-            DDR_histogram(myrank,nprocs,comm,bins,Rmin,Rmax,IL,BoxSize,
-                          dims,indexes=None,pos1=None,pos2=None)
+            DDR_histogram(bins,Rmin,Rmax,IL,BoxSize,dims,
+                          indexes=None,pos1=None,pos2=None)                          
         if DR_action=='compute':
-            DDR_histogram(myrank,nprocs,comm,bins,Rmin,Rmax,IL,BoxSize,
-                          dims,indexes=None,pos1=None,pos2=None)
+            DDR_histogram(bins,Rmin,Rmax,IL,BoxSize,dims,
+                          indexes=None,pos1=None,pos2=None)                          
 ################################################################################
 
 
@@ -152,7 +149,7 @@ def TPCF(pos_g,pos_r,BoxSize,dims,DD_action,RR_action,DR_action,
 ################################################################################
 ####### COMPUTE THE NUMBER OF PAIRS IN A CATALOG ####### (x,y,z) very fast
 ################################################################################
-def DDR_histogram(myrank,nprocs,comm,bins,Rmin,Rmax,IL,BoxSize,dims,indexes,pos1,pos2):
+def DDR_histogram(bins,Rmin,Rmax,IL,BoxSize,dims,indexes,pos1,pos2):
 
     #we put bins+1. The last bin is only for ocassions when r=Rmax
     total_histogram=np.zeros(bins+1,dtype=np.int64) 
@@ -207,7 +204,9 @@ def DDR_histogram(myrank,nprocs,comm,bins,Rmin,Rmax,IL,BoxSize,dims,indexes,pos1
         comm.send(myrank,dest=0,tag=1)
         final=comm.recv(source=0,tag=2)
         while not(final):
-            if pos2==None:
+            
+            #galaxy-galaxy or random-random case
+            if pos2==None: 
                 subbox=comm.recv(source=0,tag=3)
                 core_ids=indexes[subbox] #ids of the particles in the subbox
                 #print subbox
@@ -220,8 +219,10 @@ def DDR_histogram(myrank,nprocs,comm,bins,Rmin,Rmax,IL,BoxSize,dims,indexes,pos1
                     ids=indexes_subbox_neigh(pos0,Rmax,dims,BoxSize,indexes,subbox)
                     if ids!=[]:
                         posN=pos1[ids]
-                        distances(pos0,posN,BoxSize,bins,Rmin,Rmax,total_histogram)        
-            else:
+                        distances(pos0,posN,BoxSize,bins,Rmin,Rmax,total_histogram)      
+            
+            #galaxy-random case
+            else:          
                 numbers=comm.recv(source=0,tag=4)
                 #if np.any(numbers%10000==0):
                 #    print numbers[np.where(numbers%10000==0)[0]]
@@ -249,8 +250,8 @@ def distances_core(pos,BoxSize,bins,Rmin,Rmax,histogram):
     z=pos[:,2]
 
     support = """
-            #include <iostream>"
-            using namespace std;
+       #include <iostream>
+       using namespace std;
     """
     code = """
        float middle=BoxSize/2.0;
@@ -291,8 +292,8 @@ def distances(pos1,pos2,BoxSize,bins,Rmin,Rmax,histogram):
     z=pos2[:,2]
 
     support = """
-            #include <iostream>"
-            using namespace std;
+         #include <iostream>
+         using namespace std;
     """
     code = """
          float x0 = pos1(0);
@@ -466,7 +467,7 @@ def read_results(fname,case):
 
 
 ############ EXAMPLE OF USAGE ############
-"""
+
 points_g=150000
 points_r=200000
 
@@ -495,4 +496,4 @@ if myrank==0:
 else:
     pos_g=None; pos_r=None
     TPCF(pos_g,pos_r,BoxSize,dims,DD_action,RR_action,DR_action,DD_name,RR_name,DR_name,bins,Rmin,Rmax,verbose=True)
-"""
+
