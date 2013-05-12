@@ -467,7 +467,7 @@ def read_results(fname,case):
 
 
 ############ EXAMPLE OF USAGE ############
-
+"""
 points_g=150000
 points_r=200000
 
@@ -496,4 +496,4 @@ if myrank==0:
 else:
     pos_g=None; pos_r=None
     TPCF(pos_g,pos_r,BoxSize,dims,DD_action,RR_action,DR_action,DD_name,RR_name,DR_name,bins,Rmin,Rmax,verbose=True)
-
+"""
