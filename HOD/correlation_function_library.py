@@ -1,3 +1,4 @@
+#Version 1.0
 #LATEST MODIFICATION: 12/05/2013
 #This file contains the functions needed to compute the 2pt correlation function
 
