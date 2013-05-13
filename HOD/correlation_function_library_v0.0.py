@@ -34,11 +34,9 @@ myrank=comm.Get_rank()
 #Rmin: minimum radius to compute the 2pt correlation function
 #Rmax: maximum radius to compute the 2pt correlation function
 #USAGE: at the end of the file there is a example of how to use this function
-def TPCF(pos_g,pos_r,BoxSize,DD_action,RR_action,DR_action,
+def TPCF(pos_g,pos_r,BoxSize,dims,DD_action,RR_action,DR_action,
          DD_name,RR_name,DR_name,bins,Rmin,Rmax,verbose=False):
 
-    #dims is determined requiring that no more than 8 adyacent subboxes will be taken
-    dims=int(BoxSize/Rmax)
     dims2=dims**2; dims3=dims**3
 
     ##### MASTER #####
@@ -65,8 +63,7 @@ def TPCF(pos_g,pos_r,BoxSize,DD_action,RR_action,DR_action,
 
         #compute galaxy-galaxy pairs
         if DD_action=='compute':
-            DD=DDR_pairs(bins,Rmin,Rmax,BoxSize,dims,indexes1=indexes_g,
-                             indexes2=None,pos1=pos_g,pos2=None)
+            DD=DDR_histogram(bins,Rmin,Rmax,BoxSize,dims,indexes_g,pos_g,pos2=None)
             if verbose:
                 print DD
                 print np.sum(DD)
@@ -81,8 +78,7 @@ def TPCF(pos_g,pos_r,BoxSize,DD_action,RR_action,DR_action,
 
         #compute random-random pairs
         if RR_action=='compute':
-            RR=DDR_pairs(bins,Rmin,Rmax,BoxSize,dims,indexes1=indexes_r,
-                             indexes2=None,pos1=pos_r,pos2=None)
+            RR=DDR_histogram(bins,Rmin,Rmax,BoxSize,dims,indexes_r,pos_r,pos2=None)   
             if verbose:
                 print RR
                 print np.sum(RR)
@@ -97,8 +93,7 @@ def TPCF(pos_g,pos_r,BoxSize,DD_action,RR_action,DR_action,
 
         #compute galaxy-random pairs
         if DR_action=='compute':
-            DR=DDR_pairs(bins,Rmin,Rmax,BoxSize,dims,indexes1=indexes_g,
-                         indexes2=indexes_r,pos1=pos_g,pos2=pos_r)
+            DR=DDR_histogram(bins,Rmin,Rmax,BoxSize,dims,indexes_r,pos_g,pos_r)
             if verbose:
                 print DR
                 print np.sum(DR)
@@ -135,15 +130,15 @@ def TPCF(pos_g,pos_r,BoxSize,DD_action,RR_action,DR_action,
 
     ##### SLAVES #####
     else:
-        if DD_action=='compute':
-            DDR_pairs(bins,Rmin,Rmax,BoxSize,dims,
-                      indexes1=None,indexes2=None,pos1=None,pos2=None)
-        if RR_action=='compute':
-            DDR_pairs(bins,Rmin,Rmax,BoxSize,dims,
-                      indexes1=None,indexes2=None,pos1=None,pos2=None)           
         if DR_action=='compute':
-            DDR_pairs(bins,Rmin,Rmax,BoxSize,dims,
-                      indexes1=None,indexes2=None,pos1=None,pos2=None)
+            DDR_histogram(bins,Rmin,Rmax,BoxSize,dims,
+                          indexes=None,pos1=None,pos2=None)                          
+        if RR_action=='compute':
+            DDR_histogram(bins,Rmin,Rmax,BoxSize,dims,
+                          indexes=None,pos1=None,pos2=None)                          
+        if DR_action=='compute':
+            DDR_histogram(bins,Rmin,Rmax,BoxSize,dims,
+                          indexes=None,pos1=None,pos2=None)                          
 ################################################################################
 
 
@@ -154,95 +149,105 @@ def TPCF(pos_g,pos_r,BoxSize,DD_action,RR_action,DR_action,
 ################################################################################
 ####### COMPUTE THE NUMBER OF PAIRS IN A CATALOG ####### (x,y,z) very fast
 ################################################################################
-def DDR_pairs(bins,Rmin,Rmax,BoxSize,dims,indexes1,indexes2,pos1,pos2):
+def DDR_histogram(bins,Rmin,Rmax,BoxSize,dims,indexes,pos1,pos2):
 
-    dims2=dims**2; dims3=dims**3
-
-    #we put bins+1. The last bin is only for pairs separated by r=Rmax
-    pairs=np.zeros(bins+1,dtype=np.int64) 
+    #we put bins+1. The last bin is only for ocassions when r=Rmax
+    total_histogram=np.zeros(bins+1,dtype=np.int64) 
 
     ##### MASTER #####
     if myrank==0:
         #Master sends the indexes and particle positions to the slaves
         for i in range(1,nprocs):
-            comm.send(pos1,dest=i,tag=6)
-            comm.send(pos2,dest=i,tag=7)
-            comm.send(indexes1,dest=i,tag=8)
-            comm.send(indexes2,dest=i,tag=9)
+            comm.send(pos1,dest=i,tag=7)
+            comm.send(pos2,dest=i,tag=8)
+            comm.send(indexes,dest=i,tag=9)
 
         #Masters distributes the calculation among slaves
-        for subbox in range(dims3):
-            b=comm.recv(source=MPI.ANY_SOURCE,tag=1)
-            comm.send(False,dest=b,tag=2)
-            comm.send(subbox,dest=b,tag=3)
+        if pos2==None: #galaxy-galaxy or random-random case
+            for subbox in range(dims**3):
+                b=comm.recv(source=MPI.ANY_SOURCE,tag=1)
+                comm.send(False,dest=b,tag=2)
+                comm.send(subbox,dest=b,tag=3)
+        else:          #galaxy-random case
+            i=0; number=len(pos1); IL=number/(nprocs-1)
+            while i<number:
+                b=comm.recv(source=MPI.ANY_SOURCE,tag=1)
+                comm.send(False,dest=b,tag=2)
+                if i+IL<number:
+                    #a=np.arange(0,10) -- a=array([0,1,2,3,4,5,6,7,8,9])
+                    comm.send(np.arange(i,i+IL),dest=b,tag=4)
+                else:
+                    comm.send(np.arange(i,number),dest=b,tag=4)
+                i+=IL
 
-        #Master gathers partial results from slaves and returns the final result
+        #Master gathers partial results from slaves and return the final result
         for j in range(1,nprocs):
             b=comm.recv(source=MPI.ANY_SOURCE,tag=1)
             comm.send(True,dest=b,tag=2)
-            pairs_aux=comm.recv(source=b,tag=10)
-            pairs+=pairs_aux
+            total_histogram_aux=comm.recv(source=b,tag=10)
+            total_histogram+=total_histogram_aux
 
         #the last element is just for situations in which r=Rmax
-        pairs[bins-1]+=pairs[bins]
+        total_histogram[bins-1]+=total_histogram[bins]
 
-        return pairs[:-1]
+        return total_histogram[:-1]
 
 
     ##### SLAVES #####
     else:
-        #position of the center of each subbox
-        sub_c=np.empty(3,dtype=np.float32)
 
         #slaves receive the positions and indexes
-        pos1=comm.recv(source=0,tag=6)
-        pos2=comm.recv(source=0,tag=7)
-        indexes1=comm.recv(source=0,tag=8)
-        indexes2=comm.recv(source=0,tag=9)
+        pos1=comm.recv(source=0,tag=7)
+        pos2=comm.recv(source=0,tag=8)
+        indexes=comm.recv(source=0,tag=9)
 
         comm.send(myrank,dest=0,tag=1)
         final=comm.recv(source=0,tag=2)
         while not(final):
             
-            subbox=comm.recv(source=0,tag=3)
-            core_ids=indexes1[subbox] #ids of the particles in the subbox
-            pos0=pos1[core_ids]
-
-            sub_c[0]=(subbox/dims2+0.5)*BoxSize/dims
-            sub_c[1]=((subbox%dims2)/dims+0.5)*BoxSize/dims
-            sub_c[2]=((subbox%dims2)%dims+0.5)*BoxSize/dims
-
             #galaxy-galaxy or random-random case
             if pos2==None: 
-                #first: distances between particles in the same subbox
-                distances_core(pos0,BoxSize,bins,Rmin,Rmax,pairs)
+                subbox=comm.recv(source=0,tag=3)
+                core_ids=indexes[subbox] #ids of the particles in the subbox
+                #print subbox
+                distances_core(pos1[core_ids],BoxSize,bins,Rmin,Rmax,total_histogram)
 
-                #second: distances between particles in the subbox and particles around
-                ids=indexes_subbox_neigh(sub_c,Rmax,dims,BoxSize,indexes1,subbox)
-                if ids!=[]:
-                    posN=pos1[ids]
-                    DR_distances(pos0,posN,BoxSize,bins,Rmin,Rmax,pairs)
-
+                for index in core_ids:
+                    #second: compute the pairs of particles in the subbox with 
+                    #particles in the neighboord subboxes
+                    pos0=pos1[index]
+                    ids=indexes_subbox_neigh(pos0,Rmax,dims,BoxSize,indexes,subbox)
+                    if ids!=[]:
+                        posN=pos1[ids]
+                        distances(pos0,posN,BoxSize,bins,Rmin,Rmax,total_histogram)      
+            
             #galaxy-random case
             else:          
-                ids=indexes_subbox(sub_c,Rmax,dims,BoxSize,indexes2)
-                posN=pos2[ids]
-                DR_distances(pos0,posN,BoxSize,bins,Rmin,Rmax,pairs)
+                numbers=comm.recv(source=0,tag=4)
+                #if np.any(numbers%10000==0):
+                #    print numbers[np.where(numbers%10000==0)[0]]
+
+                for i in numbers:
+                    pos0=pos1[i]
+                    #compute the ids of the particles in the neighboord subboxes
+                    posN=pos2[indexes_subbox(pos0,Rmax,dims,BoxSize,indexes)]
+                    distances(pos0,posN,BoxSize,bins,Rmin,Rmax,total_histogram)
 
             comm.send(myrank,dest=0,tag=1)
             final=comm.recv(source=0,tag=2)
 
         print 'cpu ',myrank,' finished: transfering data to master'
-        comm.send(pairs,dest=0,tag=10)
+        comm.send(total_histogram,dest=0,tag=10)
 ################################################################################
 
 
 ################################################################################
 #this function computes the distances between all the particles-pairs and
-#return the number of pairs found in each distance bin
-def distances_core(pos,BoxSize,bins,Rmin,Rmax,pairs):
-
-    l=pos.shape[0]
+#return the result in the histogram
+def distances_core(pos,BoxSize,bins,Rmin,Rmax,histogram):
+    x=pos[:,0]
+    y=pos[:,1]
+    z=pos[:,2]
 
     support = """
        #include <iostream>
@@ -251,82 +256,73 @@ def distances_core(pos,BoxSize,bins,Rmin,Rmax,pairs):
     code = """
        float middle=BoxSize/2.0;
        float dx,dy,dz,r;
-       float x1,y1,z1,x2,y2,z2;
        float delta=log10(Rmax/Rmin)/bins;
        int bin,i,j;
+       int length=x.size();
 
-       for (i=0;i<l;i++){
-            x1=pos(i,0);
-            y1=pos(i,1);
-            z1=pos(i,2);
-            for (j=i+1;j<l;j++){
-                x2=pos(j,0);
-                y2=pos(j,1);
-                z2=pos(j,2);
-                dx=(fabs(x1-x2)<middle) ? x1-x2 : BoxSize-fabs(x1-x2);
-                dy=(fabs(y1-y2)<middle) ? y1-y2 : BoxSize-fabs(y1-y2);
-                dz=(fabs(z1-z2)<middle) ? z1-z2 : BoxSize-fabs(z1-z2);
+       for (i=0;i<length;i++){
+            for (j=i+1;j<length;j++){
+                dx=(fabs(x(i)-x(j))<middle)?x(i)-x(j):BoxSize-fabs(x(i)-x(j));
+                dy=(fabs(y(i)-y(j))<middle)?y(i)-y(j):BoxSize-fabs(y(i)-y(j));
+                dz=(fabs(z(i)-z(j))<middle)?z(i)-z(j):BoxSize-fabs(z(i)-z(j));
                 r=sqrt(dx*dx+dy*dy+dz*dz);
 
                if (r>=Rmin && r<=Rmax){
                    bin=(int)(log10(r/Rmin)/delta);
-                   pairs(bin)+=1; 
+                   histogram(bin)+=1; 
                }
             }   
        }
     """
-    wv.inline(code,['pos','l','BoxSize','Rmin','Rmax','bins','pairs'],
+    wv.inline(code,
+              ['BoxSize','Rmin','Rmax','bins','x','y','z','histogram'],
               type_converters = wv.converters.blitz,
               support_code = support,libraries = ['m'])
 
-    return pairs
+    return histogram
 ################################################################################
-#pos1---an array of positions
+#pos1---a single position
 #pos2---an array of positions
-#the function returns the number of pairs in distance bins between pos1 and pos2
-def DR_distances(p1,p2,BoxSize,bins,Rmin,Rmax,pairs):
+#the function returns the histogram of the computed distances between 
+#pos1 and pos2
+def distances(pos1,pos2,BoxSize,bins,Rmin,Rmax,histogram):
 
-    l1=p1.shape[0]
-    l2=p2.shape[0]
+    x=pos2[:,0]
+    y=pos2[:,1]
+    z=pos2[:,2]
 
     support = """
-       #include <iostream>
-       using namespace std;
+         #include <iostream>
+         using namespace std;
     """
     code = """
-       float middle=BoxSize/2.0;
-       float dx,dy,dz,r;
-       float x1,y1,z1,x2,y2,z2;
-       float delta=log10(Rmax/Rmin)/bins;
-       int bin,i,j;
+         float x0 = pos1(0);
+         float y0 = pos1(1);
+         float z0 = pos1(2);
+         
+         float middle = BoxSize/2.0;
+         float dx,dy,dz,r;
+         float delta = log10(Rmax/Rmin)/bins;
+         int bin;
 
-       for (i=0;i<l1;i++){
-           x1=p1(i,0); 
-           y1=p1(i,1);
-           z1=p1(i,2);
-           for (j=0;j<l2;j++){
-               x2=p2(j,0); 
-               y2=p2(j,1);
-               z2=p2(j,2);
-               dx=(fabs(x1-x2)<middle) ? x1-x2 : BoxSize-fabs(x1-x2);
-               dy=(fabs(y1-y2)<middle) ? y1-y2 : BoxSize-fabs(y1-y2);
-               dz=(fabs(z1-z2)<middle) ? z1-z2 : BoxSize-fabs(z1-z2);
-               r=sqrt(dx*dx+dy*dy+dz*dz);
+         for (int i=0;i<x.size();i++){
+             dx = (fabs(x0-x(i))<middle) ? x0-x(i) : BoxSize-fabs(x0-x(i));
+             dy = (fabs(y0-y(i))<middle) ? y0-y(i) : BoxSize-fabs(y0-y(i));
+             dz = (fabs(z0-z(i))<middle) ? z0-z(i) : BoxSize-fabs(z0-z(i));
+             r=sqrt(dx*dx+dy*dy+dz*dz);
 
-               if (r>=Rmin && r<=Rmax){
-                   bin=(int)(log10(r/Rmin)/delta);
-                   pairs(bin)+=1; 
-               }
-           }   
-       }
+             if (r>=Rmin && r<=Rmax){
+                bin = (int)(log10(r/Rmin)/delta);
+                histogram(bin)+=1; 
+             }
+         }
     """
-    wv.inline(code,['p1','p2','l1','l2','BoxSize','Rmin','Rmax','bins','pairs'],
-              type_converters = wv.converters.blitz,support_code = support)
+    wv.inline(code,
+              ['pos1','x','y','z','BoxSize','Rmin','Rmax','bins','histogram'],
+              type_converters = wv.converters.blitz,
+              support_code = support)
 
-    return pairs
-################################################################################
-
-
+    return histogram
 ################################################################################
 #this routine computes the IDs of all the particles within the neighboord cells
 #that which can lie within the radius Rmax
@@ -385,9 +381,6 @@ def indexes_subbox_neigh(pos,Rmax,dims,BoxSize,indexes,subbox):
                     ids_subbox=indexes[num]
                     ids=np.concatenate((ids,ids_subbox)).astype(np.int32)
     return ids
-################################################################################
-
-
 ################################################################################
 #This function computes the correlation function and its error once the number
 #of galaxy-galaxy, random-random & galaxy-random pairs are given together
@@ -481,6 +474,7 @@ points_r=200000
 BoxSize=500.0 #Mpc/h
 Rmin=1.0      #Mpc/h
 Rmax=50.0     #Mpc/h
+dims=10
 bins=30
 
 DD_action='compute'
@@ -495,8 +489,7 @@ if myrank==0:
     pos_r=np.random.random((points_r,3))*BoxSize
 
     start=time.clock()
-    r,xi_r,error_xi=TPCF(pos_g,pos_r,BoxSize,DD_action,RR_action,DR_action,
-                         DD_name,RR_name,DR_name,bins,Rmin,Rmax,verbose=True)
+    r,xi_r,error_xi=TPCF(pos_g,pos_r,BoxSize,dims,DD_action,RR_action,DR_action,DD_name,RR_name,DR_name,bins,Rmin,Rmax,verbose=True)
 
     print r
     print xi_r
@@ -505,7 +498,5 @@ if myrank==0:
     print 'time:',end-start
 else:
     pos_g=None; pos_r=None
-    TPCF(pos_g,pos_r,BoxSize,DD_action,RR_action,DR_action,
-         DD_name,RR_name,DR_name,bins,Rmin,Rmax,verbose=True)
-
+    TPCF(pos_g,pos_r,BoxSize,dims,DD_action,RR_action,DR_action,DD_name,RR_name,DR_name,bins,Rmin,Rmax,verbose=True)
 
