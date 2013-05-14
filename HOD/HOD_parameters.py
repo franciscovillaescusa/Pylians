@@ -1,90 +1,103 @@
-#LATEST MODIFICATION: 03/05/2013
-#This code computes the correlation function of CDM halos from N-body simulations
-#It uses the fast routines DDR_histogram3
+#LATEST MODIFICATION: 14/05/2013
+#This code computes the Xi^2 for a set of different HOD parameters
+
 from mpi4py import MPI
 import numpy as np
 import scipy.integrate as si
+import snap_chooser as SC
 import readsnap
 import readsubf
 import HOD_library as HOD
 import correlation_function_library as CF
-import sys,os
+import sys
+import os
 
+#function used to compute wp(rp): d(wp) / dr = 2r*xi(r) / sqrt(r^2-rp^2)
 def deriv(y,x,r,xi,rp):
     value=2.0*x*np.interp(x,r,xi)/np.sqrt(x**2-rp**2)
     return np.array([value])
+
 
 ###### MPI DEFINITIONS ######
 comm=MPI.COMM_WORLD
 nprocs=comm.Get_size()
 myrank=comm.Get_rank()
 
-##################### INPUT ##########################
-#### SNAPSHOTS TO SELECT GALAXIES WITHIN CDM HALOS ####
-#snapshot_fname='/data1/villa/b500p512nu0.6z99np1024tree/snapdir_017/snap_017'
-#groups_fname='/data1/villa/b500p512nu0.6z99np1024tree'
-#groups_number=17
-snapshot_fname='/disk/disksom2/villa/b500p512nu0.6z99np1024tree/snapdir_017/snap_017'
-groups_fname='/disk/disksom2/villa/b500p512nu0.6z99np1024tree'
-groups_number=17
+########################### INPUT ###############################
+if len(sys.argv)>1:
+    sa=sys.argv
 
-#snapshot_fname='/data1/villa/b500p512nu0z99tree/snapdir_017/snap_017'
-#groups_fname='/data1/villa/b500p512nu0z99tree'
-#groups_number=17
+    Mnu=float(sa[1]); z=float(sa[2]); som=sa[3] 
 
-#### HALO CATALOGUE PARAMETERS ####
-mass_criteria='m200' #'t200' 'm200' or 'c200'
-min_mass=2e12 #Msun/h
-max_mass=2e15 #Msun/h
+    mass_criteria=sa[4]; min_mass=float(sa[5]); max_mass=float(sa[6])
 
-### HOD PARAMETERS ###
-fiducial_density=0.00111 #mean number density for galaxies with Mr<-21
-#M1=8e13
-#alpha=1.5
-
-#### RANDOM CATALOG ####
-random_file='/disk/disksom2/villa/Correlation_function/Random_catalogue/random_catalogue_2e5.dat'
-
-#### PARAMETERS ####
-Rmin=0.1
-Rmax=60.0
-bins=30
-BoxSize=500.0 #Mpc/h
-
-#### PARTIAL RESULTS NAMES ####
-DD_name='DD.dat' #name for the file containing DD results
-RR_name='RR_0.1_60_30.dat' #name for the file containing RR results
-DR_name='DR.dat' #name for the file containing DR results
-
-#### ACTIONS ####
-DD_action='compute' #'compute' or 'read' (from DD_name file)
-RR_action='read' #'compute' or 'read' (from RR_name file)
-DR_action='compute' #'compute' or 'read' (from DR_name file)
+    fiducial_density=float(sa[7])
+    M1_min=float(sa[8]); M1_max=float(sa[9]); M1_bins=int(sa[10]); 
+    alpha_min=float(sa[11]); alpha_max=float(sa[12]); alpha_bins=int(sa[13])
     
-#### OUTPUT ####
-out_fname='borrar2.dat'
-results_file='results_0.6_mean200_new1.dat'
+    random_file=sa[14]
 
-#measured correlation function from Zehavi et al 2011
-wp=np.array([[586.2,19.5],[402.9,11.7],[258.7,6.7],[163.2,4.7],
-             [105.5,3.0],[68.9,2.2],[50.2,2.1],[35.5,1.8],
-             [24.5,1.6],[15.3,1.3],[8.54,0.94],[4.11,0.71],
-             [2.73,0.54]])
+    BoxSize=float(sa[15])
+    Rmin=float(sa[16]); Rmax=float(sa[17]); bins=int(sa[18])
 
-Rp=np.array([0.17, 0.27, 0.42, 0.67, 1.1, 1.7, 2.7, 
-             4.2, 6.7, 10.6, 16.9, 26.8, 42.3])
+    DD_name=sa[19];   RR_name=sa[20];   DR_name=sa[21]
+    DD_action=sa[22]; RR_action=sa[23]; DR_action=sa[24]
+
+    wp_file=sa[25]; results_file=sa[26]
+
+else:
+    #### SNAPSHOTS TO SELECT GALAXIES WITHIN CDM HALOS ####
+    Mnu=0.0
+    z=0.0
+    som='som2'
+
+    #### HALO CATALOGUE PARAMETERS ####
+    mass_criteria='m200' #'t200' 'm200' or 'c200'
+    min_mass=2e12 #Msun/h
+    max_mass=2e15 #Msun/h
+
+    ### HOD PARAMETERS ###
+    fiducial_density=0.00111 #mean number density for galaxies with Mr<-21
+    M1_min=9e13;     M1_max=1.2e14;   M1_bins=15
+    alpha_min=1.25;  alpha_max=1.60;  alpha_bins=15
+
+    #### RANDOM CATALOG ####
+    random_file='/disk/disksom2/villa/Correlation_function/Random_catalogue/random_catalogue_2e5.dat'
+
+    #### PARAMETERS ####
+    BoxSize=500.0 #Mpc/h
+    Rmin=0.1 #Mpc/h
+    Rmax=60.0 #Mpc/h
+    bins=30
+
+    #### PARTIAL RESULTS NAMES ####
+    DD_name='DD.dat' #name for the file containing DD results
+    RR_name='RR_0.1_60_30.dat' #name for the file containing RR results
+    DR_name='DR.dat' #name for the file containing DR results
+
+    #### ACTIONS ####
+    DD_action='compute' #'compute' or 'read' (from DD_name file)
+    RR_action='read' #'compute' or 'read' (from RR_name file)
+    DR_action='compute' #'compute' or 'read' (from DR_name file)
+    
+    #### wp FILE ####
+    wp_file='w_p_21.dat'
+
+    #### OUTPUT ####
+    results_file='results_0.6_mean200_new1.dat'
 ######################################################
 
-M1_array=np.linspace(9e13,1.2e14,25)
-alpha_array=np.linspace(1.25,1.60,25)
-
-#M1_array=[7.85e13,7.87e13,7.89e13,7.91e13,7.93e13,7.95e13]
-#alpha_array=np.ones(6)*1.47
-
-#M1_array=[7.90e13]
-#alpha_array=[1.48]
+M1_array=np.linspace(M1_min, M1_max, M1_bins)
+alpha_array=np.linspace(alpha_min, alpha_max, alpha_bins)
 
 if myrank==0:
+
+    #obtain the names of snapshots and groups files
+    F=SC.snap.chooser(Mnu,z,som)
+    snapshot_fname=F.snap
+    groups_fname=F.group
+    groups_number=F.group_number
+    del F
 
     #read positions and IDs of DM particles: sort the IDs array
     DM_pos=readsnap.read_block(snapshot_fname,"POS ",parttype=1)
@@ -137,13 +150,21 @@ if myrank==0:
     del halos_indexes
 
     #read the random catalogue
-    f=open(random_file,'r')
-    pos_r=[]
+    f=open(random_file,'r');  pos_r=[]
     for line in f.readlines():
         a=line.split()
         pos_r.append([float(a[0]),float(a[1]),float(a[2])])
     f.close()
     pos_r=np.array(pos_r)*BoxSize #rand catalog:dimensionless box size 1 
+
+    #read the wp file
+    f=open(wp_file,'r');  wp=[]
+    for line in f.readlines():
+        a=line.split()
+        wp.append([float(a[0]),float(a[1]),float(a[2])])
+    f.close();  wp=np.array(wp)
+
+    
 
 
 g=open(results_file,'a')
@@ -152,7 +173,7 @@ for M1 in M1_array:
 
         ##### MASTER #####
         if myrank==0:
-            #create the galaxy catalogue through HOD parameters
+            #create the galaxy catalogue through the HOD parameters
             pos_g=HOD.hod_fast(DM_pos,sorted_ids,IDs,halo_mass,halo_pos,
                                halo_radius,halo_len,halo_offset,BoxSize,
                                min_mass,max_mass,fiducial_density,M1,
@@ -168,7 +189,7 @@ for M1 in M1_array:
             yinit=np.array([0.0])
 
             wp_HOD=[]
-            for rp in Rp:
+            for rp in wp[:,0]:
                 x=np.array([rp+h,r_max])
                 y=si.odeint(deriv,yinit,x,args=(r,xi_r,rp),mxstep=1000)
                 wp_HOD.append(y[1][0])
