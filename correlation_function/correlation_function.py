@@ -1,6 +1,7 @@
 from mpi4py import MPI
 import numpy as np
 import readsubf
+import correlation_function_library as CF
 import snap_chooser as SC
 
 comm=MPI.COMM_WORLD
@@ -59,6 +60,7 @@ if myrank==0:
 
     pos_r=np.random.random((points_r,3))*BoxSize
 
+    print 'I am here...'
     #compute the 2pt correlation function
     r,xi_r,error_xi=CF.TPCF(pos_g,pos_r,BoxSize,DD_action,
                             RR_action,DR_action,DD_name,RR_name,
