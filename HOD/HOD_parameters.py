@@ -93,7 +93,7 @@ alpha_array=np.linspace(alpha_min, alpha_max, alpha_bins)
 if myrank==0:
 
     #obtain the names of snapshots and groups files
-    F=SC.snap.chooser(Mnu,z,som)
+    F=SC.snap_chooser(Mnu,z,som)
     snapshot_fname=F.snap
     groups_fname=F.group
     groups_number=F.group_number
