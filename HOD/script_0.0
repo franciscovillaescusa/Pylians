@@ -41,7 +41,7 @@ alpha_bins=25
 
 results_file=0.0_mean200.dat
 
-clusterlauncher -q $queue -n $procs -s som2 python HOD_parameters.py $Mnu $z $som $mass_criteria $min_mass $max_mass $fiducial_density $M1_min $M1_max $M1_bins $alpha_min $alpha_max $alpha_bins $random_file $BoxSize $Rmin $Rmax $bins $DD_action $RR_action $DR_action $wp_file
+clusterlauncher -q $queue -n $procs -s som2 python HOD_parameters.py $Mnu $z $som $mass_criteria $min_mass $max_mass $fiducial_density $M1_min $M1_max $M1_bins $alpha_min $alpha_max $alpha_bins $random_file $BoxSize $Rmin $Rmax $bins $DD_name $RR_name $DR_name $DD_action $RR_action $DR_action $wp_file $results_file
 
 
 
