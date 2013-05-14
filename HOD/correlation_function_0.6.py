@@ -3,12 +3,16 @@
 #It uses the fast routines DDR_histogram3
 from mpi4py import MPI
 import numpy as np
-import library as lb
+import scipy.integrate as si
 import readsnap
 import readsubf
 import HOD_library as HOD
 import correlation_function_library as CF
 import sys,os
+
+def deriv(y,x,r,xi,rp):
+    value=2.0*x*np.interp(x,r,xi)/np.sqrt(x**2-rp**2)
+    return np.array([value])
 
 ###### MPI DEFINITIONS ######
 comm=MPI.COMM_WORLD
@@ -35,8 +39,8 @@ max_mass=2e15 #Msun/h
 
 ### HOD PARAMETERS ###
 fiducial_density=0.00111 #mean number density for galaxies with Mr<-21
-M1=8e13
-alpha=1.5
+#M1=8e13
+#alpha=1.5
 
 #### RANDOM CATALOG ####
 random_file='/disk/disksom2/villa/Correlation_function/Random_catalogue/random_catalogue_2e5.dat'
@@ -46,7 +50,6 @@ Rmin=0.1
 Rmax=60.0
 bins=30
 BoxSize=500.0 #Mpc/h
-dims=10
 
 #### PARTIAL RESULTS NAMES ####
 DD_name='DD.dat' #name for the file containing DD results
@@ -153,28 +156,23 @@ for M1 in M1_array:
                                alpha,verbose=True)/1e3
 
             #compute the 2pt correlation function
-            r,xi_r,error_xi=CF.TPCF(pos_g,pos_r,BoxSize,dims,DD_action,RR_action,
-                                    DR_action,DD_name,RR_name,DR_name,bins,
-                                    Rmin,Rmax)
+            r,xi_r,error_xi=CF.TPCF(pos_g,pos_r,BoxSize,dims,DD_action,
+                                    RR_action,DR_action,DD_name,RR_name,
+                                    DR_name,bins,Rmin,Rmax)
+                                    
+            r_max=np.max(r)
+            h=1e-13 #discontinuity at r=rp. We integrate from r=rp+h to r_max
+            yinit=np.array([0.0])
 
-            #save the results to a file
-            f=open(out_fname,'w')
-            for i in range(len(r)):
-                f.write(str(r[i])+' '+str(xi_r[i])+' '+str(error_xi[i])+'\n')
-            f.close()
-
-            os.system("./run_fortran")
+            wp_HOD=[]
+            for rp in r:
+                x=np.array([rp+h,r_max])
+                y=si.odeint(deriv,yinit,x,args=(r,xi,rp),mxstep=1000)
+                wp_HOD.append(y[1][0])
+            wp_HOD=np.array(wp_HOD)
 
             print 'M1=',M1
             print 'alpha=',alpha
-
-            #read the wp file and compute chi^2
-            f=open('borrar3.dat','r')
-            wp_HOD=[]
-            for line in f.readlines():
-                a=line.split()
-                wp_HOD.append(float(a[1]))
-            f.close()
 
             chi2=np.sum((wp_HOD-wp[:,0])**2/wp[:,1]**2)
             print 'X2=',chi2
