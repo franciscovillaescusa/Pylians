@@ -1,5 +1,6 @@
 from mpi4py import MPI
 import numpy as np
+import readsubf
 import snap_chooser as SC
 
 comm=MPI.COMM_WORLD
