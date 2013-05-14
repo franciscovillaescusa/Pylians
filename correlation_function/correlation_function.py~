@@ -1,5 +1,7 @@
 from mpi4py import MPI
 import numpy as np
+import readsubf
+import correlation_function_library as CF
 import snap_chooser as SC
 
 comm=MPI.COMM_WORLD
@@ -14,6 +16,7 @@ som='som1'
 mass_criteria='t200'
 min_mass=2e12 #Msun/h
 max_mass=2e15 #Msun/h
+subhalos=True #True or False
 
 BoxSize=500.0 #Mpc/h
 points_r=200000
@@ -24,6 +27,8 @@ DD_name='DD.dat'; RR_name='RR.dat'; DR_name='DR.dat'
 bins=30
 Rmin=0.1
 Rmax=50.0
+
+f_out='borrar.dat'
 ###############################
 
 
@@ -52,19 +57,26 @@ if myrank==0:
         sys.exit()
     halos_pos=halos.group_pos/1e3 #positions in Mpc/h
     halos_indexes=np.where((halos_mass>min_mass) & (halos_mass<max_mass))[0]
+
+    subhalos_pos=halos.sub_pos/1e3 #positions in Mpc/h
+    subhalos_indexes=np.where()
+
     del halos
 
     pos_g=halos_pos
 
     pos_r=np.random.random((points_r,3))*BoxSize
 
+    print 'I am here...'
     #compute the 2pt correlation function
     r,xi_r,error_xi=CF.TPCF(pos_g,pos_r,BoxSize,DD_action,
                             RR_action,DR_action,DD_name,RR_name,
                             DR_name,bins,Rmin,Rmax)
-    print r
-    print xi_r
-    print error_xi
+
+    f=open(f_out,'w')
+    for i in range(len(r)):
+        f.write(str(r[i])+' '+str(xi_r[i])+' '+str(error_xi[i])+'\n')
+    f.close()
 
 
 #### SLAVES ####
