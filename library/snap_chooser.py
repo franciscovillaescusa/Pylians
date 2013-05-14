@@ -227,7 +227,7 @@ class snap_chooser:
             
         
 ##### EXAMPLE OF USAGE #####
-
+"""
 Mnu=0.0; 
 z=[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8,
    0.9, 1.0, 1.2, 1.4, 1.6, 2.0, 3.0, 4.0, 5.0]
@@ -244,4 +244,4 @@ for Z in z:
     print groups_fname
     print groups_number
     print ' '
-
+"""
