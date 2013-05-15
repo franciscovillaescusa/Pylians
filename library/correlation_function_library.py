@@ -1,7 +1,8 @@
-#Version 1.0
-#LATEST MODIFICATION: 12/05/2013
-#This file contains the functions needed to compute the 2pt correlation function
-
+#Version 1.1
+#LATEST MODIFICATION: 15/05/2013
+#This file contains the functions needed to compute:
+#1)-the 2pt correlation function
+#2)-the 2pt cross-correlation function
 from mpi4py import MPI
 import numpy as np
 import scipy.weave as wv
@@ -24,7 +25,6 @@ myrank=comm.Get_rank()
 #pos_g: array containing the positions of the galaxies
 #pos_r: array containing the positions of the random particles catalogue
 #BoxSize: Size of the Box. Units must be equal to those of pos_r/pos_g
-#dims: number of divisions in one dimension to divide the box into subboxes
 #DD_action: compute number of galaxy pairs from data or read them---compute/read
 #RR_action: compute number of random pairs from data or read them---compute/read
 #DR_action: compute number of galaxy-random pairs or read them---compute/read
@@ -38,7 +38,7 @@ myrank=comm.Get_rank()
 def TPCF(pos_g,pos_r,BoxSize,DD_action,RR_action,DR_action,
          DD_name,RR_name,DR_name,bins,Rmin,Rmax,verbose=False):
 
-    #dims is determined requiring that no more than 8 adyacent subboxes will be taken
+    #dims determined requiring that no more 8 adyacent subboxes will be taken
     dims=int(BoxSize/Rmax)
     dims2=dims**2; dims3=dims**3
 
@@ -64,7 +64,7 @@ def TPCF(pos_g,pos_r,BoxSize,DD_action,RR_action,DR_action,
         indexes_r=np.array(indexes_r)
 
 
-        #compute galaxy-galaxy pairs
+        #compute galaxy-galaxy pairs: DD
         if DD_action=='compute':
             DD=DDR_pairs(bins,Rmin,Rmax,BoxSize,dims,indexes1=indexes_g,
                              indexes2=None,pos1=pos_g,pos2=None)
@@ -80,7 +80,7 @@ def TPCF(pos_g,pos_r,BoxSize,DD_action,RR_action,DR_action,
                 print 'Sizes are different!'
                 sys.exit()
 
-        #compute random-random pairs
+        #compute random-random pairs: RR
         if RR_action=='compute':
             RR=DDR_pairs(bins,Rmin,Rmax,BoxSize,dims,indexes1=indexes_r,
                              indexes2=None,pos1=pos_r,pos2=None)
@@ -96,7 +96,7 @@ def TPCF(pos_g,pos_r,BoxSize,DD_action,RR_action,DR_action,
                 print 'Sizes are different!'
                 sys.exit()
 
-        #compute galaxy-random pairs
+        #compute galaxy-random pairs: DR
         if DR_action=='compute':
             DR=DDR_pairs(bins,Rmin,Rmax,BoxSize,dims,indexes1=indexes_g,
                          indexes2=indexes_r,pos1=pos_g,pos2=pos_r)
@@ -145,6 +145,165 @@ def TPCF(pos_g,pos_r,BoxSize,DD_action,RR_action,DR_action,
         if DR_action=='compute':
             DDR_pairs(bins,Rmin,Rmax,BoxSize,dims,
                       indexes1=None,indexes2=None,pos1=None,pos2=None)
+################################################################################
+
+################################################################################
+#This functions computes the TPCCF (2pt cross-correlation function) 
+#from an N-body simulation. It takes into account boundary conditions
+#VARIABLES:
+#pos_g1: array containing the positions of the galaxies1
+#pos_g2: array containing the positions of the galaxies2
+#pos_r: array containing the positions of the random particles catalogue
+#BoxSize: Size of the Box. Units must be equal to those of pos_r/pos_g1/pos_g2
+#DD_action: compute number of galaxy pairs from data or read them---compute/read
+#RR_action: compute number of random pairs from data or read them---compute/read
+#DR_action: compute number of galaxy-random pairs or read them---compute/read
+#DD_name: file name to write/read galaxy-galaxy pairs results
+#RR_name: file name to write/read random-random pairs results
+#DR_name: file name to write/read galaxy-random pairs results
+#bins: number of bins to compute the 2pt correlation function
+#Rmin: minimum radius to compute the 2pt correlation function
+#Rmax: maximum radius to compute the 2pt correlation function
+#USAGE: at the end of the file there is a example of how to use this function
+def TPCCF(pos_g1,pos_g2,pos_r,BoxSize,
+          D1D2_action,D1R_action,D2R_action,RR_action,
+          D1D2_name,D1R_name,D2R_name,RR_name,
+          bins,Rmin,Rmax,verbose=False):          
+          
+
+    #dims determined requiring that no more 8 adyacent subboxes will be taken
+    dims=int(BoxSize/Rmax)
+    dims2=dims**2; dims3=dims**3
+
+    ##### MASTER #####
+    if myrank==0:
+
+        #compute the indexes of the halo1/subhalo1/galaxy1 catalogue
+        Ng1=len(pos_g1)*1.0; indexes_g1=[]
+        coord=np.floor(dims*pos_g1/BoxSize).astype(np.int32)
+        index=dims2*coord[:,0]+dims*coord[:,1]+coord[:,2]
+        for i in range(dims3):
+            ids=np.where(index==i)[0]
+            indexes_g1.append(ids)
+        indexes_g1=np.array(indexes_g1)
+
+        #compute the indexes of the halo2/subhalo2/galaxy2 catalogue
+        Ng2=len(pos_g2)*1.0; indexes_g2=[]
+        coord=np.floor(dims*pos_g2/BoxSize).astype(np.int32)
+        index=dims2*coord[:,0]+dims*coord[:,1]+coord[:,2]
+        for i in range(dims3):
+            ids=np.where(index==i)[0]
+            indexes_g2.append(ids)
+        indexes_g2=np.array(indexes_g2)
+
+        #compute the indexes of the random catalogue
+        Nr=len(pos_r)*1.0; indexes_r=[]
+        coord=np.floor(dims*pos_r/BoxSize).astype(np.int32)
+        index=dims2*coord[:,0]+dims*coord[:,1]+coord[:,2]
+        for i in range(dims3):
+            ids=np.where(index==i)[0]
+            indexes_r.append(ids)
+        indexes_r=np.array(indexes_r)
+
+
+        #compute galaxy1-galaxy2 pairs: D1D2
+        if D1D2_action=='compute':
+            D1D2=DDR_pairs(bins,Rmin,Rmax,BoxSize,dims,indexes1=indexes_g1,
+                           indexes2=indexes_g2,pos1=pos_g1,pos2=pos_g2)
+            if verbose:
+                print D1D2
+                print np.sum(D1D2)
+            #write results to a file
+            write_results(D1D2_name,D1D2,bins,'radial')
+        else:
+            #read results from a file
+            D1D2,bins_aux=read_results(D1D2_name,'radial')
+            if bins_aux!=bins:
+                print 'Sizes are different!'
+                sys.exit()
+
+        #compute galaxy1-random pairs: D1R
+        if D1R_action=='compute':
+            D1R=DDR_pairs(bins,Rmin,Rmax,BoxSize,dims,indexes1=indexes_g1,
+                          indexes2=indexes_r,pos1=pos_g1,pos2=pos_r)
+            if verbose:
+                print D1R
+                print np.sum(D1R)
+            #write results to a file
+            write_results(D1R_name,D1R,bins,'radial')
+        else:
+            #read results from a file
+            D1R,bins_aux=read_results(D1R_name,'radial')
+            if bins_aux!=bins:
+                print 'Sizes are different!'
+                sys.exit()
+
+        #compute galaxy2-random pairs: D2R
+        if D2R_action=='compute':
+            D2R=DDR_pairs(bins,Rmin,Rmax,BoxSize,dims,indexes1=indexes_g2,
+                          indexes2=indexes_r,pos1=pos_g2,pos2=pos_r)
+            if verbose:
+                print D2R
+                print np.sum(D2R)
+            #write results to a file
+            write_results(D2R_name,D2R,bins,'radial')
+        else:
+            #read results from a file
+            D2R,bins_aux=read_results(D2R_name,'radial')
+            if bins_aux!=bins:
+                print 'Sizes are different!'
+                sys.exit()
+
+        #compute random-random pairs: RR
+        if RR_action=='compute':
+            RR=DDR_pairs(bins,Rmin,Rmax,BoxSize,dims,indexes1=indexes_r,
+                         indexes2=None,pos1=pos_r,pos2=None)
+            if verbose:
+                print RR
+                print np.sum(RR)
+            #write results to a file
+            write_results(RR_name,RR,bins,'radial')
+        else:
+            #read results from a file
+            RR,bins_aux=read_results(RR_name,'radial')
+            if bins_aux!=bins:
+                print 'Sizes are different!'
+                sys.exit()
+
+
+        #final procesing
+        bins_histo=np.logspace(np.log10(Rmin),np.log10(Rmax),bins+1)
+        middle=0.5*(bins_histo[:-1]+bins_histo[1:])
+
+        inside=np.where(RR>0)[0]
+        D1D2=D1D2[inside]; D1R=D1R[inside]; D2R=D2R[inside]; RR=RR[inside]
+        middle=middle[inside]
+
+        D1D2n=D1D2*1.0/(Ng1*Ng2)
+        D1Rn=D1R*1.0/(Ng1*Nr)
+        D2Rn=D2R*1.0/(Ng2*Nr)
+        RRn=RR*2.0/(Nr*(Nr-1.0))
+        
+        xi_r=D1D2n/RRn-D1Rn/RRn-D2Rn/RRn+1.0
+
+        return middle,xi_r
+
+
+
+    ##### SLAVES #####
+    else:
+        if D1D2_action=='compute':
+            DDR_pairs(bins,Rmin,Rmax,BoxSize,dims,
+                      indexes1=None,indexes2=None,pos1=None,pos2=None)
+        if D1R_action=='compute':
+            DDR_pairs(bins,Rmin,Rmax,BoxSize,dims,
+                      indexes1=None,indexes2=None,pos1=None,pos2=None)
+        if D2R_action=='compute':
+            DDR_pairs(bins,Rmin,Rmax,BoxSize,dims,
+                      indexes1=None,indexes2=None,pos1=None,pos2=None)
+        if RR_action=='compute':
+            DDR_pairs(bins,Rmin,Rmax,BoxSize,dims,
+                      indexes1=None,indexes2=None,pos1=None,pos2=None)           
 ################################################################################
 
 
@@ -474,7 +633,7 @@ def read_results(fname,case):
 
 
 
-############ EXAMPLE OF USAGE ############
+############ EXAMPLE OF USAGE: TPCF ############
 """
 points_g=150000
 points_r=200000
@@ -510,3 +669,39 @@ else:
          DD_name,RR_name,DR_name,bins,Rmin,Rmax,verbose=True)
 """
 
+
+############ EXAMPLE OF USAGE: TPCCF ############
+"""
+points_g1=150000
+points_g2=150000
+points_r=200000
+
+BoxSize=500.0 #Mpc/h
+Rmin=1.0      #Mpc/h
+Rmax=50.0     #Mpc/h
+bins=30
+
+D1D2_action='compute'; D1D2_name='D1D2.dat'
+D1R_action='compute'; D1R_name='D1R.dat'
+D2R_action='compute'; D2R_name='D2R.dat'
+RR_action='compute'; RR_name='RR.dat'
+
+
+if myrank==0:
+    pos_g1=np.random.random((points_g1,3))*BoxSize
+    pos_g2=np.random.random((points_g2,3))*BoxSize
+    pos_r=np.random.random((points_r,3))*BoxSize
+
+    r,xi_r=TPCCF(pos_g1,pos_g2,pos_r,BoxSize,
+                 D1D2_action,D1R_action,D2R_action,RR_action,
+                 D1D2_name,D1R_name,D2R_name,RR_name,
+                 bins,Rmin,Rmax,verbose=True)
+
+    print r
+    print xi_r
+else:
+    pos_g1=None; pos_g2=None; pos_r=None
+    TPCCF(pos_g1,pos_g2,pos_r,BoxSize,D1D2_action,D1R_action,D2R_action,
+          RR_action,D1D2_name,D1R_name,D2R_name,RR_name,bins,Rmin,Rmax,
+          verbose=True)     
+"""

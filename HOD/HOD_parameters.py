@@ -198,7 +198,7 @@ for M1 in M1_array:
             print 'M1=',M1
             print 'alpha=',alpha
 
-            chi2=np.sum((wp_HOD-wp[:,0])**2/wp[:,1]**2)
+            chi2=np.sum((wp_HOD-wp[:,1])**2/wp[:,2]**2)
             print 'X2=',chi2
             g.write(str(M1)+ ' '+str(alpha)+' '+str(chi2)+'\n')
 

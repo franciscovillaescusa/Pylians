@@ -14,15 +14,15 @@ myrank=comm.Get_rank()
 ########### INPUT #############
 Mnu=0.0
 z=0.0
-som='som1'
+som='som2'
 
 mass_criteria='t200'
 min_mass=2e12 #Msun/h
 max_mass=2e15 #Msun/h
-subhalos=True #True or False
+mode='DM' #'halos','subhalos' or 'DM'
 
 BoxSize=500.0 #Mpc/h
-points_r=2000000
+points_r=4000000
 
 DD_action='compute'; RR_action='compute'; DR_action='compute'
 DD_name='DD.dat'; RR_name='RR.dat'; DR_name='DR.dat'
@@ -31,7 +31,7 @@ bins=20
 Rmin=0.1
 Rmax=50.0
 
-Np=1000000 #number of randomly picked particles from the simulation
+Np=2000000 #number of randomly picked particles from the simulation
 
 f_out='borrar.dat'
 ###############################
@@ -44,8 +44,6 @@ if myrank==0:
     snapshot_fname=F.snap
     groups_fname=F.group
     groups_number=F.group_number
-
-    PAR_pos=readsnap.read_block(snapshot_fname,"POS ",parttype=1)/1e3 #Mpc/h
 
     #read CDM halos information
     halos=readsubf.subfind_catalog(groups_fname,groups_number,
@@ -71,13 +69,19 @@ if myrank==0:
     subhalos_indexes=np.where((subhalos_mass>min_mass) & (subhalos_mass<max_mass))[0]
     del halos
 
-    if subhalos:
+
+    if mode=='DM':
+        PAR_pos=readsnap.read_block(snapshot_fname,"POS ",parttype=1)/1e3 #Mpc/h
+        IDs=np.arange(len(PAR_pos))
+        IDs=random.sample(IDs,Np)
+        pos_g=PAR_pos[IDs]
+    elif mode=='subhalos':
         pos_g=subhalos_pos[subhalos_indexes]
-    else:
+    elif mode=='halos':
         pos_g=halos_pos[halos_indexes]
-    IDs=np.arange(len(PAR_pos))
-    IDs=random.sample(IDs,Np)
-    pos_g=PAR_pos[IDs]
+    else:
+        print 'bad mode choosen'
+        sys.exit()
 
 
     pos_r=np.random.random((points_r,3))*BoxSize
