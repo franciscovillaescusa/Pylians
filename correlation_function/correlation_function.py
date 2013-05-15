@@ -12,7 +12,7 @@ nprocs=comm.Get_size()
 myrank=comm.Get_rank()
 
 ########### INPUT #############
-Mnu=0.0
+Mnu=0.6
 z=0.0
 som='som2'
 
