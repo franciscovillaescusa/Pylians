@@ -1,0 +1,63 @@
+This folder contains several codes to compute the TPCF (two point correlation 
+function).
+
+---- random_catalogue.py ----
+This code creates a random distribution of points within a box of size 1.0. 
+The code saves later the results into a binary file.
+When computing the terms RR and DR, it is important to use always the same
+catalogue. The term RR can be computed just one, for a given bin distribution.
+The term DR has to be computed everytime, and the catalogue has to be the same
+as this from which the term RR is obtained.
+
+
+---- correlation_function.py ----
+This code computes the TPCF for halos/subhalos or CDM/NU particles from an
+N-body simulation. If the simulation contains both CDM and neutrinos, then
+the code cross_correlation_function.py must be used to compute the correlation
+function of the total DM density field.
+If the TPCF of halos is wanted, user should specify how to define the virial 
+radius: m200, c200 or t200 (200xmean_density, 200xcritical_density or 
+200xtop_hat).
+For subhalos only mass of the subhalo can be choosen (Subfind only contains this)
+If the TPCF of CDM/NU is wanted, the code will randomly select N_par from the
+total N-body particles and compute the TPCF from that subset.
+If the TPCF of the total DM is wanted, this code can only be used when there 
+is no neutrino particles, i.e. for simulations with Mnu=0.0
+
+
+---- cross_correlation_function.py ----
+This code computes the TPCF for N-body simulations with more than 1 particle
+type (for example simulations with CDM and neutrinos). The code computes the
+TPCF for each component, their cross-correlation function and the TPCF for the
+total DM field.
+The proportions of each component, in terms of Omega_CDM and Omega_NU should
+be specified. The code will randomly select Np particles of each type to compute
+the autocorrelation and the cross-correlation functions.
+
+
+---- total_correlation_function.py ----
+This code is used to compute the DM correlation function from the CDM and NU
+autocorrelation functions plus the CDM-NU cross-correlation function. The code
+inside it also contained in the cross_correlation_function.py code, so in
+principle this code should not be used unless we only have the TPCF for the 
+CDM, NU and CDM-NU and want to compute the TPCF of the DM.
+
+
+---- RR files ----
+The RR files contains the number of RR pairs counted from the random catalogue.
+The way this file is written can be found on the correlation_function_library.py
+The name of the files is RR_Rmin_Rmax_bins_Np.dat, where Rmin and Rmax (in Mpc/h)
+are the minimum and maximum distances to fill the number of bins. Np is the 
+number of particles contained in the random catalogue.
+For computing the TPCF it is good to use these files and avoid computing the
+number of random pairs. It is important that the bins used are equal to those
+of the RR files, and that the random catalogue used (for computing the DR term) is the same that the one used for computing the RR files.
+If the RR files are not present, one simple way to obtain them is by measuring
+the TPCF for halos (at z=0 for example) for one of the N-body simulations using
+the correlation_function.py code. The RR file obtained can be used in the 
+future for measuring the TPCF of CDM or neutrinos.
+
+
+---- results ----
+This folder contains the TPCF files computed. There can be several folders
+inside named: Rmin_Rmax_bins for distinguishing the different bins used.

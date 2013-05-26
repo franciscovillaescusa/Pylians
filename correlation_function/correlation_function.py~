@@ -1,48 +1,79 @@
+#This code computes the 2pt autocorrelation function of any the following:
+#1) CDM halos
+#2) CDM subhalos
+#3) DM particles from an N-body simulation
+
 from mpi4py import MPI
 import numpy as np
+import readsnap
 import readsubf
 import correlation_function_library as CF
 import snap_chooser as SC
+import random
+import sys
 
 comm=MPI.COMM_WORLD
 nprocs=comm.Get_size()
 myrank=comm.Get_rank()
 
 ########### INPUT #############
-Mnu=0.0
-z=0.0
-som='som1'
+if len(sys.argv)>1:
+    sa=sys.argv
+    
+    Mnu=float(sa[1]); z=float(sa[2]); location=sa[3]
 
-mass_criteria='t200'
-min_mass=2e12 #Msun/h
-max_mass=2e15 #Msun/h
-subhalos=True #True or False
+    mass_criteria=sa[4]; min_mass=float(sa[5]); max_mass=float(sa[6])
+    mode=sa[7]
 
-BoxSize=500.0 #Mpc/h
-points_r=200000
+    N_par=int(sa[8]); random_points=int(sa[9])
 
-DD_action='compute'; RR_action='compute'; DR_action='compute'
-DD_name='DD.dat'; RR_name='RR.dat'; DR_name='DR.dat'
+    DD_action=sa[10]; RR_action=sa[11]; DR_action=sa[12]
+    DD_name=sa[13];   RR_name=sa[14];   DR_name=sa[15]
 
-bins=30
-Rmin=0.1
-Rmax=50.0
+    BoxSize=float(sa[16])
+    bins=int(sa[17]); Rmin=float(sa[18]); Rmax=float(sa[19])
 
-f_out='borrar.dat'
+    f_out=sa[20]
+else:
+    Mnu=0.0; z=0.0; location='som2'
+
+    mass_criteria='t200'
+    min_mass=2e12 #Msun/h
+    max_mass=2e15 #Msun/h
+    mode='halos' #'halos','subhalos' or 'DM'
+
+    N_par=300000 #number of random particles from the simulation (only for DM)
+    random_points=10000000
+
+    random_file='/disk/disksom2/villa/Correlation_function/Random_catalogue/random_catalogue_10e6.dat'
+#'/data2/home/villa/Correlation_function/Random_catalogue/random_catalogue_10e6.dat'
+
+    DD_action='compute'; RR_action='compute'; DR_action='compute'
+    DD_name='DD.dat'; RR_name='RR.dat'; DR_name='DR.dat'
+
+    BoxSize=500.0 #Mpc/h
+    bins=40
+    Rmin=0.1
+    Rmax=50.0
+
+    f_out='borrar1.dat'
+#'TPCF_DM_0.0_z=2.dat'
 ###############################
 
 
 #### MASTER ####
 if myrank==0:
-    #obtain subfind group file name
-    F=SC.snap_chooser(Mnu,z,som)
+    #obtain snapshot/subfind-group file name
+    F=SC.snap_chooser(Mnu,z,location)
+    snapshot_fname=F.snap
     groups_fname=F.group
     groups_number=F.group_number
 
-    #read CDM halos information
+    #read CDM halos/subhalos information
     halos=readsubf.subfind_catalog(groups_fname,groups_number,
                                    group_veldisp=True,masstab=True,
                                    long_ids=True,swap=False)
+    halos_pos=halos.group_pos/1e3                 #positions in Mpc/h
     if mass_criteria=='t200':
         halos_mass=halos.group_m_tophat200*1e10   #masses in Msun/h
         halos_radius=halos.group_r_tophat200/1e3  #radius in Mpc/h
@@ -55,19 +86,37 @@ if myrank==0:
     else:
         print 'bad mass_criteria'
         sys.exit()
-    halos_pos=halos.group_pos/1e3 #positions in Mpc/h
     halos_indexes=np.where((halos_mass>min_mass) & (halos_mass<max_mass))[0]
 
-    subhalos_pos=halos.sub_pos/1e3 #positions in Mpc/h
-    subhalos_indexes=np.where()
-
+    subhalos_mass=halos.sub_mass*1e10             #masses in Msun/h
+    subhalos_pos=halos.sub_pos/1e3                #positions in Mpc/h
+    subhalos_indexes=np.where((subhalos_mass>min_mass) & (subhalos_mass<max_mass))[0]
     del halos
 
-    pos_g=halos_pos
+    #chose the object of which compute the correlation function
+    if mode=='DM':
+        PAR_pos=readsnap.read_block(snapshot_fname,"POS ",parttype=1)/1e3 #Mpc/h
+        IDs=np.arange(len(PAR_pos))
+        IDs=random.sample(IDs,N_par)
+        pos_g=PAR_pos[IDs]; del PAR_pos,IDs
+    elif mode=='subhalos':
+        pos_g=subhalos_pos[subhalos_indexes]
+    elif mode=='halos':
+        pos_g=halos_pos[halos_indexes]
+    else:
+        print 'bad mode chosen'
+        sys.exit()
 
-    pos_r=np.random.random((points_r,3))*BoxSize
+    #create the random catalogue or read it
+    #f=open(random_file,'r'); pos_r=[];
+    #for line in f.readlines():
+    #    a=line.split()
+    #    pos_r.append([float(a[0]),float(a[1]),float(a[2])])
+    #f.close(); pos_r=np.array(pos_r)*BoxSize
+    pos_r=np.random.random((random_points,3))*BoxSize  #positions in Mpc/h
 
-    print 'I am here...'
+    print 'Done'
+
     #compute the 2pt correlation function
     r,xi_r,error_xi=CF.TPCF(pos_g,pos_r,BoxSize,DD_action,
                             RR_action,DR_action,DD_name,RR_name,

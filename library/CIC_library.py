@@ -1,3 +1,4 @@
+#version 1.1
 #Library to compute the overdensity of a point-set distribution using the 
 #CIC interpolation technique
 
@@ -6,7 +7,7 @@
 
 import numpy as np
 import scipy.weave as wv
-import time,sys
+import sys
 
 #################################################################################
 #This function computes the overdensity, within a cubic box of size BoxSize,
@@ -18,11 +19,14 @@ import time,sys
 #For reasons regarding weave, the size of the positions array, N, has to be 
 #smaller than 2^31/3. For that reason, if the array is larger, we split it into
 #several pieces to guaranty that requirement
-#USAGE: positions=np.random.random((10000,3)).astype(np.float32)
-#       dims=512
-#       BoxSize=1.0
-#       cic_densities=np.zeros(dims**3,dtype=np.float32)
-#       CIC_serial(positions,dims,BoxSize,cic_densities)        
+
+#In order to avoid problems with particles at the edge x==BoxSize or y==BoxSize
+#or z==BoxSize, we first compute x[i]=dims*1.0 (note that this coordenate goes
+#from 0 to dims-1, i.e. it cant take a value equal to dims). 
+#This particle will contribute to the cell 0, not dims or dims-1. 
+#We first compute fx[i]==dims, and thus dx[i]=0.0 and tx[i]=1.0
+#Once this is computed we recalculate fx[i] by fx[i]%dims, and thus, fx[i]=0
+#and dx[i]=1
 
 def CIC_serial(positions,dims,BoxSize,cic_densities,weights=None):
     n_max=850**3 #maximum number of elements weave can deal with
@@ -44,11 +48,12 @@ def CIC_serial(positions,dims,BoxSize,cic_densities,weights=None):
 
              for (i=0;i<3;i++){
                 x[i]=pos(n,i)*units;
-                fx[i]=((int)floor(x[i]))%dims;
-                nx[i]=(fx[i]+1)%dims;
+                fx[i]=(int)floor(x[i]);
                 dx[i]=x[i]-fx[i];
                 tx[i]=1.0-dx[i];
-             }
+                fx[i]=fx[i]%dims;
+                nx[i]=(fx[i]+1)%dims;
+             } 
 
              cont[0]=invrho*tx[0]*tx[1]*tx[2];
 	     cont[1]=invrho*dx[0]*tx[1]*tx[2];
@@ -58,7 +63,7 @@ def CIC_serial(positions,dims,BoxSize,cic_densities,weights=None):
 	     cont[5]=invrho*dx[0]*tx[1]*dx[2];
 	     cont[6]=invrho*tx[0]*dx[1]*dx[2];
 	     cont[7]=invrho*dx[0]*dx[1]*dx[2];
-	     
+
              index[0]=dims2*fx[0] + dims*fx[1] + fx[2];
 	     index[1]=dims2*nx[0] + dims*fx[1] + fx[2];
 	     index[2]=dims2*fx[0] + dims*nx[1] + fx[2];
@@ -70,7 +75,7 @@ def CIC_serial(positions,dims,BoxSize,cic_densities,weights=None):
 
              for (j=0;j<8;j++)
                  cic_densities(index[j])+=cont[j];
-
+             
          }
     """
     code_w = """
@@ -83,10 +88,11 @@ def CIC_serial(positions,dims,BoxSize,cic_densities,weights=None):
 
              for (i=0;i<3;i++){
                 x[i]=pos(n,i)*units;
-                fx[i]=((int)floor(x[i]))%dims;
-                nx[i]=(fx[i]+1)%dims;
+                fx[i]=(int)floor(x[i]);
                 dx[i]=x[i]-fx[i];
                 tx[i]=1.0-dx[i];
+                fx[i]=fx[i]%dims;
+                nx[i]=(fx[i]+1)%dims;
              }
 
              cont[0]=invrho*tx[0]*tx[1]*tx[2]*wg(n);
@@ -135,13 +141,15 @@ def CIC_serial(positions,dims,BoxSize,cic_densities,weights=None):
             wv.inline(code,
                       ['pos','units','siz','dims','cic_densities','invrho'],
                       type_converters = wv.converters.blitz,
-                      verbose=2,support_code = support,libraries = ['m'])
+                      verbose=2,support_code = support,libraries = ['m'],
+                      extra_compile_args =['-O3'],)
         else:
             wg=weights[start:end]
             wv.inline(code_w,
                       ['pos','units','siz','dims','cic_densities','invrho','wg'],
                       type_converters = wv.converters.blitz,
-                      verbose=2,support_code = support,libraries = ['m'])
+                      verbose=2,support_code = support,libraries = ['m'],
+                      extra_compile_args =['-O3'],)
 
         start=end
 
@@ -177,10 +185,11 @@ def CIC_openmp(positions,dims,BoxSize,threads,cic_densities):
             {
                 for (i=0;i<3;i++){
                    x[i]=pos(n+l,i)*units;
-                   fx[i]=((int)floor(x[i]))%dims;
-                   nx[i]=(fx[i]+1)%dims;
+                   fx[i]=(int)floor(x[i]);
                    dx[i]=x[i]-fx[i];
                    tx[i]=1.0-dx[i];
+                   fx[i]=fx[i]%dims;
+                   nx[i]=(fx[i]+1)%dims;
                 }
 
                 cont[n][0]=invrho*tx[0]*tx[1]*tx[2];
@@ -233,31 +242,61 @@ def CIC_openmp(positions,dims,BoxSize,threads,cic_densities):
 
 
 
-#n=512**3
-#threads=8
 
-#BoxSize=1.0
-#dims=512
+########################## EXAMPLE OF USAGE #########################
+### CIC_serial without weights ###
+"""
+n=512**3
+BoxSize=500.0 #Mpc/h
+dims=512
 
-#pos=np.random.random((n,3)).astype(np.float32)
+np.random.seed(seed=1)
+pos=(np.random.random((n,3))*BoxSize).astype(np.float32)
+print pos
+
+cic_densities=np.zeros(dims**3,dtype=np.float32)
+CIC_serial(pos,dims,BoxSize,cic_densities)
+
+print np.sum(cic_densities,dtype=np.float64)
+print cic_densities
+print np.min(cic_densities),np.max(cic_densities)
+"""
+
+
+### CIC_serial with weights ###
+"""
+n=512**3
+BoxSize=500.0 #Mpc/h
+dims=512
+
+#pos=(np.random.random((n,3))*BoxSize).astype(np.float32)
 #print pos
 
-#start=time.time()
-#cic_densities=np.zeros(dims**3,dtype=np.float32)
-#weights=np.ones(dims**3,dtype=np.float32)
-#print weights
-#CIC_serial(pos,dims,BoxSize,cic_densities,weights)
-#CIC_serial(pos,dims,BoxSize,cic_densities)
-#print np.sum(cic_densities,dtype=np.float64)
-#print cic_densities
-#end=time.time()
-#print 'total time=',end-start
+weights=np.ones(dims**3,dtype=np.float32)
+print weights
+cic_densities=np.zeros(dims**3,dtype=np.float32)
+CIC_serial(pos,dims,BoxSize,cic_densities,weights)
 
-#start=time.time()
-#cic_densities=np.zeros(dims**3,dtype=np.float32)
-#CIC_openmp(pos,dims,BoxSize,threads,cic_densities)
-#print np.sum(cic_densities,dtype=np.float64)
-#print cic_densities
-#end=time.time()
-#print 'total time=',end-start
+print np.sum(cic_densities,dtype=np.float64)
+print cic_densities
+print np.min(cic_densities),np.max(cic_densities)
+"""
 
+### CIC_openmp 
+"""
+n=512**3
+BoxSize=500.0 #Mpc/h
+dims=512
+
+threads=8
+
+#pos=(np.random.random((n,3))*BoxSize).astype(np.float32)
+#print pos
+
+cic_densities=np.zeros(dims**3,dtype=np.float32)
+CIC_openmp(pos,dims,BoxSize,threads,cic_densities)
+
+print np.sum(cic_densities,dtype=np.float64)
+print cic_densities
+print np.min(cic_densities),np.max(cic_densities)
+"""

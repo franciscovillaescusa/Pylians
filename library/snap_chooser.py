@@ -4,16 +4,18 @@ import sys
 # VARIABLES:
 # Mnu--total neutrino mass: 0.0, 0.3, 0.6, ....
 # z--redshift: 0.0, 0.1, 0.2, 1.0, 3.0, ...
-# som: file contained in som1/som2/cosmos ...
+# location: file contained in som1/som2/cosmos ...
 class snap_chooser:
-    def __init__(self,Mnu,z,som):
+    def __init__(self,Mnu,z,location):
 
         ########## 0.0 eV #########
         if Mnu==0.0:
-            if som=='som1':
+            if location=='som1':
                 folder='/data1/villa/b500p512nu0z99tree'
-            elif som=='som2':
+            elif location=='som2':
                 folder='/disk/disksom2/villa/b500p512nu0z99tree'
+            elif location=='cosmos':
+                folder='/home/cosmos/users/mv249/RUNSG2/Paco/simulations/b500p512nu0z99'
             else:
                 print 'no files in that som'
                 sys.exit()
@@ -81,10 +83,12 @@ class snap_chooser:
 
         ########## 0.3 eV #########
         elif Mnu==0.3:
-            if som=='som1':
+            if location=='som1':
                 folder='/data1/villa/b500p512nu0.3z99'
-            elif som=='som2':
+            elif location=='som2':
                 folder='/disk/disksom2/villa/b500p512nu0.3z99'
+            elif location=='cosmos':
+                folder='/home/cosmos/users/mv249/RUNSG2/Paco/simulations/b500p512nu0.3z99'
             else:
                 print 'no files in that som'
                 sys.exit()
@@ -152,10 +156,12 @@ class snap_chooser:
 
         ########## 0.6 eV #########
         elif Mnu==0.6:
-            if som=='som1':
+            if location=='som1':
                 folder='/data1/villa/b500p512nu0.6z99np1024tree'
-            elif som=='som2':
+            elif location=='som2':
                 folder='/disk/disksom2/villa/b500p512nu0.6z99np1024tree'
+            elif location=='cosmos':
+                folder='/home/cosmos/users/mv249/RUNSG2/Paco/simulations/b500p512nu0.6z99'
             else:
                 print 'no files in that som'
                 sys.exit()
@@ -231,10 +237,10 @@ class snap_chooser:
 Mnu=0.0; 
 z=[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8,
    0.9, 1.0, 1.2, 1.4, 1.6, 2.0, 3.0, 4.0, 5.0]
-som='som2'
+location='som2'
 
 for Z in z:
-    F=snap_chooser(Mnu,Z,som)
+    F=snap_chooser(Mnu,Z,location)
 
     snapshot_fname=F.snap
     groups_fname=F.group

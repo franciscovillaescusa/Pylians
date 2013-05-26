@@ -1,0 +1,197 @@
+#!/bin/bash
+
+############################ INPUT ###############################
+cpus=14
+queue=short
+som=som2
+
+
+location=som2
+mass_criteria=m200
+min_mass=2e12
+max_mass=2e15
+
+N_par=1000000 #only when computing the CDM/NU correlation function
+random_points=1000000 #number of points in the random catalogue
+
+DD_action=compute
+RR_action=compute
+DR_action=compute
+
+DD_name=DD.dat
+RR_name=RR.dat
+DR_name=DR.dat
+
+BoxSize=500.0
+bins=20
+Rmin=0.1
+Rmax=50.0
+
+
+################# 0.0 eV ##################
+Mnu=0.0
+
+####### z=0.0 #######
+z=0.0
+
+mode=halos
+f_out=TPCF_halos_0.0_z=0.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
+
+mode=subhalos
+f_out=TPCF_subhalos_0.0_z=0.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
+
+####### z=0.5 #######
+z=0.5
+
+mode=halos
+f_out=TPCF_halos_0.0_z=0.5.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
+
+mode=subhalos
+f_out=TPCF_subhalos_0.0_z=0.5.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
+
+####### z=1.0 #######
+z=1.0
+
+mode=halos
+f_out=TPCF_halos_0.0_z=1.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
+
+mode=subhalos
+f_out=TPCF_subhalos_0.0_z=1.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
+
+####### z=2.0 #######
+z=2.0
+
+mode=halos
+f_out=TPCF_halos_0.0_z=2.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
+
+mode=subhalos
+f_out=TPCF_subhalos_0.0_z=2.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
+
+
+
+################# 0.3 eV ##################
+Mnu=0.3
+
+####### z=0.0 #######
+z=0.0
+
+mode=halos
+f_out=TPCF_halos_0.3_z=0.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
+
+mode=subhalos
+f_out=TPCF_subhalos_0.3_z=0.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
+
+####### z=0.5 #######
+z=0.5
+
+mode=halos
+f_out=TPCF_halos_0.3_z=0.5.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
+
+mode=subhalos
+f_out=TPCF_subhalos_0.3_z=0.5.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
+
+####### z=1.0 #######
+z=1.0
+
+mode=halos
+f_out=TPCF_halos_0.3_z=1.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
+
+mode=subhalos
+f_out=TPCF_subhalos_0.3_z=1.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
+
+####### z=2.0 #######
+z=2.0
+
+mode=halos
+f_out=TPCF_halos_0.3_z=2.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
+
+mode=subhalos
+f_out=TPCF_subhalos_0.3_z=2.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
+
+
+################# 0.6 eV ##################
+Mnu=0.6
+
+####### z=0.0 #######
+z=0.0
+
+mode=halos
+f_out=TPCF_halos_0.6_z=0.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
+
+mode=subhalos
+f_out=TPCF_subhalos_0.6_z=0.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
+
+####### z=0.5 #######
+z=0.5
+
+mode=halos
+f_out=TPCF_halos_0.6_z=0.5.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
+
+mode=subhalos
+f_out=TPCF_subhalos_0.6_z=0.5.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
+
+####### z=1.0 #######
+z=1.0
+
+mode=halos
+f_out=TPCF_halos_0.6_z=1.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
+
+mode=subhalos
+f_out=TPCF_subhalos_0.6_z=1.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
+
+####### z=2.0 #######
+z=2.0
+
+mode=halos
+f_out=TPCF_halos_0.6_z=2.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
+
+mode=subhalos
+f_out=TPCF_subhalos_0.6_z=2.dat
+
+clusterlauncher -q $queue -s $som -n $cpus python correlation_function.py $Mnu $z $location $mass_criteria $min_mass $max_mass $mode $N_par $random_points $DD_action $RR_action $DR_action $DD_name $RR_name $DR_name $BoxSize $bins $Rmin $Rmax $f_out
