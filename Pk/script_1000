@@ -1,0 +1,644 @@
+#!/bin/bash
+#This script is used to generate the P(k) of the CDM, NU, DM and halos from the
+#new simulations run by Paco: 1000 Mpc/h 512^3 CDM and 512^3 NU particles with
+#the tree ON for the neutrinos.
+
+memory=50G
+
+dims=1024
+
+mass_interval=1
+min_mass=1.6e3  #1.6e3 3.2e3 1.0e4
+max_mass=3.0e5
+
+############################## CDM ###################################
+
+######## z=0 ########
+snapshot_fname=/home/villa/disksom2/1000Mpc_z=99/CDM/snapdir_022/snap_022
+groups_fname=/home/villa/disksom2/1000Mpc_z=99/CDM
+groups_number=22
+
+f_CDM=Pk_DM_0.0_z=0.dat
+f_NU=A
+f_DM=A
+f_CDM_NU=A 
+f_halos=Pk_halos_0.0_z=0.dat
+f_CDM_halos=Pk_DM-halos_0.0_z=0.dat
+f_DM_halos=A
+
+obj=CDM
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos &
+
+obj=halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=CDM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+######## z=0.5 ########
+snapshot_fname=/home/villa/disksom2/1000Mpc_z=99/CDM/snapdir_017/snap_017
+groups_fname=/home/villa/disksom2/1000Mpc_z=99/CDM
+groups_number=17
+
+f_CDM=Pk_DM_0.0_z=0.5.dat
+f_NU=A
+f_DM=A
+f_CDM_NU=A
+f_halos=Pk_halos_0.0_z=0.5.dat
+f_CDM_halos=Pk_DM-halos_0.0_z=0.5.dat
+f_DM_halos=A
+
+obj=CDM
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos 
+
+obj=halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=CDM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+######## z=1 ########
+snapshot_fname=/home/villa/disksom2/1000Mpc_z=99/CDM/snapdir_012/snap_012
+groups_fname=/home/villa/disksom2/1000Mpc_z=99/CDM
+groups_number=12
+
+f_CDM=Pk_DM_0.0_z=1.dat
+f_NU=A
+f_DM=A
+f_CDM_NU=A
+f_halos=Pk_halos_0.0_z=1.dat
+f_CDM_halos=Pk_DM-halos_0.0_z=1.dat
+f_DM_halos=A
+
+obj=CDM
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos 
+
+obj=halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=CDM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+######## z=2 ########
+snapshot_fname=/home/villa/disksom2/1000Mpc_z=99/CDM/snapdir_008/snap_008
+groups_fname=/home/villa/disksom2/1000Mpc_z=99/CDM
+groups_number=8
+
+f_CDM=Pk_DM_0.0_z=2.dat
+f_NU=A
+f_DM=A
+f_CDM_NU=A
+f_halos=Pk_halos_0.0_z=2.dat
+f_CDM_halos=Pk_DM-halos_0.0_z=2.dat
+f_DM_halos=A
+
+obj=CDM
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos 
+
+obj=halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=CDM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+######################################################################
+
+
+
+############################## NU0.3 ###################################
+
+######## z=0 ########
+snapshot_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.3/snapdir_022/snap_022
+groups_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.3
+groups_number=22
+
+f_CDM=Pk_CDM_0.3_z=0.dat
+f_NU=Pk_NU_0.3_z=0.dat
+f_DM=Pk_DM_0.3_z=0.dat
+f_CDM_NU=Pk_CDM-NU_0.3_z=0.dat
+f_halos=Pk_halos_0.3_z=0.dat
+f_CDM_halos=Pk_CDM-halos_0.3_z=0.dat
+f_DM_halos=Pk_DM-halos_0.3_z=0.dat
+
+obj=DM
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=CDM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-NU
+f_DM_halos=Pk_DM-NU_0.3_z=0.dat
+
+clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+######## z=0.5 ########
+snapshot_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.3/snapdir_017/snap_017
+groups_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.3
+groups_number=17
+
+f_CDM=Pk_CDM_0.3_z=0.5.dat
+f_NU=Pk_NU_0.3_z=0.5.dat
+f_DM=Pk_DM_0.3_z=0.5.dat
+f_CDM_NU=Pk_CDM-NU_0.3_z=0.5.dat
+f_halos=Pk_halos_0.3_z=0.5.dat
+f_CDM_halos=Pk_CDM-halos_0.3_z=0.5.dat
+f_DM_halos=Pk_DM-halos_0.3_z=0.5.dat
+
+obj=DM
+
+clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos 
+
+obj=halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=CDM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-NU
+f_DM_halos=Pk_DM-NU_0.3_z=0.5.dat
+
+clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+######## z=1 ########
+snapshot_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.3/snapdir_012/snap_012
+groups_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.3
+groups_number=12
+
+f_CDM=Pk_CDM_0.3_z=1.dat
+f_NU=Pk_NU_0.3_z=1.dat
+f_DM=Pk_DM_0.3_z=1.dat
+f_CDM_NU=Pk_CDM-NU_0.3_z=1.dat
+f_halos=Pk_halos_0.3_z=1.dat
+f_CDM_halos=Pk_CDM-halos_0.3_z=1.dat
+f_DM_halos=Pk_DM-halos_0.3_z=1.dat
+
+obj=DM
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos &
+
+obj=CDM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-NU
+f_DM_halos=Pk_DM-NU_0.3_z=1.dat
+
+clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+######## z=2 ########
+snapshot_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.3/snapdir_008/snap_008
+groups_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.3
+groups_number=8
+
+f_CDM=Pk_CDM_0.3_z=2.dat
+f_NU=Pk_NU_0.3_z=2.dat
+f_DM=Pk_DM_0.3_z=2.dat
+f_CDM_NU=Pk_CDM-NU_0.3_z=2.dat
+f_halos=Pk_halos_0.3_z=2.dat
+f_CDM_halos=Pk_CDM-halos_0.3_z=2.dat
+f_DM_halos=Pk_DM-halos_0.3_z=2.dat
+
+obj=DM
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=CDM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-NU
+f_DM_halos=Pk_DM-NU_0.3_z=2.dat
+
+clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+######################################################################
+
+
+############################## NU0.6 ###################################
+
+######## z=0 ########
+snapshot_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.6/snapdir_022/snap_022
+groups_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.6
+groups_number=22
+
+f_CDM=Pk_CDM_0.6_z=0.dat
+f_NU=Pk_NU_0.6_z=0.dat
+f_DM=Pk_DM_0.6_z=0.dat
+f_CDM_NU=Pk_CDM-NU_0.6_z=0.dat
+f_halos=Pk_halos_0.6_z=0.dat
+f_CDM_halos=Pk_CDM-halos_0.6_z=0.dat
+f_DM_halos=Pk_DM-halos_0.6_z=0.dat
+
+obj=DM
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=CDM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-NU
+f_DM_halos=Pk_DM-NU_0.6_z=0.dat
+
+clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+######## z=0.5 ########
+snapshot_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.6/snapdir_017/snap_017
+groups_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.6
+groups_number=17
+
+f_CDM=Pk_CDM_0.6_z=0.5.dat
+f_NU=Pk_NU_0.6_z=0.5.dat
+f_DM=Pk_DM_0.6_z=0.5.dat
+f_CDM_NU=Pk_CDM-NU_0.6_z=0.5.dat
+f_halos=Pk_halos_0.6_z=0.5.dat
+f_CDM_halos=Pk_CDM-halos_0.6_z=0.5.dat
+f_DM_halos=Pk_DM-halos_0.6_z=0.5.dat
+
+obj=DM
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=CDM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-NU
+f_DM_halos=Pk_DM-NU_0.6_z=0.5.dat
+
+clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+######## z=1 ########
+snapshot_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.6/snapdir_012/snap_012
+groups_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.6
+groups_number=12
+
+f_CDM=Pk_CDM_0.6_z=1.dat
+f_NU=Pk_NU_0.6_z=1.dat
+f_DM=Pk_DM_0.6_z=1.dat
+f_CDM_NU=Pk_CDM-NU_0.6_z=1.dat
+f_halos=Pk_halos_0.6_z=1.dat
+f_CDM_halos=Pk_CDM-halos_0.6_z=1.dat
+f_DM_halos=Pk_DM-halos_0.6_z=1.dat
+
+obj=DM
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=CDM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-NU
+f_DM_halos=Pk_DM-NU_0.6_z=1.dat
+
+clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+######## z=2 ########
+snapshot_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.6/snapdir_008/snap_008
+groups_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.6
+groups_number=8
+
+f_CDM=Pk_CDM_0.6_z=2.dat
+f_NU=Pk_NU_0.6_z=2.dat
+f_DM=Pk_DM_0.6_z=2.dat
+f_CDM_NU=Pk_CDM-NU_0.6_z=2.dat
+f_halos=Pk_halos_0.6_z=2.dat
+f_CDM_halos=Pk_CDM-halos_0.6_z=2.dat
+f_DM_halos=Pk_DM-halos_0.6_z=2.dat
+
+obj=DM
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=CDM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-NU
+f_DM_halos=Pk_DM-NU_0.6_z=2.dat
+
+clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+######################################################################
+
+
+############################## NU0.6s8 ###################################
+
+######## z=0 ########
+snapshot_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.6s8/snapdir_003/snap_003
+groups_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.6s8
+groups_number=3
+
+f_CDM=Pk_CDM_0.6s8_z=0.dat
+f_NU=Pk_NU_0.6s8_z=0.dat
+f_DM=Pk_DM_0.6s8_z=0.dat
+f_CDM_NU=Pk_CDM-NU_0.6s8_z=0.dat
+f_halos=Pk_halos_0.6s8_z=0.dat
+f_CDM_halos=Pk_CDM-halos_0.6s8_z=0.dat
+f_DM_halos=Pk_DM-halos_0.6s8_z=0.dat
+
+obj=DM
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=CDM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-NU
+f_DM_halos=Pk_DM-NU_0.6s8_z=0.dat
+
+clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+######## z=0.5 ########
+snapshot_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.6s8/snapdir_002/snap_002
+groups_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.6s8
+groups_number=2
+
+f_CDM=Pk_CDM_0.6s8_z=0.5.dat
+f_NU=Pk_NU_0.6s8_z=0.5.dat
+f_DM=Pk_DM_0.6s8_z=0.5.dat
+f_CDM_NU=Pk_CDM-NU_0.6s8_z=0.5.dat
+f_halos=Pk_halos_0.6s8_z=0.5.dat
+f_CDM_halos=Pk_CDM-halos_0.6s8_z=0.5.dat
+f_DM_halos=Pk_DM-halos_0.6s8_z=0.5.dat
+
+obj=DM
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=CDM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-NU
+f_DM_halos=Pk_DM-NU_0.6s8_z=0.5.dat
+
+clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+######## z=1 ########
+snapshot_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.6s8/snapdir_001/snap_001
+groups_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.6s8
+groups_number=1
+
+f_CDM=Pk_CDM_0.6s8_z=1.dat
+f_NU=Pk_NU_0.6s8_z=1.dat
+f_DM=Pk_DM_0.6s8_z=1.dat
+f_CDM_NU=Pk_CDM-NU_0.6s8_z=1.dat
+f_halos=Pk_halos_0.6s8_z=1.dat
+f_CDM_halos=Pk_CDM-halos_0.6s8_z=1.dat
+f_DM_halos=Pk_DM-halos_0.6s8_z=1.dat
+
+obj=DM
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=CDM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-NU
+f_DM_halos=Pk_DM-NU_0.6s8_z=1.dat
+
+clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+######## z=2 ########
+snapshot_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.6s8/snapdir_000/snap_000
+groups_fname=/home/villa/disksom2/1000Mpc_z=99/NU0.6s8
+groups_number=0
+
+f_CDM=Pk_CDM_0.6s8_z=2.dat
+f_NU=Pk_NU_0.6s8_z=2.dat
+f_DM=Pk_DM_0.6s8_z=2.dat
+f_CDM_NU=Pk_CDM-NU_0.6s8_z=2.dat
+f_halos=Pk_halos_0.6s8_z=2.dat
+f_CDM_halo=Pk_CDM-halos_0.6s8_z=2.dat
+f_DM_halos=Pk_DM-halos_0.6s8_z=2.dat
+
+obj=DM
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=CDM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=DM-NU
+f_DM_halos=Pk_DM-NU_0.6s8_z=2.dat
+
+clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+######################################################################
+
+
+############################## CDM2 ###################################
+
+######## z=0 ########
+snapshot_fname=/home/villa/disksom2/1000Mpc_z=99/CDM2/snapdir_003/snap_003
+groups_fname=/home/villa/disksom2/1000Mpc_z=99/CDM2
+groups_number=3
+
+f_CDM=Pk_DM_0.0s8_z=0.dat
+f_NU=A
+f_DM=A
+f_CDM_NU=A
+f_halos=Pk_halos_0.0s8_z=0.dat
+f_CDM_halos=Pk_DM-halos_0.0s8_z=0.dat
+f_DM_halos=A
+
+obj=CDM
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=CDM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+######## z=0.5 ########
+snapshot_fname=/home/villa/disksom2/1000Mpc_z=99/CDM2/snapdir_002/snap_002
+groups_fname=/home/villa/disksom2/1000Mpc_z=99/CDM2
+groups_number=2
+
+f_CDM=Pk_DM_0.0s8_z=0.5.dat
+f_NU=A
+f_DM=A
+f_CDM_NU=A
+f_halos=Pk_halos_0.0s8_z=0.5.dat
+f_CDM_halos=Pk_DM-halos_0.0s8_z=0.5.dat
+f_DM_halos=A
+
+obj=CDM
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=CDM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+######## z=1 ########
+snapshot_fname=/home/villa/disksom2/1000Mpc_z=99/CDM2/snapdir_001/snap_001
+groups_fname=/home/villa/disksom2/1000Mpc_z=99/CDM2
+groups_number=1
+
+f_CDM=Pk_DM_0.0s8_z=1.dat
+f_NU=A
+f_DM=A
+f_CDM_NU=A
+f_halos=Pk_halos_0.0s8_z=1.dat
+f_CDM_halos=Pk_DM-halos_0.0s8_z=1.dat
+f_DM_halos=A
+
+obj=CDM
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=CDM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+######## z=2 ########
+snapshot_fname=/home/villa/disksom2/1000Mpc_z=99/CDM2/snapdir_000/snap_000
+groups_fname=/home/villa/disksom2/1000Mpc_z=99/CDM2
+groups_number=0
+
+f_CDM=Pk_DM_0.0s8_z=2.dat
+f_NU=A
+f_DM=A
+f_CDM_NU=A
+f_halos=Pk_halos_0.0s8_z=2.dat
+f_CDM_halos=Pk_DM-halos_0.0s8_z=2.dat
+f_DM_halos=A
+
+obj=CDM
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+
+obj=CDM-halos
+
+#clusterlauncher -n 1 -m $memory python Pk.py $snapshot_fname $groups_fname $groups_number $obj $mass_interval $min_mass $max_mass $dims $f_CDM $f_NU $f_DM $f_CDM_NU $f_halos $f_CDM_halos $f_DM_halos
+######################################################################
+

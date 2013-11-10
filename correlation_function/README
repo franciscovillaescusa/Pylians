@@ -60,10 +60,7 @@ number of particles contained in the random catalogue.
 For computing the TPCF it is good to use these files and avoid computing the
 number of random pairs. It is important that the bins used are equal to those
 of the RR files, and that the random catalogue used (for computing the DR term) is the same that the one used for computing the RR files.
-If the RR files are not present, one simple way to obtain them is by measuring
-the TPCF for halos (at z=0 for example) for one of the N-body simulations using
-the correlation_function.py code. The RR file obtained can be used in the 
-future for measuring the TPCF of CDM or neutrinos.
+If the RR files are not present, the code RR_file.py can be used to get them.The RR file obtained can be used in the future for measuring the TPCF of CDM or neutrinos.
 
 
 ---- results ----

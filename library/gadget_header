@@ -30,7 +30,7 @@ print 'cooling=',head.cooling
 print 'Omega_m,Omega_l=',head.omega_m,head.omega_l
 print 'h=',head.hubble,'\n'
   
-rhocrit=2.775e11 #h**2 M_sun/Mpc**3
+rhocrit=2.77536627e11 #h**2 M_sun/Mpc**3
 rhocrit=rhocrit/1e9 #h**2M_sun/kpc**3
   
 Omega_DM=head.nall[1]*head.massarr[1]*1e10/(head.boxsize**3*rhocrit)

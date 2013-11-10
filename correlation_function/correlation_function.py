@@ -23,43 +23,43 @@ myrank=comm.Get_rank()
 if len(sys.argv)>1:
     sa=sys.argv
     
-    Mnu=float(sa[1]); z=float(sa[2]); location=sa[3]
+    Mnu=float(sa[1]); z=float(sa[2]); Box=int(sa[3]); location=sa[4]
 
-    mass_criteria=sa[4]; min_mass=float(sa[5]); max_mass=float(sa[6])
-    mode=sa[7]
+    mass_criteria=sa[5]; min_mass=float(sa[6]); max_mass=float(sa[7])
+    mode=sa[8]
 
-    N_par=int(sa[8]); random_points=int(sa[9])
+    N_par=int(sa[9]); random_points=int(sa[10])
 
-    DD_action=sa[10]; RR_action=sa[11]; DR_action=sa[12]
-    DD_name=sa[13];   RR_name=sa[14];   DR_name=sa[15]
+    DD_action=sa[11]; RR_action=sa[12]; DR_action=sa[13]
+    DD_name=sa[14];   RR_name=sa[15];   DR_name=sa[16]
 
-    random_file=sa[16]
+    random_file=sa[17]
 
-    BoxSize=float(sa[17])
-    bins=int(sa[18]); Rmin=float(sa[19]); Rmax=float(sa[20])
+    BoxSize=float(sa[18])
+    bins=int(sa[19]); Rmin=float(sa[20]); Rmax=float(sa[21])
 
-    f_out=sa[21]
+    f_out=sa[22]
 else:
-    Mnu=0.6; z=0.5; location='som2'
+    Mnu=0.0; z=0.0; Box=1000; location='cosmos'
 
     mass_criteria='m200' #'t200' 'm200' or 'c200'
-    min_mass=2e12 #Msun/h
-    max_mass=2e15 #Msun/h
-    mode='subhalos' #'halos','subhalos' or 'DM'
+    min_mass=2e12*8.0 #Msun/h
+    max_mass=3e15 #Msun/h
+    mode='halos' #'halos','subhalos' or 'DM'
 
     N_par=300000 #number of random particles from the simulation (only for DM/NU)
     random_points=10000000
 
-    random_file='/disk/disksom2/villa/Correlation_function/Random_catalogue/'
+    random_file='/home/cosmos/users/mv249/RUNSG2/Paco/Random_catalogue/'
     random_file+='random_catalogue_1e7.dat'
 
     DD_action='compute'; RR_action='read'; DR_action='compute'
-    DD_name='DD.dat'; RR_name='RR_0.106_53_40_1e7.dat'; DR_name='DR.dat'
+    DD_name='DD.dat'; RR_name='RR_0.206_103_40_1e7.dat'; DR_name='DR.dat'
 
-    BoxSize=500.0 #Mpc/h
+    BoxSize=1000.0 #Mpc/h
     bins=40
-    Rmin=0.106
-    Rmax=53.0
+    Rmin=0.103*2.0
+    Rmax=51.5*2.0
 
     f_out='borrar.dat'
 #'TPCF_DM_0.0_z=2.dat'
@@ -69,7 +69,7 @@ else:
 #### MASTER ####
 if myrank==0:
     #obtain snapshot/subfind-group file name
-    F=SC.snap_chooser(Mnu,z,location)
+    F=SC.snap_chooser(Mnu,z,Box,location)
     snapshot_fname=F.snap
     groups_fname=F.group
     groups_number=F.group_number

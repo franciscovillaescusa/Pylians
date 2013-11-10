@@ -16,27 +16,27 @@ myrank=comm.Get_rank()
 ########### INPUT #############
 if len(sys.argv)>1:
     sa=sys.argv
-    Mnu=float(sa[1]); z=float(sa[2]); som=sa[3]
+    Mnu=float(sa[1]); z=float(sa[2]); Box=int(sa[3]); som=sa[4]
 
-    BoxSize=float(sa[4]); points_r=int(sa[5])
+    BoxSize=float(sa[5]); points_r=int(sa[6])
 
-    DD_action=sa[6]; DR_action=sa[7]; RR_action=sa[8]
-    DD_name=sa[9]; DR_name=sa[10]; RR_name=sa[11]
+    DD_action=sa[7]; DR_action=sa[8]; RR_action=sa[9]
+    DD_name=sa[10]; DR_name=sa[11]; RR_name=sa[12]
 
-    D1D2_action=sa[12]; D1R_action=sa[13]; D2R_action=sa[14]
-    D1D2_name=sa[15]; D1R_name=sa[16]; D2R_name=sa[17]
+    D1D2_action=sa[13]; D1R_action=sa[14]; D2R_action=sa[15]
+    D1D2_name=sa[16]; D1R_name=sa[17]; D2R_name=sa[18]
 
-    random_file=sa[18]
+    random_file=sa[19]
 
-    bins=int(sa[19]); Rmin=float(sa[20]); Rmax=float(sa[21])
-    Np=int(sa[22])
+    bins=int(sa[20]); Rmin=float(sa[21]); Rmax=float(sa[22])
+    Np=int(sa[23])
 
-    f_CDM=sa[23]; f_NU=sa[24]; f_CDM_NU=sa[25]; f_DM=sa[26]
+    f_CDM=sa[24]; f_NU=sa[25]; f_CDM_NU=sa[26]; f_DM=sa[27]
 
-    Omega_CDM=float(sa[27]); Omega_NU=float(sa[28])
+    Omega_CDM=float(sa[28]); Omega_NU=float(sa[29])
 
 else:
-    Mnu=0.3; z=0.5; som='som2'
+    Mnu=0.3; z=0.5; Box=1000; som='som2'
 
     BoxSize=500.0 #Mpc/h
     points_r=10000000
@@ -69,7 +69,7 @@ Omega_DM=Omega_CDM+Omega_NU
 #### MASTER ####
 if myrank==0:
     #obtain subfind group file name
-    F=SC.snap_chooser(Mnu,z,som)
+    F=SC.snap_chooser(Mnu,z,Box,som)
     snapshot_fname=F.snap
 
     #create the random catalogue or read it: positions in Mpc/h

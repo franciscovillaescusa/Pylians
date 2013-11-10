@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+
+import numpy as np
+import os
+import sys
+import readsubf
+
+if len(sys.argv)!=3:
+    print 'Usage:'
+    print 'subfind_info folder_containing_groups/subhalos number'
+    sys.exit()
+
+groups_fname=sys.argv[1]
+groups_number=int(sys.argv[2])
+
+
+#read CDM halos information
+halos=readsubf.subfind_catalog(groups_fname,groups_number,
+                               group_veldisp=True,masstab=True,
+                               long_ids=True,swap=False)
+
+H_pos=halos.group_pos
+
+print '######################### GROUPS #############################'
+print '# of groups found = ',len(H_pos),'\n'
+
+print np.min(H_pos[:,0]),'< X [kpc/h] <',np.max(H_pos[:,0])
+print np.min(H_pos[:,1]),'< Y [kpc/h] <',np.max(H_pos[:,1])
+print np.min(H_pos[:,2]),'< Z [kpc/h] <',np.max(H_pos[:,2]),'\n'
+
+H_mass=halos.group_m_tophat200*1e10   #Msun/h
+H_radius=halos.group_r_tophat200      #kpc/h
+print np.min(H_mass),'< M_tophat200 [Msun/h] <',np.max(H_mass)
+print np.min(H_radius),'< r_tophat200 [kpc/h] <',np.max(H_radius),'\n'
+
+H_mass=halos.group_m_mean200*1e10   #Msun/h
+H_radius=halos.group_r_mean200      #kpc/h
+print np.min(H_mass),'< M_mean200 [Msun/h] <',np.max(H_mass)
+print np.min(H_radius),'< r_mean200 [kpc/h] <',np.max(H_radius),'\n'
+
+H_mass=halos.group_m_crit200*1e10   #Msun/h
+H_radius=halos.group_r_crit200      #kpc/h
+print np.min(H_mass),'< M_crit200 [Msun/h] <',np.max(H_mass)
+print np.min(H_radius),'< r_crit200 [kpc/h] <',np.max(H_radius),'\n'
+
+
+
+
+#read subhalos information
+S_mass=halos.sub_mass*1e10          #Msun/h
+S_pos=halos.sub_pos                 #kpc/h
+
+print '######################### SUBHALOS #############################'
+print '# of subhalos found = ',len(S_pos),'\n'
+
+print np.min(S_pos[:,0]),'< X [kpc/h] <',np.max(S_pos[:,0])
+print np.min(S_pos[:,1]),'< Y [kpc/h] <',np.max(S_pos[:,1])
+print np.min(S_pos[:,2]),'< Z [kpc/h] <',np.max(S_pos[:,2]),'\n'
+
+print np.min(S_mass),'< M_subhalos [Msun/h] <',np.max(S_mass)
+

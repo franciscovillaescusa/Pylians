@@ -26,8 +26,8 @@ def hod(snapshot_fname,groups_fname,groups_number,min_mass,max_mass,
     BoxSize=head.boxsize    #BoxSize in kpc/h
 
     #read positions and IDs of DM particles: sort the IDs array
-    DM_pos=readsnap.read_block(snapshot_fname,"POS ",parttype=1) #kpc/h
-    DM_ids=readsnap.read_block(snapshot_fname,"ID  ",parttype=1) #kpc/h
+    DM_pos=readsnap.read_block(snapshot_fname,"POS ",parttype=-1) #kpc/h
+    DM_ids=readsnap.read_block(snapshot_fname,"ID  ",parttype=-1)-1 
     sorted_ids=DM_ids.argsort(axis=0)
     #the particle whose ID is N is located in the position sorted_ids[N]
     #i.e. DM_ids[sorted_ids[N]]=N
@@ -37,7 +37,7 @@ def hod(snapshot_fname,groups_fname,groups_number,min_mass,max_mass,
     #read the IDs of the particles belonging to the CDM halos
     halos_ID=readsubf.subf_ids(groups_fname,groups_number,0,0,
                                long_ids=True,read_all=True)
-    IDs=halos_ID.SubIDs
+    IDs=halos_ID.SubIDs-1
     del halos_ID
 
     #read CDM halos information
@@ -82,11 +82,11 @@ def hod(snapshot_fname,groups_fname,groups_number,min_mass,max_mass,
         Mmin=0.5*(Mmin1+Mmin2) #estimation of the HOD parameter Mmin
 
         total_galaxies=0
-        inside=np.where(halo_mass>Mmin)[0]
+        inside=np.where(halo_mass>Mmin)[0] #take all galaxies with M>Mmin
         mass=halo_mass[inside] #only halos with M>Mmin have central/satellites
 
         total_galaxies=mass.shape[0]+np.sum((mass/M1)**alpha)
-        mean_density=total_galaxies*1.0/(BoxSize*1e-3)**3
+        mean_density=total_galaxies*1.0/(BoxSize*1e-3)**3 #galaxies/(Mpc/h)^3
 
         if (np.absolute((mean_density-fiducial_density)/fiducial_density)<thres):
             i=max_iterations
@@ -239,8 +239,9 @@ def hod(snapshot_fname,groups_fname,groups_number,min_mass,max_mass,
 #fiducial_density: galaxy number density to be reproduced, in (h/Mpc)^3
 def hod_fast(DM_pos,sorted_ids,IDs,halo_mass,halo_pos,halo_radius,halo_len,
              halo_offset,BoxSize,min_mass,max_mass,fiducial_density,
-             M1,alpha,verbose=False):
+             M1,alpha,seed,verbose=False):
 
+    problematic_cases=0 #number of problematic cases (e.g. halos with Rvir=0.0)
     thres=1e-3 #controls the max relative error to accept a galaxy density
 
     ##### COMPUTE Mmin GIVEN M1 & alpha #####
@@ -281,6 +282,7 @@ def hod_fast(DM_pos,sorted_ids,IDs,halo_mass,halo_pos,halo_radius,halo_len,
     del inside
 
     #compute number of satellites in each halo using the Poisson distribution 
+    np.random.seed(seed) #this is just to check convergence on w_p(r_p)
     N_mean_sat=(halo_mass/M1)**alpha #mean number of satellites
     N_sat=np.empty(len(N_mean_sat),dtype=np.int32)
     for i in range(len(N_sat)):
@@ -302,6 +304,7 @@ def hod_fast(DM_pos,sorted_ids,IDs,halo_mass,halo_pos,halo_radius,halo_len,
     #index: variable that go through halos (may be several galaxies in a halo)
     #i: variable that go through galaxies
     #count: find number of galaxies that lie beyond its host halo virial radius
+    random.seed(seed) #this is just to check convergence on w_p(r_p)
     index=0; count=0; i=0 
     while (index<halo_mass.size):
 
@@ -342,8 +345,12 @@ def hod_fast(DM_pos,sorted_ids,IDs,halo_mass,halo_pos,halo_radius,halo_len,
                 
             radii=np.sqrt(posc[:,0]**2+posc[:,1]**2+posc[:,2]**2)
             inside=np.where(radii<radius)[0]
-            selected=random.sample(inside,Nsat)
-            pos=pos[selected]
+            if len(inside)<Nsat:
+                problematic_cases+=1
+                print 'problematic case',len(inside),Nsat
+            else:
+                selected=random.sample(inside,Nsat)
+                pos=pos[selected]
 
             #aditional, not esential check. Can be comment out
             #posc=pos-position
@@ -369,8 +376,8 @@ def hod_fast(DM_pos,sorted_ids,IDs,halo_mass,halo_pos,halo_radius,halo_len,
             #    print pos
             #    count+=1
 
-            for j in range(Nsat):
-                pos_galaxies[i]=pos[j]; i+=1
+                for j in range(Nsat):
+                    pos_galaxies[i]=pos[j]; i+=1
         index+=1
 
     if verbose:

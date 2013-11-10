@@ -1,0 +1,121 @@
+import numpy as np
+import readsubf
+import readfof
+import readsnap
+import sys
+
+snapshot_fname='../../snapdir_022/snap_022'
+groups_number=22
+mass1=4e13
+mass2=4e13
+
+#read DM positions and IDS
+#Pos=readsnap.read_block(snapshot_fname,"POS ",parttype=-1)/1e3 #Mpc/h
+#IDS=readsnap.read_block(snapshot_fname,"ID  ",parttype=-1)
+#print len(IDS),np.min(IDS),np.max(IDS)
+#sorted_ids=IDS.argsort(axis=0); del IDS
+#the particle whose ID is N is located in the position sorted_ids[N]
+#i.e. DM_ids[sorted_ids[N]]=N
+#the position of the particle whose ID is N would be:
+#DM_pos[sorted_ids[N]]
+
+############################### CDM+NU #######################################
+groups_fname='./'
+
+
+#read FoF halos information
+#fof=readfof.FoF_catalog(groups_fname,groups_number,long_ids=True,swap=False)
+#F_pos1=fof.GroupPos/1e3        #positions in Mpc/h
+#F_mass1=fof.GroupMass*1e10     #masses in Msun/h
+#F_len1=fof.GroupLen            #number of particles in the FoF halos
+#del fof
+
+#read CDM halos/subhalos information
+halos=readsubf.subfind_catalog(groups_fname,groups_number,
+                               group_veldisp=True,masstab=True,
+                               long_ids=True,swap=False)
+#F_pos1=halos.group_pos/1e3             #positions in Mpc/h
+#F_mass1=halos.group_m_mean200*1e10     #masses in Msun/h
+
+F_pos1=halos.sub_pos/1e3                 #positions in Mpc/h
+F_mass1=halos.sub_mass*1e10              #masses in Msun/h
+F_len1=halos.sub_len
+del halos
+
+#inside=np.where(F_mass1>mass1)[0]
+#F_pos1=F_pos1[inside]
+
+print len(F_pos1)
+
+#print F_pos1[0]
+#print F_num1[0]
+
+#diff=Pos-F_pos1[100000]
+#diff=np.sqrt(diff[:,0]**2+diff[:,1]**2+diff[:,2]**2)
+#print 'distance=',np.min(diff)
+#sys.exit()
+
+################################## CDM #######################################
+groups_fname='../'
+
+#read FoF halos information
+#fof=readfof.FoF_catalog(groups_fname,groups_number,long_ids=True,swap=False)
+#F_pos2=fof.GroupPos/1e3        #positions in Mpc/h
+#F_mass2=fof.GroupMass*1e10     #masses in Msun/h
+#F_len2=fof.GroupLen            #number of particles in the FoF halo
+#F_offset2=fof.GroupOffset      #offset in the FoF halo
+#F_ID2=fof.GroupIDs             #ID of the particles in the FoF halo
+#del fof
+
+#read CDM halos/subhalos information
+halos=readsubf.subfind_catalog(groups_fname,groups_number,
+                               group_veldisp=True,masstab=True,
+                               long_ids=True,swap=False)
+#F_pos2=halos.group_pos/1e3             #positions in Mpc/h
+#F_mass2=halos.group_m_mean200*1e10     #masses in Msun/h
+
+F_pos2=halos.sub_pos/1e3                 #positions in Mpc/h
+F_mass2=halos.sub_mass*1e10              #masses in Msun/h
+F_len2=halos.sub_len
+del halos
+
+inside=np.where(F_mass2>mass2)[0]
+F_pos2=F_pos2[inside]
+
+print len(F_pos2)
+
+
+#num=120000
+#print F_pos2[num]
+#print F_len2[num]
+#print F_offset2[num]
+
+#partial_ids=F_ID2[F_offset2[num]:F_offset2[num]+F_len2[num]]-1
+#partial_pos=Pos[sorted_ids[partial_ids]]
+#print partial_pos
+#print np.sum(partial_pos,axis=0)/len(partial_pos)
+
+#diff=partial_pos-F_pos2[num]
+#diff=np.sqrt(diff[:,0]**2+diff[:,1]**2+diff[:,2]**2)
+#print np.sort(diff)
+#sys.exit()
+
+
+f=open('borrar2.dat','w')
+distance=[]
+for number in range(len(F_pos2)):
+    print number
+    diff=F_pos1-F_pos2[number]
+    diff=np.sqrt(diff[:,0]**2+diff[:,1]**2+diff[:,2]**2)
+    index=np.where(diff==np.min(diff))[0]
+    #F_pos2=np.delete(F_pos2,index,axis=0)
+    #print F_pos1[number]
+    #print F_pos2[index]
+    #print np.min(diff)
+    distance.append(np.min(diff))
+    f.write(str(F_len1[index][0])+' '+str(F_len2[number])+' '+str(diff[index][0])+' '+str(F_mass1[index][0])+' '+str(F_mass2[number])+'\n')
+f.close()
+
+distance=np.array(distance)
+distance=np.sort(distance)
+print distance[-100:]

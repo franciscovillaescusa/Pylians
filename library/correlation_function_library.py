@@ -307,6 +307,52 @@ def TPCCF(pos_g1,pos_g2,pos_r,BoxSize,
 ################################################################################
 
 
+################################################################################
+#This function is used to compute the DD file (the number of random pairs in a
+#random catalogue) that it is need for massive computation of the 2pt 
+#correlation function
+#from an N-body simulation. It takes into account boundary conditions
+#VARIABLES:
+#pos_r: array containing the positions of the random particles catalogue
+#BoxSize: Size of the Box. Units must be equal to those of pos_r/pos_g
+#RR_name: file name to write/read random-random pairs results
+#bins: number of bins to compute the 2pt correlation function
+#Rmin: minimum radius to compute the 2pt correlation function
+#Rmax: maximum radius to compute the 2pt correlation function
+#USAGE: at the end of the file there is a example of how to use this function
+def DD_file(pos_r,BoxSize,RR_name,bins,Rmin,Rmax):
+
+    #dims determined requiring that no more 8 adyacent subboxes will be taken
+    dims=int(BoxSize/Rmax)
+    dims2=dims**2; dims3=dims**3
+
+    ##### MASTER #####
+    if myrank==0:
+
+        #compute the indexes of the random catalogue
+        Nr=len(pos_r)*1.0; indexes_r=[]
+        coord=np.floor(dims*pos_r/BoxSize).astype(np.int32)
+        index=dims2*coord[:,0]+dims*coord[:,1]+coord[:,2]
+        for i in range(dims3):
+            ids=np.where(index==i)[0]
+            indexes_r.append(ids)
+        indexes_r=np.array(indexes_r)
+
+        #compute random-random pairs: RR
+        RR=DDR_pairs(bins,Rmin,Rmax,BoxSize,dims,indexes1=indexes_r,
+                     indexes2=None,pos1=pos_r,pos2=None)
+        print RR
+        print np.sum(RR)
+        #write results to a file
+        write_results(RR_name,RR,bins,'radial')
+
+    ##### SLAVES #####
+    else:
+        DDR_pairs(bins,Rmin,Rmax,BoxSize,dims,
+                  indexes1=None,indexes2=None,pos1=None,pos2=None)           
+################################################################################
+
+
 
 
 
@@ -481,7 +527,8 @@ def DR_distances(p1,p2,BoxSize,bins,Rmin,Rmax,pairs):
        }
     """
     wv.inline(code,['p1','p2','l1','l2','BoxSize','Rmin','Rmax','bins','pairs'],
-              type_converters = wv.converters.blitz,support_code = support)
+              type_converters = wv.converters.blitz,
+              support_code = support)
 
     return pairs
 ################################################################################
@@ -704,4 +751,23 @@ else:
     TPCCF(pos_g1,pos_g2,pos_r,BoxSize,D1D2_action,D1R_action,D2R_action,
           RR_action,D1D2_name,D1R_name,D2R_name,RR_name,bins,Rmin,Rmax,
           verbose=True)     
+"""
+
+############ EXAMPLE OF USAGE: DD_file ############
+"""
+points_r=200000
+
+BoxSize=500.0 #Mpc/h
+Rmin=1.0      #Mpc/h
+Rmax=50.0     #Mpc/h
+bins=30
+
+RR_name='RR.dat'
+
+if myrank==0:
+    pos_r=np.random.random((points_r,3))*BoxSize
+    DD_file(pos_r,BoxSize,RR_name,bins,Rmin,Rmax)
+else:
+    pos_r=None
+    DD_file(pos_r,BoxSize,RR_name,bins,Rmin,Rmax)
 """
