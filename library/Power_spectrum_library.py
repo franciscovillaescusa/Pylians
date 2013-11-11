@@ -39,8 +39,8 @@ def power_spectrum(pos,dims,BoxSize,shoot_noise_correction=True):
     #FFT of the delta field (scipy.fftpack seems superior to numpy.fft)
     delta=np.reshape(delta,(dims,dims,dims))
     print 'Computing the FFT of the field...'; start_fft=time.clock()
-    delta_k=np.fft.ifftn(delta)
-    #delta_k=scipy.fftpack.ifftn(delta,overwrite_x=True); del delta
+    #delta_k=np.fft.ifftn(delta)
+    delta_k=scipy.fftpack.ifftn(delta,overwrite_x=True); del delta
     print 'done: time taken for computing the FFT=',time.clock()-start_fft
     delta_k=np.ravel(delta_k)
 
