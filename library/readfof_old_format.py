@@ -16,14 +16,12 @@
         #--------
         #updated time 19 Oct 2012 by wgcui
 
-#For simulations with SFR, set SFR=True
-
 import numpy as np
 import os
 from struct import unpack
 
 class FoF_catalog:
-    def __init__(self,basedir,snapnum,long_ids=False,swap=False,SFR=False):
+    def __init__(self,basedir,snapnum,long_ids=False,swap=False):
 
         if long_ids: format=np.uint64
         else: format=np.uint32
@@ -53,8 +51,6 @@ class FoF_catalog:
                 self.GroupVel=np.empty(TNG,dtype=np.dtype((np.float32,3)))
                 self.GroupTLen=np.empty(TNG,dtype=np.dtype((np.float32,6)))
                 self.GroupTMass=np.empty(TNG,dtype=np.dtype((np.float32,6)))
-                if SFR:
-                    self.GroupSFR=np.empty(TNG,dtype=np.float32)
             if NG>0:
                 locs=slice(skip,skip+NG)
                 self.GroupLen[locs]=np.fromfile(f,dtype=np.int32,count=NG)
@@ -64,8 +60,6 @@ class FoF_catalog:
                 self.GroupVel[locs]=np.fromfile(f,dtype=np.dtype((np.float32,3)),count=NG)
                 self.GroupTLen[locs]=np.fromfile(f,dtype=np.dtype((np.float32,6)),count=NG)
                 self.GroupTMass[locs]=np.fromfile(f,dtype=np.dtype((np.float32,6)),count=NG)
-                if SFR:
-                    self.GroupSFR[locs]=np.fromfile(f,dtype=np.float32,count=NG)
                 skip+=NG
 
                 if swap:
@@ -76,13 +70,12 @@ class FoF_catalog:
                     self.GroupVel.byteswap(True)
                     self.GroupTLen.byteswap(True)
                     self.GroupTMass.byteswap(True)
-                    if SFR:
-                        self.GroupSFR.byteswap(True)
 
             curpos = f.tell()
             f.seek(0,os.SEEK_END)
             if curpos != f.tell():
                 print "Warning: finished reading before EOF for tab file",fnb
+                print curpos,f.tell()
             f.close()
             fnb+=1
             if fnb==self.Nfiles: Final=True
