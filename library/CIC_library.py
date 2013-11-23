@@ -550,6 +550,144 @@ def NGP_serial(positions,dims,BoxSize,ngp_densities,weights=None):
 
     return ngp_densities
 ################################################################################
+#This routine computes the values of the density on each point of a regular
+#grid using the TSC interpolation scheme
+def TSC_serial(positions,dims,BoxSize,cic_densities,weights=None):
+    n_max=850**3 #maximum number of elements weave can deal with
+
+    units=dims*1.0/BoxSize
+    total_siz=positions.shape[0]
+
+    support = """
+         #include <math.h>
+    """
+    code = """
+         int dims2=dims*dims;
+         float x,W[3][4],cont,diff;
+         int num[3][4],index,point;
+         int xmin,i,j,k;
+
+         for (int n=0;n<siz;n++){
+
+             for (i=0;i<3;i++){
+                x=pos(n,i)*units;
+                xmin=(int)floor(x-1.5+0.5);
+
+                for (k=0;k<4;k++){
+                   point=xmin+k;
+                   num[i][k]=(point+dims)%dims;
+
+                   diff=fabs(point-x);
+                   if (diff<0.5){
+                       W[i][k]=0.75-diff*diff;
+                   }
+                   else{
+                      if (diff<1.5){
+                          W[i][k]=(1.5-diff)*(1.5-diff)/2.0;
+                      }
+                      else{
+                          W[i][k]=0.0; 
+                      }
+                   }
+                }
+             }
+
+             for (i=0;i<4;i++){
+                for (j=0;j<4;j++){
+                   for (k=0;k<4;k++){
+                       index=dims2*num[0][i]+dims*num[1][j]+num[2][k];
+                       cont=W[0][i]*W[1][j]*W[2][k];
+                       cic_densities(index)+=cont;
+                   }
+                }
+             }
+
+         }    
+    """
+    code_w = """
+         int dims2=dims*dims;
+         float x,W[3][4],cont,diff;
+         int num[3][4],index,point;
+         int xmin,i,j,k;
+
+         for (int n=0;n<siz;n++){
+
+             for (i=0;i<3;i++){
+                x=pos(n,i)*units;
+                xmin=(int)floor(x-1.5+0.5);
+
+                for (k=0;k<4;k++){
+                   point=xmin+k;
+                   num[i][k]=(point+dims)%dims;
+
+                   diff=fabs(point-x);
+                   if (diff<0.5){
+                       W[i][k]=0.75-diff*diff;
+                   }
+                   else{
+                      if (diff<1.5){
+                          W[i][k]=(1.5-diff)*(1.5-diff)/2.0;
+                      }
+                      else{
+                          W[i][k]=0.0;
+                      }
+                   }
+                }
+             }
+
+             for (i=0;i<4;i++){
+                for (j=0;j<4;j++){
+                   for (k=0;k<4;k++){
+                       index=dims2*num[0][i]+dims*num[1][j]+num[2][k];
+                       cont=W[0][i]*W[1][j]*W[2][k]*wg(n); 
+                       cic_densities(index)+=cont;
+                   }
+                }
+             }
+
+         }    
+    """
+
+    #check that the sizes of the positions and the weights are the same
+    if weights!=None:
+        if total_siz!=weights.shape[0]:
+            print 'the sizes of the positions and weights are not the same'
+            print total_siz,weights.shape[0]
+            sys.exit()
+
+    #if the array to be sent is larger than n_max, split it into smaller pieces
+    start=0; final=False
+    while not(final):
+
+        if start+n_max>total_siz:
+            end=total_siz; final=True
+        else:
+            end=start+n_max
+
+        print start,'--',end
+        pos=positions[start:end]
+        siz=pos.shape[0]
+
+        if weights==None:
+            wv.inline(code,['pos','units','siz','dims','cic_densities'],
+                      type_converters = wv.converters.blitz,
+                      verbose=2,support_code = support,libraries = ['m'],
+                      extra_compile_args =['-O3'],)
+        else:
+            wg=weights[start:end]
+            wv.inline(code_w,['pos','units','siz','dims','cic_densities','wg'],
+                      type_converters = wv.converters.blitz,
+                      verbose=2,support_code = support,libraries = ['m'],
+                      extra_compile_args =['-O3'],)
+
+        start=end
+
+
+    return cic_densities
+################################################################################
+
+
+
 
 
 ############################### EXAMPLE OF USAGE ###############################
@@ -726,7 +864,49 @@ if len(sys.argv)==2:
         print np.min(cic_overdensities),np.max(cic_overdensities)
 
 #########################################################################
+        ### TSC_serial ###
+        
+        n=100**3
+        BoxSize=500.0 #Mpc/h
+        dims=128
+
+        #pos=(np.random.random((n,3))*BoxSize).astype(np.float32)
+        #print pos
+
+        tsc_overdensities=np.zeros(dims**3,dtype=np.float32)
+        #compute densities
+        TSC_serial(pos,dims,BoxSize,tsc_overdensities)
+        tsc_overdensities*=dims**3*1.0/n #divide by mean to obtain overdensities
+
+        print np.sum(tsc_overdensities,dtype=np.float64)
+        print tsc_overdensities
+        print np.min(tsc_overdensities),np.max(tsc_overdensities)
+
+#########################################################################
+        ### TSC_serial with weights ###
+        
+        n=100**3
+        BoxSize=500.0 #Mpc/h
+        dims=128
+
+        #pos=(np.random.random((n,3))*BoxSize).astype(np.float32)
+        #print pos
+        
+        weights=np.ones(n,dtype=np.float32)
+        print weights
+        tsc_overdensities=np.zeros(dims**3,dtype=np.float32)
+        #compute densities
+        TSC_serial(pos,dims,BoxSize,tsc_overdensities,weights)
+        tsc_overdensities*=dims**3*1.0/n #divide by mean to obtain overdensities
+
+        print np.sum(tsc_overdensities,dtype=np.float64)
+        print tsc_overdensities
+        print np.min(tsc_overdensities),np.max(tsc_overdensities)
+
+#########################################################################
 
     else:
         print 'To compile the code type:'
         print 'python CIC_library.py compile'
+
+
