@@ -1,23 +1,25 @@
 #DESCRIPTION: 
-#This code computes the auto- (cross-) power spectrum (PS) of many different 
-#objects:
+#This code computes the auto- (cross-) power spectrum (PS) and the quadrupole 
+#of many different objects:
 
-# 'CDM' ------------ only CDM
-# 'NU' ------------- only neutrinos
-# 'DM-NU' ---------- CDM+NU-NU
-# 'DM' ------------- CDM+NU, CDM alone. NU alone and CDM-NU cross
+# 'CDM' -------------- only CDM
+# 'NU' --------------- only neutrinos
+# 'DM-NU' ------------ CDM+NU-NU
+# 'DM' --------------- CDM+NU, CDM alone. NU alone and CDM-NU cross
 
-# 'halos' ---------- SUBFIND halos
-# 'subhalos' ------- SUBFIND subhalos
-# 'FoF_halos' ------ FoF halos
+# 'halos' ------------ SUBFIND halos
+# 'subhalos' --------- SUBFIND subhalos
+# 'FoF_halos' -------- FoF halos
 
-# 'DM-halos' ------- CDM+NU - SUBFIND halos
-# 'DM-subhalos' ---- CDM+NU - SUBFIND subhalos
-# 'DM-FoF_halos' --- CDM+NU - FoF halos
+# 'DM-halos' --------- CDM+NU - SUBFIND halos
+# 'DM-subhalos' ------ CDM+NU - SUBFIND subhalos
+# 'DM-FoF_halos' ----- CDM+NU - FoF halos
 
-# 'CDM-halos' ------ CDM - SUBFIND halos
-# 'CDM-subhalos' --- CDM - SUBFIND subhalos
-# 'CDM-FoF_halos' -- CDM - FoF halos
+# 'CDM-halos' -------- CDM - SUBFIND halos
+# 'CDM-subhalos' ----- CDM - SUBFIND subhalos
+# 'CDM-FoF_halos' ---- CDM - FoF halos
+
+# 'quadrupole-CDM' --- quadrupole CDM only
 
 #VARIABLES:
 #snapshot_fname --> name of the N-body snapshot
@@ -37,6 +39,9 @@
 #Set the variables and type python Pk.py
 
 #VERSION HISTORY:
+#Version 2.3
+#Computes the quadrupole
+
 #Version 2.2
 #includes the posibility of measuring the power spectrums in redshift-space
 #along a given axis
@@ -82,7 +87,7 @@ if len(sys.argv)>1:
 else:
     snapshot_fname='/home/villa/disksom2/ICTP/CDM/0/snapdir_022/snap_022'
     groups_fname='/home/villa/disksom2/ICTP/CDM/0/'
-    groups_number=22 #22-z=0  17-z=0.5  12-z=1  8-z=2
+    groups_number=22 
 
     obj='CDM' 
 
@@ -90,7 +95,7 @@ else:
     min_mass=1.6e3
     max_mass=3.0e5
 
-    do_RSD=True #do redshift-space distortions----True or False
+    do_RSD=False #do redshift-space distortions----True or False
     axis=0 #axis along which the RSD are computed: 0-X, 1-Y, 2-Z
 
     dims=512
@@ -477,6 +482,27 @@ elif obj=='CDM-FoF_halos':
     Pk=PSL.cross_power_spectrum(Pos1,Pos2,dims,BoxSize)
     
     #write cross-P(k) file
+    f=open(f_out,'w')
+    for i in range(len(Pk[0])):
+        f.write(str(Pk[0][i])+' '+str(Pk[1][i])+'\n')
+    f.close()
+
+############################ QUADRUPOLE CDM ONLY #############################
+
+elif obj=='quadrupole-CDM':
+    #read CDM positions
+    Pos=readsnap.read_block(snapshot_fname,"POS ",parttype=1)/1e3 #Mpc/h
+    
+    #move to redshift-space 
+    if do_RSD:
+        Vel=readsnap.read_block(snapshot_fname,"VEL ",parttype=1) #km/s
+        RSD(Pos[:,axis],Vel[:,axis],Hubble,redshift); del Vel
+
+    #computes P_2(k)
+    ell=2
+    Pk=PSL.multipole(Pos,dims,BoxSize,ell,shoot_noise_correction=False)
+    
+    #write CDM P_2(k) file
     f=open(f_out,'w')
     for i in range(len(Pk[0])):
         f.write(str(Pk[0][i])+' '+str(Pk[1][i])+'\n')
