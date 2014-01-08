@@ -39,6 +39,9 @@
 #Set the variables and type python Pk.py
 
 #VERSION HISTORY:
+#Version 2.3.1
+#Computes the quadrupole along any axis
+
 #Version 2.3
 #Computes the quadrupole
 
@@ -500,7 +503,7 @@ elif obj=='quadrupole-CDM':
 
     #computes P_2(k)
     ell=2
-    Pk=PSL.multipole(Pos,dims,BoxSize,ell,shoot_noise_correction=False)
+    Pk=PSL.multipole(Pos,dims,BoxSize,ell,axis,shoot_noise_correction=False)
     
     #write CDM P_2(k) file
     f=open(f_out,'w')
