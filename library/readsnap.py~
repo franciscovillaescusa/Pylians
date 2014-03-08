@@ -156,9 +156,8 @@ def find_block(filename, format, swap, block, block_num, only_list_blocks=False)
     return offset,blocksize
  
 # ----- read data block -----
-#for snapshots with very very large number of particles set nall manually
-#for instance nall=np.array([0,2048**3,0,0,0,0]) 
-def read_block(filename, block, parttype=-1, physical_velocities=True, arepo=0, no_masses=False, verbose=False, nall=[0,0,0,0,0,0]):
+ 
+def read_block(filename, block, parttype=-1, physical_velocities=True, arepo=0, no_masses=False, verbose=False):
   if (verbose):
     print "reading block", block
   
@@ -171,15 +170,15 @@ def read_block(filename, block, parttype=-1, physical_velocities=True, arepo=0, 
     blockadd=0
   if arepo==1:
     if (verbose):	
-      print "Arepo format"
+	    print "Arepo format"
     blockadd=1	
   if arepo==2:
     if (verbose):
-      print "Arepo extended format"
+	   print "Arepo extended format"
     blockadd=4	
   if no_masses==True:
     if (verbose):	
-      print "No mass block present"    
+	    print "No mass block present"    
     blocksub=1
 		 
   if parttype not in [-1,0,1,2,3,4,5]:
@@ -202,8 +201,7 @@ def read_block(filename, block, parttype=-1, physical_velocities=True, arepo=0, 
   swap = head.swap
   npart = head.npart
   massarr = head.massarr
-  if np.all(nall==[0,0,0,0,0,0]):
-    nall = head.nall
+  nall = head.nall
   filenum = head.filenum
   redshift = head.redshift
   time = head.time
@@ -225,11 +223,6 @@ def read_block(filename, block, parttype=-1, physical_velocities=True, arepo=0, 
     data_for_type[:] = True
     dt = np.uint32
     block_num = 4
-#only used for format I, when file structure is HEAD,POS,VEL,ID,ACCE
-  elif block=="ACCE":              #This is only for the PIETRONI project
-    data_for_type[:] = True        #This is only for the PIETRONI project
-    dt = np.dtype((np.float32,3))  #This is only for the PIETRONI project
-    block_num = 5                  #This is only for the PIETRONI project
   elif block=="MASS":
     data_for_type[np.where(massarr==0)] = True
     block_num = 5
@@ -269,12 +262,6 @@ def read_block(filename, block, parttype=-1, physical_velocities=True, arepo=0, 
   elif block=="SFR ":
     data_for_type[0] = True
     block_num = 11+blockadd-blocksub
-  elif block=="MHI ":                  #This is only for the bias_HI project
-    data_for_type[0] = True            #This is only for the bias_HI project
-    block_num = 12+blockadd-blocksub   #This is only for the bias_HI project
-  elif block=="TEMP":                  #This is only for the bias_HI project
-    data_for_type[0] = True            #This is only for the bias_HI project
-    block_num = 13+blockadd-blocksub   #This is only for the bias_HI project
   elif block=="AGE ":
     data_for_type[4] = True
     block_num = 12+blockadd-blocksub
@@ -292,7 +279,7 @@ def read_block(filename, block, parttype=-1, physical_velocities=True, arepo=0, 
     print "Sorry! Block type", block, "not known!"
     sys.exit()
   # - end of block description -
-  
+    
   actual_data_for_type = np.copy(data_for_type)  
   if parttype >= 0:
     actual_data_for_type[:] = False
@@ -420,7 +407,7 @@ def read_gadget_header(filename):
   print 'Omega_m,Omega_l=',head.omega_m,head.omega_l
   print 'h=',head.hubble,'\n'
   
-  rhocrit=2.77536627e11 #h**2 M_sun/Mpc**3
+  rhocrit=2.775e11 #h**2 M_sun/Mpc**3
   rhocrit=rhocrit/1e9 #h**2M_sun/kpc**3
   
   Omega_DM=head.nall[1]*head.massarr[1]*1e10/(head.boxsize**3*rhocrit)
