@@ -77,6 +77,7 @@ def power_spectrum(pos,dims,BoxSize,method='CIC',shoot_noise_correction=True):
     #final processing
     bins_k=np.linspace(0.0,bins_r,bins_r+1)
     #compute the bins in k-space and give them physical units (h/Mpc), (h/kpc)
+    k=k.astype(np.float64) #to avoid problems with np.histogram
     k=2.0*np.pi/BoxSize*np.histogram(k,bins_k,weights=k)[0]/count
 
     #given the physical units to P(k) (Mpc/h)^3, (kpc/h)^3 ...
@@ -167,6 +168,7 @@ def power_spectrum_2comp(pos1,pos2,Omega1,Omega2,dims,BoxSize):
     #final processing
     bins_k=np.linspace(0.0,bins_r,bins_r+1)
     #compute the bins in k-space and give them physical units (h/Mpc), (h/kpc)
+    k=k.astype(np.float64) #to avoid problems with np.histogram
     k=2.0*np.pi/BoxSize*np.histogram(k,bins_k,weights=k)[0]/count
 
     #given the physical units to P(k) (Mpc/h)^3, (kpc/h)^3 ...
@@ -248,6 +250,7 @@ def cross_power_spectrum(pos1,pos2,dims,BoxSize):
     #final processing
     bins_k=np.linspace(0.0,bins_r,bins_r+1)
     #compute the bins in k-space and give them physical units (h/Mpc), (h/kpc)
+    k=k.astype(np.float64) #to avoid problems with np.histogram
     k=2.0*np.pi/BoxSize*np.histogram(k,bins_k,weights=k)[0]/count
 
     #given the physical units to P(k) (Mpc/h)^3, (kpc/h)^3 ...
@@ -343,6 +346,7 @@ def cross_power_spectrum_DM(pos1,pos2,posh,Omega1,Omega2,dims,BoxSize):
     #final processing
     bins_k=np.linspace(0.0,bins_r,bins_r+1)
     #compute the bins in k-space and give them physical units (h/Mpc), (h/kpc)
+    k=k.astype(np.float64) #to avoid problems with np.histogram
     k=2.0*np.pi/BoxSize*np.histogram(k,bins_k,weights=k)[0]/count
 
     #given the physical units to P(k) (Mpc/h)^3, (kpc/h)^3 ...
@@ -384,9 +388,6 @@ class power_spectrum_full_analysis:
 
         #compute k-bins
         bins_k=np.linspace(0.0,bins_r,bins_r+1)
-        #compute bins in k-space and give them physical units (h/Mpc), (h/kpc)
-        k=0.5*(bins_k[:-1]+bins_k[1:]); del bins_k
-        self.k=(2.0*np.pi*k/BoxSize)[1:] #ignore first bin
 
         #compute the delta in the mesh points for the component 1
         delta1=np.zeros(dims3,dtype=np.float32)
@@ -425,6 +426,11 @@ class power_spectrum_full_analysis:
         print 'done: time taken for the correction=   ',time.clock()-start_cic
         #count modes
         count=lin_histogram(bins_r,0.0,bins_r*1.0,k)
+
+        #compute bins in k-space and give them physical units (h/Mpc), (h/kpc)
+        k=k.astype(np.float64) #to avoid problems with np.histogram
+        k=2.0*np.pi/BoxSize*np.histogram(k,bins_k,weights=k)[0]/count
+        self.k=(2.0*np.pi*k/BoxSize)[1:] #ignore first bin
 
         #compute bins in k-space and give them physical units (h/Mpc), (h/kpc)
         k=2.0*np.pi/BoxSize*np.histogram(k,bins_k,weights=k)[0]/count
@@ -567,6 +573,7 @@ def power_spectrum_given_delta(delta,dims,BoxSize):
     #final processing
     bins_k=np.linspace(0.0,bins_r,bins_r+1)
     #compute the bins in k-space and give them physical units (h/Mpc), (h/kpc)
+    k=k.astype(np.float64) #to avoid problems with np.histogram
     k=2.0*np.pi/BoxSize*np.histogram(k,bins_k,weights=k)[0]/count
 
     #given the physical units to P(k) (Mpc/h)^3, (kpc/h)^3 ...
@@ -627,12 +634,8 @@ def cross_power_spectrum_given_delta(delta1,delta2,dims,BoxSize):
     #final processing
     bins_k=np.linspace(0.0,bins_r,bins_r+1)
     #compute the bins in k-space and give them physical units (h/Mpc), (h/kpc)
-<<<<<<< HEAD
-    k=0.5*(bins_k[:-1]+bins_k[1:])
-    k=2.0*np.pi*k/BoxSize 
-=======
+    k=k.astype(np.float64) #to avoid problems with np.histogram
     k=2.0*np.pi/BoxSize*np.histogram(k,bins_k,weights=k)[0]/count
->>>>>>> parent of 22c5fd2... k values defined as 64 bit array to avoid problems with np.histrogram
 
     #given the physical units to P(k) (Mpc/h)^3, (kpc/h)^3 ...
     Pk=Pk*BoxSize**3 
@@ -868,6 +871,7 @@ def multipole(pos,dims,BoxSize,ell,axis,shoot_noise_correction=False):
     #compute the bins in k-space and give them physical units (h/Mpc), (h/kpc)
     #we should add 1 since we want to equal the number of intervals
     bins_k=np.arange(int(np.sqrt(3*int(0.5*(dims+1))**2))+1+1)
+    k=k.astype(np.float64) #to avoid problems with np.histogram
     k=2.0*np.pi/BoxSize*np.histogram(k,bins_k,weights=k)[0]/count
 
     n=len(pos)*1.0/BoxSize**3 #mean density
