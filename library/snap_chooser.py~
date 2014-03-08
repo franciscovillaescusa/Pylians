@@ -1,4 +1,0 @@
-
-
-class snap_chooser:
-    def __init__(self,Mnu,)
