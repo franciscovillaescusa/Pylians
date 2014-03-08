@@ -22,6 +22,6 @@ For receive the changes from the server:
 
 If you just want to pull the changes then:
 
-1) git fetch
+1) git fetch --all
 2) git reset origin/master --soft
-3) In case the step 2) fails use: git reset origin master --hard
+3) In case the step 2) fails use: git reset origin/master --hard
