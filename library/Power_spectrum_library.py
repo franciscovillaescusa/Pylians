@@ -1275,7 +1275,8 @@ n=256**3 #number of particles in the catalogue
 
 pos=(np.random.random((n,3))*BoxSize).astype(np.float32) #positions in Mpc/h
 
-Pk=power_spectrum(pos,dims,BoxSize)
+Pk=power_spectrum(pos,dims,BoxSize,method='CIC')
+Pk=power_spectrum(pos,dims,BoxSize,method='TSC')
 
 print Pk
 
