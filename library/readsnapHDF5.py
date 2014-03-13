@@ -65,7 +65,7 @@ class snapshot_header:
 				print "[error] file not found : ", filename
 			    	sys.exit()
     
-			f=tables.openFile(curfilename)
+			f=tables.open_file(curfilename)
 			self.npart = f.root.Header._v_attrs.NumPart_ThisFile 
 			self.nall = f.root.Header._v_attrs.NumPart_Total
 			self.nall_highword = f.root.Header._v_attrs.NumPart_Total_HighWord
@@ -162,7 +162,7 @@ def read_block_single_file(filename, block_name, dim2, parttype=-1, no_mass_repl
   #doubleflag = 0 #GADGET-2
   del head
 
-  f=tables.openFile(filename)
+  f=tables.open_file(filename)
 
 
   #read specific particle type 
@@ -175,7 +175,7 @@ def read_block_single_file(filename, block_name, dim2, parttype=-1, no_mass_repl
 		ret_val=np.repeat(massarr[parttype], npart[parttype])
         else:		
 	  	part_name='PartType'+str(parttype)
-	  	ret_val = f.root._f_getChild(part_name)._f_getChild(block_name)[:]
+	  	ret_val = f.root._f_get_child(part_name)._f_get_child(block_name)[:]
         if (verbose):
         	print "[single] read particles (total) : ", ret_val.shape[0]/dim2
 
@@ -207,14 +207,14 @@ def read_block_single_file(filename, block_name, dim2, parttype=-1, no_mass_repl
                 	        	print "[single] read particles (total) : ", ret_val.shape[0]/dim2
                                 if (doubleflag==0):
 					ret_val=ret_val.astype("float32")
-			if (f.root._f_getChild(part_name).__contains__(block_name)):
+			if (f.root._f_get_child(part_name).__contains__(block_name)):
 				if (first):
-					data=f.root._f_getChild(part_name)._f_getChild(block_name)[:]
+					data=f.root._f_get_child(part_name)._f_get_child(block_name)[:]
 					dim1+=data.shape[0]
 					ret_val=data
 					first=False
 				else:
-					data=f.root._f_getChild(part_name)._f_getChild(block_name)[:]
+					data=f.root._f_get_child(part_name)._f_get_child(block_name)[:]
 					dim1+=data.shape[0]
 					ret_val=np.append(ret_val, data)
                 		if (verbose):
@@ -298,7 +298,7 @@ def read_block(filename, block, parttype=-1, no_mass_replicate=False, verbose=Fa
 #############
 def list_blocks(filename, parttype=-1, verbose=False):
   
-  f=tables.openFile(filename)
+  f=tables.open_file(filename)
   for parttype in range(0,5):
   	part_name='PartType'+str(parttype)
         if (f.root.__contains__(part_name)):
@@ -309,7 +309,7 @@ def list_blocks(filename, parttype=-1, verbose=False):
 		while (1):
 			if (verbose):
 				print "check ", next, datablocks[next][0]
-			if (f.root._f_getChild(part_name).__contains__(datablocks[next][0])):
+			if (f.root._f_get_child(part_name).__contains__(datablocks[next][0])):
   				print next, datablocks[next][0]
 			try:
 				next=iter.next()
@@ -323,7 +323,7 @@ def list_blocks(filename, parttype=-1, verbose=False):
 def contains_block(filename, tag, parttype=-1, verbose=False):
   
   contains_flag=False
-  f=tables.openFile(filename)
+  f=tables.open_file(filename)
   for parttype in range(0,5):
         part_name='PartType'+str(parttype)
         if (f.root.__contains__(part_name)):
@@ -332,7 +332,7 @@ def contains_block(filename, tag, parttype=-1, verbose=False):
                 while (1):
                         if (verbose):
                                 print "check ", next, datablocks[next][0]
-                        if (f.root._f_getChild(part_name).__contains__(datablocks[next][0])):
+                        if (f.root._f_get_child(part_name).__contains__(datablocks[next][0])):
                                 if (next.find(tag)>-1):
 					contains_flag=True	
                         try:
@@ -346,7 +346,7 @@ def contains_block(filename, tag, parttype=-1, verbose=False):
 #CHECK FILE#
 ############
 def check_file(filename):
-  f=tables.openFile(filename)
+  f=tables.open_file(filename)
   f.close()
                                                                                                                                                   
 
@@ -365,7 +365,7 @@ def check_file(filename):
 #OPEN FILE FOR WRITING#
 #######################
 def openfile(filename):
-	f=tables.openFile(filename, mode = "w")	 
+	f=tables.open_file(filename, mode = "w")	 
 	return f
 
 ############
@@ -405,7 +405,7 @@ def write_block(f, block, parttype, data):
 	if (f.root.__contains__(part_name)==False):
 	    	group=f.createGroup(f.root, part_name)
 	else:
-		group=f.root._f_getChild(part_name)	
+		group=f.root._f_get_child(part_name)	
 	
 	if (datablocks.has_key(block)):
         	block_name=datablocks[block][0]
