@@ -18,12 +18,11 @@ def deriv_sigma(y,x,k,Pk,R):
     Pkp=np.interp(np.log10(x),np.log10(k),np.log10(Pk)); Pkp=10**Pkp
     kR=x*R
     W=3.0*(np.sin(kR)-kR*np.cos(kR))/kR**3 
-    return np.array([x**2*Pkp*W**2])
+    return [x**2*Pkp*W**2]
 
 #this function computes sigma(R)
 def sigma(k,Pk,R):
-    yinit=np.array([0.0])
-    k_limits=np.array([k[0],k[-1]])    
+    k_limits=[k[0],k[-1]]; yinit=[0.0]
 
     I=si.odeint(deriv_sigma,yinit,k_limits,args=(k,Pk,R),
                 rtol=1e-8,atol=1e-8,
@@ -55,8 +54,7 @@ def ST_mass_function(k,Pk,OmegaM,M1,M2,bins,Masses=None):
         dndM=np.empty(bins,dtype=np.float64)
         Masses=np.logspace(np.log10(M1),np.log10(M2),bins)
     else:
-        length=len(Masses)
-        dndM=np.empty(length,dtype=np.float64)
+        length=len(Masses); dndM=np.empty(length,dtype=np.float64)
         
     i=0
     for M in Masses:
@@ -303,35 +301,54 @@ def Angulo_subhalos_mass_function(k,Pk,OmegaM,M1,M2,bins,Masses=None):
 #   *FoF halos -----------> 'FoF'
 #   *SO 200xmean halos ---> 'halos_m200'
 #   *subhalos -------- ---> 'subhalos'
+#long_IDs_flag -> flag for long IDs (True or False)
+#SFR_flag ------> flag for SFR (True or False)
 #When using FoF halos their masses are corrected to account for sampling effects
+#if min_mass=None the code will take the minimum mass of the halo catalogue
+#the same applies to max_mass
+def mass_function(groups_fname,groups_number,obj,BoxSize,bins,f_out,
+                  min_mass=None,max_mass=None,
+                  long_ids_flag=True,SFR_flag=False):
 
-def mass_function(groups_fname,groups_number,f_out,min_mass,max_mass,
-                  bins,BoxSize,obj):
-
-    bins_mass=np.logspace(np.log10(min_mass),np.log10(max_mass),bins+1)
-    mass_mean=10**(0.5*(np.log10(bins_mass[1:])+np.log10(bins_mass[:-1])))
-    dM=bins_mass[1:]-bins_mass[:-1]
+    #bins_mass=np.logspace(np.log10(min_mass),np.log10(max_mass),bins+1)
+    #mass_mean=10**(0.5*(np.log10(bins_mass[1:])+np.log10(bins_mass[:-1])))
+    #dM=bins_mass[1:]-bins_mass[:-1]
 
     if obj=='FoF':
         #read FoF halos information
         fof=readfof.FoF_catalog(groups_fname,groups_number,
-                                long_ids=True,swap=False)
+                                long_ids=long_ids_flag,swap=False,SFR=SFR_flag)
         F_pos=fof.GroupPos/1e3        #positions in Mpc/h
         F_mass=fof.GroupMass*1e10     #masses in Msun/h
         F_part=fof.GroupLen           #number particles belonging to the group
         F_Mpart=F_mass[0]/F_part[0]   #mass of a single particle in Msun/h
         del fof
 
+        #some verbose
+        print '\nNumber of FoF halos=',len(F_pos)
+        print '%f < X_fof < %f'%(np.min(F_pos[:,0]),np.max(F_pos[:,0]))
+        print '%f < Y_fof < %f'%(np.min(F_pos[:,1]),np.max(F_pos[:,1]))
+        print '%f < Z_fof < %f'%(np.min(F_pos[:,2]),np.max(F_pos[:,2]))
+        print '%e < M_fof < %e\n'%(np.min(F_mass),np.max(F_mass))
+
         #Correct the masses of the FoF halos
         F_mass=F_Mpart*(F_part*(1.0-F_part**(-0.6)))
 
-        #some verbose
-        print 'Number of FoF halos=',len(F_pos)
-        print np.min(F_pos[:,0]),'< X_fof <',np.max(F_pos[:,0])
-        print np.min(F_pos[:,1]),'< Y_fof <',np.max(F_pos[:,1])
-        print np.min(F_pos[:,2]),'< Z_fof <',np.max(F_pos[:,2])
-        print np.min(F_mass),'< M_fof <',np.max(F_mass)
+        #compute the minimum and maximum mass
+        if min_mass==None:
+            min_mass=np.min(F_mass)
+        if max_mass==None:
+            max_mass=np.max(F_mass)
 
+        print 'M_min = %e'%(min_mass)
+        print 'M_max = %e\n'%(max_mass)
+
+        #find the masses and mass intervals
+        bins_mass=np.logspace(np.log10(min_mass),np.log10(max_mass),bins+1)
+        mass_mean=10**(0.5*(np.log10(bins_mass[1:])+np.log10(bins_mass[:-1])))
+        dM=bins_mass[1:]-bins_mass[:-1]
+
+        #compute the number of halos within each mass interval
         number=np.histogram(F_mass,bins=bins_mass)[0]
         print number; print np.sum(number,dtype=np.float64)
 
@@ -347,12 +364,19 @@ def mass_function(groups_fname,groups_number,f_out,min_mass,max_mass,
         del halos
 
         #some verbose
-        print 'Number of halos=',len(H_pos)
-        print np.min(H_pos[:,0]),'< X_fof <',np.max(H_pos[:,0])
-        print np.min(H_pos[:,1]),'< Y_fof <',np.max(H_pos[:,1])
-        print np.min(H_pos[:,2]),'< Z_fof <',np.max(H_pos[:,2])
-        print np.min(H_mass),'< M_fof <',np.max(H_mass)
+        print '\nNumber of halos=',len(H_pos)
+        print '%f < X < %f'%(np.min(H_pos[:,0]),np.max(H_pos[:,0]))
+        print '%f < Y < %f'%(np.min(H_pos[:,1]),np.max(H_pos[:,1]))
+        print '%f < Z < %f'%(np.min(H_pos[:,2]),np.max(H_pos[:,2]))
+        print '%e < M < %e\n'%(np.min(H_mass),np.max(H_mass))
 
+        #compute the minimum and maximum mass
+        if min_mass==None:
+            min_mass=np.min(H_mass)
+        if max_mass==None:
+            max_mass=np.max(H_mass)
+
+        #compute the number of halos within each mass interval
         number=np.histogram(H_mass,bins=bins_mass)[0]
         print number; print np.sum(number,dtype=np.float64)
 
@@ -368,12 +392,19 @@ def mass_function(groups_fname,groups_number,f_out,min_mass,max_mass,
         del halos
 
         #some verbose
-        print 'Number of halos=',len(H_pos)
-        print np.min(H_pos[:,0]),'< X_fof <',np.max(H_pos[:,0])
-        print np.min(H_pos[:,1]),'< Y_fof <',np.max(H_pos[:,1])
-        print np.min(H_pos[:,2]),'< Z_fof <',np.max(H_pos[:,2])
-        print np.min(H_mass),'< M_fof <',np.max(H_mass)
+        print '\nNumber of halos=',len(H_pos)
+        print '%f < X < %f'%(np.min(H_pos[:,0]),np.max(H_pos[:,0]))
+        print '%f < Y < %f'%(np.min(H_pos[:,1]),np.max(H_pos[:,1]))
+        print '%f < Z < %f'%(np.min(H_pos[:,2]),np.max(H_pos[:,2]))
+        print '%e < M < %e\n'%(np.min(H_mass),np.max(H_mass))
 
+        #compute the minimum and maximum mass
+        if min_mass==None:
+            min_mass=np.min(H_mass)
+        if max_mass==None:
+            max_mass=np.max(H_mass)
+
+        #compute the number of halos within each mass interval
         number=np.histogram(H_mass,bins=bins_mass)[0]
         print number; print np.sum(number,dtype=np.float64)
 
@@ -388,12 +419,19 @@ def mass_function(groups_fname,groups_number,f_out,min_mass,max_mass,
         del halos
 
         #some verbose
-        print 'Number of halos=',len(S_pos)
-        print np.min(S_pos[:,0]),'< X_fof <',np.max(S_pos[:,0])
-        print np.min(S_pos[:,1]),'< Y_fof <',np.max(S_pos[:,1])
-        print np.min(S_pos[:,2]),'< Z_fof <',np.max(S_pos[:,2])
-        print np.min(S_mass),'< M_fof <',np.max(S_mass)
+        print '\nNumber of subhalos=',len(S_pos)
+        print '%f < X < %f'%(np.min(S_pos[:,0]),np.max(S_pos[:,0]))
+        print '%f < Y < %f'%(np.min(S_pos[:,1]),np.max(S_pos[:,1]))
+        print '%f < Z < %f'%(np.min(S_pos[:,2]),np.max(S_pos[:,2]))
+        print '%e < M < %e\n'%(np.min(S_mass),np.max(S_mass))
 
+        #compute the minimum and maximum mass
+        if min_mass==None:
+            min_mass=np.min(S_mass)
+        if max_mass==None:
+            max_mass=np.max(S_mass)
+
+        #compute the number of halos within each mass interval
         number=np.histogram(S_mass,bins=bins_mass)[0]
         print number; print np.sum(number,dtype=np.float64)
 
@@ -582,8 +620,8 @@ f.close()
 groups_fname='/home/villa/disksom2/ICTP/CDM/1/Mass_function'
 groups_number=3
 
-min_mass=2.0e13
-max_mass=2.0e15
+#min_mass=2.0e13
+#max_mass=2.0e15
 bins=25
 
 BoxSize=1000.0 #Mpc/h
@@ -591,8 +629,10 @@ BoxSize=1000.0 #Mpc/h
 obj='FoF' #choose between 'FoF' or 'halos_m200'
 
 f_out='mass_function_FoF_corrected_z=0.dat'
-mass_function(groups_fname,groups_number,f_out,min_mass,max_mass,
-              bins,BoxSize,obj)
+
+mass_function(groups_fname,groups_number,obj,BoxSize,bins,f_out,
+              min_mass=None,max_mass=None,
+              long_ids_flag=True,SFR_flag=False)
 """
 
 ##### mass function f(sigma) #####
