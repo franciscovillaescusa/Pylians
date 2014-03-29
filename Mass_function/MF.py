@@ -13,8 +13,8 @@ groups_number=22
 f_Pk_DM='../../CAMB_TABLES/ics_matterpow_0.dat'
 f_transfer='../../CAMB_TABLES/ics_transfer_0.dat'
 
-min_mass=2.0e13
-max_mass=2.0e15
+#min_mass=2.0e13
+#max_mass=2.0e15
 bins=25
 
 BoxSize=1000.0 #Mpc/h
@@ -29,8 +29,9 @@ Omega_M=Omega_CDM+Omega_B
 
 
 f_out='mass_function_FoF_corrected_z=0.dat'
-MFL.mass_function(groups_fname,groups_number,f_out,min_mass,max_mass,
-                  bins,BoxSize,obj)
+MFL.mass_function(groups_fname,groups_number,obj,BoxSize,bins,f_out,
+                  min_mass=None,max_mass=None,
+                  long_ids_flag=True,SFR_flag=False)
 
 """
 [k,Pk]=BL.DM_Pk(f_Pk_DM)
