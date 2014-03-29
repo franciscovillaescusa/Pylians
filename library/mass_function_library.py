@@ -221,6 +221,38 @@ def Warren_mass_function(k,Pk,OmegaM,M1,M2,bins,Masses=None):
 
 ##############################################################################
 
+#This function computes the Warren mass function for FoF halos. Returns dn/dM
+#If the mass function wants to be computed in a given mass bins, use Masses
+def Watson_mass_function_FoF(k,Pk,OmegaM,M1,M2,bins,Masses=None):
+
+    A=0.282
+    a=2.163
+    b=1.406
+    c=1.210
+    
+    rhoM=rho_crit*OmegaM
+
+    if Masses==None:
+        dndM=np.empty(bins,dtype=np.float64)
+        Masses=np.logspace(np.log10(M1),np.log10(M2),bins)
+    else:
+        length=len(Masses)
+        dndM=np.empty(length,dtype=np.float64)
+        
+    i=0
+    for M in Masses:
+        R=(3.0*M/(4.0*pi*rhoM))**(1.0/3.0)
+        s=sigma(k,Pk,R)
+        f_s=A*((b/s)**a+1.0)*np.exp(-c/s**2)
+
+        dndM[i]=-(rhoM/M)*dSdM(k,Pk,OmegaM,M)*f_s/s
+
+        i+=1
+
+    return [Masses,dndM]
+
+##############################################################################
+
 #This function computes the Warren mass function. Returns dn/dM
 #If the mass function wants to be computed in a given mass bins, use Masses
 def Watson_mass_function(k,Pk,OmegaM,M1,M2,bins,Masses=None):
