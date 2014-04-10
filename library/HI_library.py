@@ -18,13 +18,15 @@ import sys
      #I2
      #Iwdl
 #Barnes_Haehelt_HI_assignment
-#halo_cross_section
+#cross_section_halo
 #cross_section_BH
      #column_density
      #deriv_column_density
      #analytic_integral
      #integral
      #deriv_HI_BH
+#incidence_rate
+     #deriv_incidence_rate
 #particle_indexes
 
 ###############################################################################
@@ -128,6 +130,7 @@ def deriv_Bagla_parameters(y,x,M,MF,Mmin,Mmax,method):
 #groups_number ---> number of the FoF/Subfind file to read
 #Omega_HI_ref ----> value of Omega_HI that wants to be obtained
 #method ----------> 1,2 or 3 (see Bagla et al. 2009 for the different methods)
+#f_MF ------------> file containing the halo mass function (M, dn/dM)
 #long_ids_flag ---> True if particle IDs are 64 bits. False otherwise
 #SFR_flag --------> True for simulations with baryons particles. False otherwise
 #the routine returns the IDs of the particles to whom HI has been assigned
@@ -136,7 +139,7 @@ def deriv_Bagla_parameters(y,x,M,MF,Mmin,Mmax,method):
 #If the positions of the particles to which HI has been assigned is wanted,
 #one should first sort the positions and then use the IDs to select them
 def Bagla_HI_assignment(snapshot_fname,groups_fname,groups_number,Omega_HI_ref,
-                       method,long_ids_flag,SFR_flag):
+                        method,f_MF,long_ids_flag,SFR_flag):
                        
 
     #read snapshot header and obtain BoxSize, redshift and h
@@ -144,7 +147,11 @@ def Bagla_HI_assignment(snapshot_fname,groups_fname,groups_number,Omega_HI_ref,
     BoxSize=head.boxsize/1e3 #Mpc/h
     Nall=head.nall
     redshift=head.redshift
-    h=head.hubble
+    h=head.hubble; del head
+
+    #find the total number of particles in the simulation
+    Ntotal=np.sum(Nall,dtype=np.int32)
+    print 'Total number of particles in the simulation: %d\n'%Ntotal
     
     #read FoF halos information
     halos=readfof.FoF_catalog(groups_fname,groups_number,
@@ -157,83 +164,122 @@ def Bagla_HI_assignment(snapshot_fname,groups_fname,groups_number,Omega_HI_ref,
     del halos
 
     #some verbose
-    print '\nNumber of FoF halos:',len(pos_FoF),len(M_FoF)
+    print 'Number of FoF halos:',len(pos_FoF),len(M_FoF)
     print '%f < X [Mpc/h] < %f'%(np.min(pos_FoF[:,0]),np.max(pos_FoF[:,0]))
     print '%f < Y [Mpc/h] < %f'%(np.min(pos_FoF[:,1]),np.max(pos_FoF[:,1]))
     print '%f < Z [Mpc/h] < %f'%(np.min(pos_FoF[:,2]),np.max(pos_FoF[:,2]))
     print '%e < M [Msun/h] < %e\n'%(np.min(M_FoF),np.max(M_FoF))
 
-    #only consider halos with Vcirc < 200 km/s: see Bagla et al 2009
-    Mmax=1e10*(200.0/60.0)**3*((1.0+redshift)/4.0)**(-1.5)*h #Msun/h
-    Mmin=1e10*(30.0/60.0)**3*((1.0+redshift)/4.0)**(-1.5)*h #Msun/h
-    print 'Mmin=%e Msun/h: log10(Min)=%f'%(Mmin,np.log10(Mmin))
-    print 'Mmax=%e Msun/h: log10(Max)=%f\n'%(Mmax,np.log10(Mmax))
+    #find the values of Mmin,Mmax,f1,f2 and f3: see Bagla et al 2009
+    [Mmin,Mmax,f1,f2,f3]=Bagla_parameters(redshift,h,Omega_HI_ref,f_MF)
+
+    #read the mass function file
+    f=open(f_MF,'r'); M,MF=[],[]
+    for line in f.readlines():
+        a=line.split(); M.append(float(a[0])); MF.append(float(a[1]))
+    f.close(); M=np.array(M); MF=np.array(MF); del a
+
+    #keep only with the halos that host HI
     if method==1:
         indexes=np.where((M_FoF>Mmin) & (M_FoF<Mmax))[0]
-        M_FoF_HI=M_FoF[indexes]; Len_HI=Len[indexes]; Offset_HI=Offset[indexes]
-        del indexes
     else:
-        M_FoF_HI=M_FoF; Len_HI=Len; Offset_HI=Offset
-
-    #Find the value of the parameter f1, f2 or f3 (methods 1,2 and 3 of Bagla)
-    iterations=20; final=False; i=0
-    f1_min=1e-6; f1_max=1.0; tol=1e-3
-    f1=10**(0.5*(np.log10(f1_min)+np.log10(f1_max)))
-    while not(final):
-        if method==1:
-            Omega_HI=np.sum(f1*M_FoF_HI,
-                            dtype=np.float64)
-        elif method==2:
-            Omega_HI=np.sum(f1/(1.0+(M_FoF_HI/Mmax)**2)*M_FoF_HI,
-                            dtype=np.float64)
-        elif method==3:
-            Omega_HI=np.sum(f1/(1.0+(M_FoF_HI/Mmax))*M_FoF_HI,
-                            dtype=np.float64)
-        else:
-            print 'Choose between method 1 (eq. 4), 2 (eq. 5) or 3 (eq. 6)'
-            print 'of Bagla et al. 2009'
-        Omega_HI=Omega_HI/BoxSize**3/rho_crit
-        print 'f1=%e --> Omega_HI=%e'%(f1,Omega_HI)
-
-        if (np.absolute((Omega_HI-Omega_HI_ref)/Omega_HI_ref)<tol) or i>iterations:
-            final=True
-        else:
-            if (Omega_HI<Omega_HI_ref):
-                f1_min=f1
-            else:
-                f1_max=f1
-        f1=10**(0.5*(np.log10(f1_min)+np.log10(f1_max)))
-        i+=1
-
-    #define array M_HI that contains the HI masses of the particles and fill it
-    size_M_HI_array=np.sum(Nall,dtype=np.int64)
-    M_HI=np.zeros(size_M_HI_array,dtype=np.float32); Mass_tot=0.0 
-    size_IDs_array=np.sum(Len_HI,dtype=np.int64); IDs_offset=0
-    if long_ids_flag:
-        IDs=np.empty(size_IDs_array,dtype=np.int64)
-    else:
-        IDs=np.empty(size_IDs_array,dtype=np.int32)
+        indexes=np.where(M_FoF>Mmin)[0]
+    M_FoF=M_FoF[indexes]; Len=Len[indexes]; Offset=Offset[indexes]#; del indexes
 
     #f=open('borrar.dat','w')
-    for index in range(len(M_FoF_HI)):
-
-        indexes=ID_FoF[Offset_HI[index]:Offset_HI[index]+Len_HI[index]]
-        IDs[IDs_offset:IDs_offset+Len_HI[index]]=indexes
-        IDs_offset+=Len_HI[index]
-
-        if method==1:
-            M_HI_halo=f1*M_FoF_HI[index]
-        elif method==2:
-            M_HI_halo=f1/(1.0+(M_FoF_HI[index]/Mmax)**2)*M_FoF_HI[index]
-        else:
-            M_HI_halo=f1/(1.0+M_FoF_HI[index]/Mmax)*M_FoF_HI[index]
-        M_HI[indexes]+=(M_HI_halo*1.0/Len_HI[index])
-
-        #f.write(str(M_FoF_HI[index])+' '+str(M_HI_halo/M_FoF_HI[index])+'\n')
+    #for i in range(len(M_FoF)):
+    #    f.write(str(pos_FoF[indexes][i,0])+' '+str(pos_FoF[indexes][i,1])+' '+\
+    #                str(pos_FoF[indexes][i,2])+' '+str(M_FoF[i])+'\n')
     #f.close()
 
-    print '\nTotal HI mass in halos = %e Msun/h'%np.sum(M_HI,dtype=np.float64)
-    print 'Omega_HI (halos) = %e\n'%(np.sum(M_HI,dtype=np.float64)/BoxSize**3/rho_crit)
+    #compute the total mass in halos hosting HI from the halo catalogue
+    print 'Total contributing mass from the catalogue = %e Msun/h'\
+        %(np.sum(M_FoF,dtype=np.float64))
+    #compute the total mass in halos hosting HI from the halo mass function
+    if method==1:
+        M_limits=[Mmin,Mmax]; yinit=[0.0] 
+        I=si.odeint(deriv_Bagla_parameters,yinit,M_limits,
+                    args=(M,MF,Mmin,Mmax,1),
+                    rtol=1e-8,atol=1e-6,h0=1e6,mxstep=1000000)[1][0]
+    else:
+        M_limits=[Mmin,np.max(M)]; yinit=[0.0] 
+        I=si.odeint(deriv_Bagla_parameters,yinit,M_limits,
+                    args=(M,MF,Mmin,np.max(M),1),
+                    rtol=1e-8,atol=1e-6,h0=1e6,mxstep=1000000)[1][0]
+    print 'Total contributing mass from the HMF       = %e Msun/h\n'\
+        %(I*BoxSize**3)
+
+    #sort the HI/H and the R array 
+    #note that only gas particles have an associated R and HI/H
+    ID_unsort=readsnap.read_block(snapshot_fname,"ID  ",parttype=0)-1
+    R_unsort=readsnap.read_block(snapshot_fname,"HSML",parttype=0)/1e3 #Mpc/h
+    nH0_unsort=readsnap.read_block(snapshot_fname,"NH  ",parttype=0)   #HI/H
+    #sanity check: the radius of any gas particle has to be larger than 0!!!
+    if np.min(R_unsort)<=0.0:
+        print 'something wrong with the HSML radii'; sys.exit()
+    R=np.zeros(Ntotal,dtype=np.float32); R[ID_unsort]=R_unsort
+    nH0=np.zeros(Ntotal,dtype=np.float32); nH0[ID_unsort]=nH0_unsort
+    del R_unsort, nH0_unsort, ID_unsort
+
+    #keep only the IDs of gas particles within halos. The radius of CDM and 
+    #star particles will be equal to 0. We use that fact to idenfify the gas
+    #particles. We set the IDs of cdm or star particles to Ntotal. Note that 
+    #the normalized IDs goes from 0 to Ntotal-1. Since ID_FoF is a uint array
+    #we can't use negative numbers
+    flag_gas=R[ID_FoF]; indexes=np.where(flag_gas==0.0)[0]#; del R
+    ID_FoF[indexes]=Ntotal
+    #define the IDs array
+    if long_ids_flag:
+        IDs=np.empty(len(ID_FoF)-len(indexes),dtype=np.uint64)
+    else:
+        IDs=np.empty(len(ID_FoF)-len(indexes),dtype=np.uint32)
+    print 'FoF groups contain %d gas particles'%(len(IDs))
+    print 'FoF groups contain %d cdm+gas+star particles'%len(ID_FoF)
+    del indexes
+
+    #loop over the halos containing HI and assign the HI to the gas particles
+    M_HI=np.zeros(Ntotal,dtype=np.float32); No_gas_halos=0; IDs_offset=0
+    for index in range(len(M_FoF)):
+
+        #select the IDs of all particles belonging to the halo
+        indexes=ID_FoF[Offset[index]:Offset[index]+Len[index]]
+
+        #find the IDs of the gas particles belonging to the halo
+        indexes=indexes[np.where(indexes!=Ntotal)[0]]
+
+        #find the sph radii and HI/H fraction of the gas particles
+        radii=R[indexes]; nH0_part=nH0[indexes]
+
+        #fill the IDs array
+        IDs[IDs_offset:IDs_offset+len(indexes)]=indexes
+        IDs_offset+=len(indexes)
+
+        #compute the total HI mass within the dark matter halo
+        if method==1:
+            M_HI_halo=f1*M_FoF[index]
+        elif method==2:
+            M_HI_halo=f2/(1.0+(M_FoF[index]/Mmax)**2)*M_FoF[index]
+        else:
+            M_HI_halo=f3/(1.0+(M_FoF[index]/Mmax))*M_FoF[index]
+
+        #if there are gas particles assign the HI to them
+        Num_gas=len(indexes)
+        if Num_gas>0:
+            M_HI[indexes]+=(M_HI_halo*1.0/Num_gas)
+            #M_HI[indexes]+=M_HI_halo*(radii**2/nH0_part**2.5)\
+            #    /np.sum(radii**2/nH0_part**2.5,dtype=np.float64)
+            #M_HI[indexes]+=M_HI_halo*(nH0_part/radii**3)\
+            #    /np.sum(nH0_part/radii**3,dtype=np.float64)
+        else:
+            No_gas_halos+=1
+    print '\nNumber of halos with no gas particles=',No_gas_halos
+
+    #just keep the IDs of the particles to which HI has been assigned
+    IDs=IDs[0:IDs_offset]
+
+    #compute the value of OmegaHI
+    print 'Omega_HI (halos) = %e\n'\
+        %(np.sum(M_HI,dtype=np.float64)/BoxSize**3/rho_crit)
 
     return [IDs,M_HI]
 ###############################################################################
@@ -477,6 +523,7 @@ def Barnes_Haehnelt(snapshot_fname,groups_fname,groups_number,long_ids_flag,
     print 'Omega_m   =',Omega_m,'\n'
 
     #find Barnes & Haehnelt parameters
+    c0=25.0
     f_HI=0.37
     f_H=0.76*Omega_b/Omega_m
     alpha_e=3.0
@@ -783,10 +830,10 @@ def cross_section_halo(X_halo,Y_halo,R_halo,num_los,redshift,h,
     cross_section=np.pi*R_halo**2*n_DLA*1.0/num_los
 
     print 'n_DLA=',n_DLA
-    f=open('borrar.dat','w')
-    for i in xrange(len(X_los)):
-        f.write(str(X_los[i])+' '+str(Y_los[i])+' '+str(N_HI[i])+'\n')
-    f.close()
+    #f=open('borrar.dat','w')
+    #for i in xrange(len(X_los)):
+    #    f.write(str(X_los[i])+' '+str(Y_los[i])+' '+str(N_HI[i])+'\n')
+    #f.close()
 
     return cross_section
 ###############################################################################
@@ -799,12 +846,13 @@ def cross_section_halo(X_halo,Y_halo,R_halo,num_los,redshift,h,
 #redshift ---------> redshift of the dark matter halo
 #h ----------------> Hubble parameter at z=0 in units of 100 km/s/Mpc
 #M ----------------> mass of the dark matter halo in Msun/h
+#c0 ---------------> value of the Barnes & Haehnelt parameter c0
 #f_HI -------------> value of the Barnes & Haehnelt parameter f_HI
 #alpha_e ----------> value of the Barnes & Haehnelt parameter alpha_e
 #V0c --------------> value of the Barnes & Haehnelt parameter V0c
 #N_HI_ref ---------> value of N_HI that wants to be obtained
 #verbose ----------> whether or not print some information in the screen
-def cross_section_BH(Omega_m,Omega_b,Omega_l,redshift,h,M,f_HI,alpha_e,V0c,
+def cross_section_BH(Omega_m,Omega_b,Omega_l,redshift,h,M,c0,f_HI,alpha_e,V0c,
                      N_HI_ref=10**20.3,verbose=False):
 
     #compute the value of f_H
@@ -818,7 +866,7 @@ def cross_section_BH(Omega_m,Omega_b,Omega_l,redshift,h,M,f_HI,alpha_e,V0c,
         print 'x = %f  delta_c = %f\n'%(x,delta_c); del x
 
     #compute the concentration of the HI halo (Eq. 6 of BH): c=Rv/Rs
-    c=25.0*(M/h/1e11)**(-0.109)*(4.0/(1.0+redshift))
+    c=c0*(M/h/1e11)**(-0.109)*(4.0/(1.0+redshift))
     if verbose:
         print 'c = %f\n'%c
 
@@ -852,6 +900,7 @@ def cross_section_BH(Omega_m,Omega_b,Omega_l,redshift,h,M,f_HI,alpha_e,V0c,
         print 'rho_0 = %e h^2 Msun/kpc^3\n'%(rho_0)
 
     #sanity check
+    """
     M_HI_check=4.0*pi*rho_0*Rs**3*analytic_integral(c)
     if verbose:
         print '%e should be equal to %e\n'%(M_HI,M_HI_check)
@@ -859,19 +908,20 @@ def cross_section_BH(Omega_m,Omega_b,Omega_l,redshift,h,M,f_HI,alpha_e,V0c,
         if np.absolute(M_HI-M_HI_check)/M_HI>1e-3:
             print 'error: different M_HI values:'
             print '%e %e\n'%(M_HI,M_HI_check)
-            print 'relative difference = %e'%np.absolute(M_HI-M_HI_check)/M_HI
+            print 'relative difference = %e'%(np.absolute(M_HI-M_HI_check)/M_HI)
             sys.exit()
     else:
         if M_HI_check!=M_HI:
             print 'error: different M_HI values:'
             print '%e %e\n'%(M_HI,M_HI_check)
             sys.exit()
+    """
 
-    #find the radius R_b for which N_HI(b)=10**20.3
+    #find the radius R_b for which N_HI(b)=N_HI_ref
     #prefactor=(Msun/h)/mH/(kpc/h/(1.0+redshift))**2
+    prefactor=(Msun/h)/mH/(kpc/h)**2 #working in physical space (not comoving!!)
     if M_HI>0.0:
-        prefactor=(Msun/h)/mH/(kpc/h)**2
-        b_min=1e-10; b_max=1.0; iterations=50; final=False; i=0; tol=1e-6
+        b_min=1e-10; b_max=1.0; iterations=50; final=False; i=0; tol=1e-4
         while (not(final)):
             b=10**(0.5*(np.log10(b_min)+np.log10(b_max)))*Rv
             N_HI=column_density(b,Rv,Rs,rho_0)*prefactor
@@ -885,7 +935,7 @@ def cross_section_BH(Omega_m,Omega_b,Omega_l,redshift,h,M,f_HI,alpha_e,V0c,
                     b_max=b/Rv
                 i+=1
             if verbose:
-                print'%f %e'%(b,N_HI)
+                print'%e %e'%(b,N_HI)
 
         cross_section=pi*b**2
     else:
@@ -908,7 +958,10 @@ def column_density(b,Rv,Rs,rho_0):
 
 def deriv_column_density(y,x,b,Rs,rho_0):
     r=np.sqrt(x**2+b**2)
-    return [rho_0/((r/Rs+3.0/4.0)*(r/Rs+1.0)**2)]
+    
+    #return [rho_0/((r/Rs+3.0/4.0)*(r/Rs+1.0)**2)]
+    #return [rho_0/((r/Rs+1e-5)**2*(r/Rs+1.0)**2)]
+    return [rho_0/((r/Rs+0.06)**2*(r/Rs+1.0)**3)]
 
 #This function returns \int_0^r_max x^2/[(x+3/4)*(x+1)^2] computed analytically
 def analytic_integral(r):
@@ -927,7 +980,24 @@ def integral(r_max):
     return I
 
 def deriv_HI_BH(y,x):
-    return [x**2/((x+3.0/4.0)*(x+1.0)**2)]
+    #return [x**2/((x+3.0/4.0)*(x+1.0)**2)]
+    #return [x**2/((x+1e-5)**2*(x+1.0)**2)]
+    return [x**2/((x+0.06)**2*(x+1.0)**3)]
+###############################################################################
+
+#This function computes the DLA incidence rate. It returns the incidence rate
+#N_HI -------- > array containing the column densities
+#f_HI ---------> array containing the column density distribution
+def incidence_rate(N_HI,f_HI):
+    indexes=np.where(f_HI>0.0)[0]; N_HI=N_HI[indexes]; f_HI=f_HI[indexes]
+    del indexes; yinit=[0.0]; N_HI_limits=[10**(20.3),np.max(N_HI)]
+    I=si.odeint(deriv_incidence_rate,yinit,N_HI_limits,rtol=1e-8,atol=1e-6,
+                args=(N_HI,f_HI),mxstep=10000000)[1][0]
+    return I
+
+def deriv_incidence_rate(y,x,N_HI,f_HI):
+    f_HI_I=10**(np.interp(np.log10(x),np.log10(N_HI),np.log10(f_HI)))
+    return [f_HI_I]
 ###############################################################################
 
 #This routine returns the indexes of the particles residing within different
@@ -1073,10 +1143,11 @@ print 'f3 = %e'%f3
 snapshot_fname='/home/villa/bias_HI/Efective_model_60Mpc/snapdir_008/snap_008'
 groups_fname='/home/villa/bias_HI/Efective_model_60Mpc/FoF_0.2'
 groups_number=8
-method=3; Omega_HI=1e-3
+method=3; Omega_HI=1e-3; 
+f_MF='/home/villa/bias_HI/mass_function/ST_MF_z=3.dat' #mass function file
 long_ids_flag=False; SFR_flag=True
 [IDs,M_HI]=Bagla_HI_assignment(snapshot_fname,groups_fname,groups_number,
-                              Omega_HI,method,long_ids_flag,SFR_flag)
+                              Omega_HI,method,f_MF,long_ids_flag,SFR_flag)
 
 BoxSize=readsnap.snapshot_header(snapshot_fname).boxsize/1e3 #Mpc/h
 print IDs
