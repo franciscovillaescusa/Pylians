@@ -10,13 +10,24 @@
 #compute the (over)density of the whole field, this routine is more appropiate
 #and clean.
 
-#########################
+############ AVAILABLE ROUTINES ###########
+#CIC_serial
+#CIC_serial_2D
+#CIC_openmp
+#CIC_sigma
+#NGP_serial
+#TSC_serial
+#SPH_gas
+##########################################
 
 #Library to compute the density of a point-set distribution using the 
-#CIC interpolation technique (there is also a rutine to compute it using the 
-#nearest grid point (NGP) technique)
+#NGP,CIC and TSC interpolation techniques
+#It also contains a routine to compute the density field when there are gas
+#particles (having SPH smoothing lengths)
 
+######## COMPILATION ##########
 #If the library needs to be compiled type: python CIC_library.py compile
+###############################
 
 #IMPORTANT!! If the c/c++ functions need to be modified, the code has to be
 #compiled by calling those functions within this file, otherwise it gives errors
@@ -686,6 +697,148 @@ def TSC_serial(positions,dims,BoxSize,cic_densities,weights=None):
     return cic_densities
 ################################################################################
 
+#This routine is used to compute the values of the density in a cubic regular
+#grid when the field is made up by gas particles, which have an associated
+#SPH radius. We generate a distribution of points sampling uniformiuosly the
+#interior volume of a sphere of radius 1 and then for each particle the code
+#computes in which grid cell each point (for each particle) lies.
+#positions -------> positions of the particles
+#radii -----------> SPH smoothing lengths of the particles (same units as pos)
+#divisions -------> a sphere of radius 1 will be divided into divisions^3 points
+#dims ------------> number of grid cells per axis
+#BoxSize ---------> size of the simulation box (in the same units as pos)
+#threads ---------> number of openmp threads to use
+#densities -------> array to be filled with the values of the density
+#weights ---------> weights associated to the gas particles
+#If the density field of the neutral hydrogen is wanted then use the positions
+#and radii of the gas particles but use as weights the HI masses of the gas
+def SPH_gas(positions,radii,divisions,dims,BoxSize,threads,
+            densities,weights=None):
+                       
+    n_max=850**3 #maximum number of elements weave can deal with
+    units=np.array([dims*1.0/BoxSize]); total_siz=positions.shape[0]
+    pi=np.pi
+
+    ######### select volume_divisions x theta_divisions x phi_divisions #######
+    ####### points equally spaced (in volume) within a sphere of radius 1 #####
+    volume_divisions=theta_divisions=phi_divisions=divisions
+    sphere_points=volume_divisions*theta_divisions*phi_divisions
+
+    #Divide a sphere of radius 1 into spherical shells of the same volume
+    V_shell=(4.0*pi/3.0)/volume_divisions; R0=0.0; Radii=[R0]
+    for i in xrange(volume_divisions):
+        #compute the radii of the spherical shell: V_shell = 4*pi/3*(R1^3-R0^3)
+        R1=(3.0*V_shell/(4.0*pi)+R0**3)**(1.0/3.0); Radii.append(R1); R0=R1
+    Radii=np.array(Radii); Radii=0.5*(Radii[1:]+Radii[:-1])
+
+    #Divide a sphere of radius 1 into slices in theta of the same area
+    A_slice=4.0*pi/theta_divisions; theta0=0.0; thetas=[theta0]
+    for i in xrange(theta_divisions):
+        #compute the theta using 2*pi*(cos(theta0)-cos(theta1)) = A_slice
+        theta1=np.arccos((np.cos(theta0)-A_slice/(2.0*pi)))
+        thetas.append(theta1); theta0=theta1
+    thetas=np.array(thetas); thetas=0.5*(thetas[1:]+thetas[:-1])
+
+    #Divide a circle into phi_divisions of the same length
+    phis=np.linspace(0.0,2.0*pi,phi_divisions+1); phis=0.5*(phis[1:]+phis[:-1])
+
+    #compute the positions of the selected points
+    sphere_pos=[]
+    for R in Radii:
+        for theta in thetas:
+            for phi in phis:
+                sphere_pos.append([R*np.sin(theta)*np.cos(phi),
+                                   R*np.sin(theta)*np.sin(phi),
+                                   R*np.cos(theta)])
+    sphere_pos=np.array(sphere_pos); sphere_pos=sphere_pos.astype(np.float32)
+
+    ###########################################################################
+
+    support = """
+         #include <math.h>
+         #include<omp.h>
+    """
+    code = """
+         omp_set_num_threads(threads);
+         int dims2=dims*dims;
+         float x[3];
+         int fx[3],index,i,j;
+
+         #pragma omp parallel for private(x,fx,index,i,j) shared(densities)
+         for (int n=0;n<siz;n++){
+             for (j=0;j<sphere_points;j++){
+                 for (i=0;i<3;i++){
+                    x[i]=(pos(n,i)+R(n)*sphere_pos(j,i))*units(0);
+                    fx[i]=(int)floor(x[i]+0.5);
+                    fx[i]=(fx[i]+dims)%dims;
+                 }
+                 index=dims2*fx[0] + dims*fx[1] + fx[2];
+                 #pragma omp atomic
+                     densities(index)+=1.0; 
+             } 
+         }
+    """
+    code_w = """
+         omp_set_num_threads(threads);
+         int dims2=dims*dims;
+         float x[3];
+         int fx[3],index,i,j;
+
+         #pragma omp parallel for private(x,fx,index,i,j) shared(densities) 
+         for (int n=0;n<siz;n++){
+             for (j=0;j<sphere_points;j++){
+                 for (i=0;i<3;i++){
+                    x[i]=(pos(n,i)+R(n)*sphere_pos(j,i))*units(0);
+                    fx[i]=(int)floor(x[i]+0.5);
+                    fx[i]=(fx[i]+dims)%dims;
+                 }
+                 index=dims2*fx[0] + dims*fx[1] + fx[2];
+                 #pragma omp atomic
+                     densities(index)+=wg(n); 
+             } 
+         }
+    """
+
+    #check that the sizes of the positions and the weights are the same
+    if weights!=None:
+        if total_siz!=weights.shape[0]:
+            print 'the sizes of the positions and weights are not the same'
+            print total_siz,weights.shape[0]; sys.exit()
+
+    #if the array to be sent is larger than n_max, split it into smaller pieces
+    start=0; final=False
+    while not(final):
+
+        if start+n_max>total_siz:
+            end=total_siz; final=True
+        else:
+            end=start+n_max
+
+        print start,'--',end
+        pos=positions[start:end]; R=radii[start:end]; siz=pos.shape[0]
+
+        if weights==None:
+            wv.inline(code,['pos','R','sphere_pos','units','siz','threads',
+                            'sphere_points','dims','densities'],
+                      extra_compile_args=['-O3 -fopenmp'],
+                      extra_link_args=['-lgomp'],
+                      type_converters = wv.converters.blitz,
+                      verbose=2,support_code = support,libraries = ['m','gomp'])
+        else:
+            wg=weights[start:end]
+            wv.inline(code_w,['pos','R','sphere_pos','units','siz','threads',
+                            'sphere_points','dims','densities','wg'],
+                      extra_compile_args=['-O3 -fopenmp'],
+                      extra_link_args=['-lgomp'],
+                      type_converters = wv.converters.blitz,
+                      verbose=2,support_code = support,libraries = ['m','gomp'])
+
+        start=end
+
+    return densities
+
+################################################################################
+
 
 
 
@@ -904,6 +1057,58 @@ if len(sys.argv)==2:
         print np.min(tsc_overdensities),np.max(tsc_overdensities)
 
 #########################################################################
+        ### SPH_gas without weights ###
+        n=100**3 #number of particles
+        BoxSize=100.0 #Mpc/h
+        dims=128
+
+        divisions=2
+        threads=1
+
+        pos=(np.random.random((n,3))*BoxSize).astype(np.float32) #positions
+        R=np.ones(dims**3,dtype=np.float32)*BoxSize/100.0 #SPH radii
+        print pos
+        print R
+
+        overdensities=np.zeros(dims**3,dtype=np.float32)
+        SPH_gas(pos,R,divisions,dims,BoxSize,threads,
+                overdensities,weights=None)
+        overdensities/=divisions**3 #to correct for the points in the sphere
+        print np.sum(overdensities,dtype=np.float64); print n
+        overdensities*=(dims**3*1.0/n)
+
+        print np.min(overdensities),'< density / <density> <',\
+            np.max(overdensities)
+        print overdensities
+
+#########################################################################
+        ### SPH_gas with weights ###
+        n=100**3 #number of particles
+        BoxSize=100.0 #Mpc/h
+        dims=128
+
+        divisions=2
+        threads=1
+
+        #pos=(np.random.random((n,3))*BoxSize).astype(np.float32) #positions
+        #R=np.ones(n,dtype=np.float32)*BoxSize/100.0 #SPH radii
+        #print pos
+        #print R
+
+        weights=np.ones(n,dtype=np.float32)
+
+        overdensities=np.zeros(dims**3,dtype=np.float32)
+        SPH_gas(pos,R,divisions,dims,BoxSize,threads,
+                overdensities,weights)
+        overdensities/=divisions**3 #to correct for the points in the sphere
+        print np.sum(overdensities,dtype=np.float64); print n
+        overdensities*=(dims**3*1.0/n)
+
+        print np.min(overdensities),'< density / <density> <',\
+            np.max(overdensities)
+        print overdensities
+        
+
 
     else:
         print 'To compile the code type:'
