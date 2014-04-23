@@ -835,6 +835,10 @@ def SPH_gas(positions,radii,divisions,dims,BoxSize,threads,
 
         start=end
 
+    #to take into account that each SPH gas particle is divided into 
+    #divisions^3 points
+    densities/=divisions**3
+
     return densities
 
 ################################################################################
@@ -1073,7 +1077,6 @@ if len(sys.argv)==2:
         overdensities=np.zeros(dims**3,dtype=np.float32)
         SPH_gas(pos,R,divisions,dims,BoxSize,threads,
                 overdensities,weights=None)
-        overdensities/=divisions**3 #to correct for the points in the sphere
         print np.sum(overdensities,dtype=np.float64); print n
         overdensities*=(dims**3*1.0/n)
 
@@ -1100,7 +1103,6 @@ if len(sys.argv)==2:
         overdensities=np.zeros(dims**3,dtype=np.float32)
         SPH_gas(pos,R,divisions,dims,BoxSize,threads,
                 overdensities,weights)
-        overdensities/=divisions**3 #to correct for the points in the sphere
         print np.sum(overdensities,dtype=np.float64); print n
         overdensities*=(dims**3*1.0/n)
 
