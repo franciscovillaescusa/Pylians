@@ -743,7 +743,6 @@ def SPH_gas(positions,radii,divisions,dims,BoxSize,threads,
     #Divide a circle into phi_divisions of the same length
     phis=np.linspace(0.0,2.0*pi,phi_divisions+1); phis=0.5*(phis[1:]+phis[:-1])
 
-    sys.exit()
     #compute the positions of the selected points
     sphere_pos=[]
     for R in Radii:
