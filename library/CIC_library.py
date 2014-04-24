@@ -735,13 +735,15 @@ def SPH_gas(positions,radii,divisions,dims,BoxSize,threads,
     A_slice=4.0*pi/theta_divisions; theta0=0.0; thetas=[theta0]
     for i in xrange(theta_divisions):
         #compute the theta using 2*pi*(cos(theta0)-cos(theta1)) = A_slice
-        theta1=np.arccos((np.cos(theta0)-A_slice/(2.0*pi)))
+        argument=np.max([-1.0,np.cos(theta0)-A_slice/(2.0*pi)])
+        theta1=np.arccos(argument)
         thetas.append(theta1); theta0=theta1
     thetas=np.array(thetas); thetas=0.5*(thetas[1:]+thetas[:-1])
 
     #Divide a circle into phi_divisions of the same length
     phis=np.linspace(0.0,2.0*pi,phi_divisions+1); phis=0.5*(phis[1:]+phis[:-1])
 
+    sys.exit()
     #compute the positions of the selected points
     sphere_pos=[]
     for R in Radii:
@@ -1066,7 +1068,7 @@ if len(sys.argv)==2:
         BoxSize=100.0 #Mpc/h
         dims=128
 
-        divisions=2
+        divisions=4
         threads=1
 
         pos=(np.random.random((n,3))*BoxSize).astype(np.float32) #positions
@@ -1090,7 +1092,7 @@ if len(sys.argv)==2:
         BoxSize=100.0 #Mpc/h
         dims=128
 
-        divisions=2
+        divisions=4
         threads=1
 
         #pos=(np.random.random((n,3))*BoxSize).astype(np.float32) #positions
