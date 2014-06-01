@@ -537,7 +537,7 @@ class power_spectrum_full_analysis:
 
 #This routine by default does not perform any shot-noise correction!!!
 #It also does not compute any error for the power spectrum
-def power_spectrum_given_delta(delta,dims,BoxSize):
+def power_spectrum_given_delta(delta,dims,BoxSize,do_CIC_correction=True):
 
     start_time=time.clock()
     bins_r=int(np.sqrt(3*int(0.5*(dims+1))**2))+1
@@ -556,7 +556,10 @@ def power_spectrum_given_delta(delta,dims,BoxSize):
     #because we are using complex numbers: 1) compute the correction over a
     #np.ones(dims3) array  2) multiply the results
     [array,k]=CIC_correction(dims)
-    delta_k*=array; del array
+    if do_CIC_correction:
+        delta_k*=array; del array
+    else:
+        del array; print 'CIC correction not performed'
     print 'done: time taken for the correction=   ',time.clock()-start_cic
     #count modes
     count=lin_histogram(bins_r,0.0,bins_r*1.0,k)
@@ -998,6 +1001,8 @@ def lin_histogram(bins,minimum,maximum,array,weights=None):
     float delta=(maximum-minimum)*1.0/bins;   /* the size of a bin */
 
     for (int k=0;k<length;k++){
+        //if (k%1000000==0)
+           //printf("%d\\n",k);
         index=(int)(array(k)-minimum)/delta;
         if (index>=0 && index<=bins)
             histo(index)+=weights(k);
