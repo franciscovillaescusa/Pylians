@@ -1,42 +1,14 @@
 import numpy as np
 import cosmology_library as cl
+import HI_library as HIL
 import readsnap
+import readfof
 import CIC_library as CIC
 import scipy.weave as wv
 import scipy.fftpack
 import time
 import sys
 
-#This functions computes the value of |k| of each mode, and returns W(kR)
-def smoothing(dims,BoxSize,R):
-    smooth_array=np.empty(dims**2,dtype=np.float32)
-    R=np.array([R]); BoxSize=np.array([BoxSize])
-
-    support = "#include <math.h>"
-    code = """
-       int dims2=dims*dims;
-       int middle=dims/2;
-       int i,j;
-       float kR;
-
-       for (long l=0;l<dims2;l++){
-           i=l/dims;
-           j=l%dims;
-
-           i = (i>middle) ? i-dims : i;
-           j = (j>middle) ? j-dims : j;
-
-           kR=sqrt(i*i+j*j)*2.0*M_PI/BoxSize(0)*R(0);
-           smooth_array(l)=exp(-kR*kR/2.0);
-       } 
-       printf("%f %f %f \\n",BoxSize(0),R(0),M_PI);
-    """
-    wv.inline(code,['dims','smooth_array','R','BoxSize'],
-              type_converters = wv.converters.blitz,
-              support_code = support,libraries = ['m'],
-              extra_compile_args =['-O3'])
-
-    return smooth_array
 
 #Pos is an array containing the positions of the particles along one axis
 #Vel is an array containing the velocities of the particle along the above axis
@@ -53,37 +25,69 @@ def RSD(pos,vel,Hubble,redshift):
 
 ################################# UNITS #####################################
 rho_crit=2.77536627e11 #h^2 Msun/Mpc^3
-
 Mpc=3.0856e24 #cm
 Msun=1.989e33 #g
 Ymass=0.24 #helium mass fraction
 mH=1.6726e-24 #proton mass in grams
-
+nu0=1420.0          #21-cm frequency in MHz
 pi=np.pi
-
 kB=1.38e3 #mJy*m^2/mK
 c=3e8 #m/s
 #############################################################################
 
-################################### INPUT #####################################
-snapshot_fname='Efective_model_60Mpc/Corrected_Snapshot/snapdir_008/snap_008'
+################################### INPUT ###################################
+if len(sys.argv)>1:
+    sa=sys.argv
 
-ang_res=4.0 #arc-minutes 4.0
+    snapshot_fname=sa[1]; groups_fname=sa[2]; groups_number=int(sa[3])
+    method=sa[4]
 
-nu0=1420.0          #21 cm frequency MHz
-channel_width=0.125 #MHz
+    fac=float(sa[5]); HI_frac=float(sa[6]); Omega_HI_ref=float(sa[7])
+    method_Bagla=int(sa[8]); long_ids_flag=bool(int(sa[9]))
+    SFR_flag=bool(int(sa[10])); f_MF=sa[11]
+    
+    ang_res=float(sa[12]); channel_width=float(sa[13]); axis=int(sa[14])
+    dims=int(sa[15]); number_slice=int(sa[16])
 
-dims=1024
+    f_out=sa[17]
 
-axis=0
+    print '################# INFO ##############'
+    for element in sa:
+        print element
 
-f_out='radio_map_60Mpc_0.5min.dat'
+    if number_slice<0:
+        number_slice=None
+
+else:
+    snapshot_fname='../Efective_model_60Mpc/snapdir_013/snap_013'
+    groups_fname='../Efective_model_60Mpc/FoF_0.2'
+    groups_number=13
+    
+    #'Dave','method_1','Bagla','Barnes','Paco'
+    method='Paco'
+
+    #1.362889 (60 Mpc/h z=3) 1.436037 (30 Mpc/h z=3) 1.440990 (15 Mpc/h z=3)
+    fac=1.362889 #factor to obtain <F> = <F>_obs from the Lya : only for Dave
+    HI_frac=0.95 #HI/H for self-shielded regions : for method_1
+    Omega_HI_ref=1e-3
+    method_Bagla=3
+    long_ids_flag=False; SFR_flag=True
+    f_MF='../mass_function/ST_MF_z=2.4.dat'
+
+    ang_res=2 #arc-minutes
+    channel_width=0.500  #MHz
+    axis=1 #axis along which make the redshift-space distortion
+
+    dims=25
+
+    number_slice=None #if none it will look the one with the highest peak flux
+
+    f_out='RM_Paco_2arcmin_z=2.4.dat_25bins'
 ###############################################################################
-
-## 1) READ THE PROPERTIES OF THE SNAPSHOT: BOXSIZE, Z, NALL .... ##
-print '\nREADING SNAPSHOTS PROPERTIES'
+TREECOOL_file='/home/villa/bias_HI/TREECOOL_bestfit_g1.3'
 
 #read snapshot head and obtain BoxSize, Omega_m and Omega_L
+print '\nREADING SNAPSHOTS PROPERTIES'
 head=readsnap.snapshot_header(snapshot_fname)
 BoxSize=head.boxsize/1e3 #Mpc/h
 Nall=head.nall
@@ -96,14 +100,15 @@ h=head.hubble
 
 #comoving distance to redshift z and spatial resolution
 r=cl.comoving_distance(z,Omega_m,Omega_l)
-print '\nComoving distance to z=%2.2f : %4.2f Mpc/h'%(z,r)
+print '\nComoving distance to z=%2.3f : %4.2f Mpc/h'%(z,r)
 
 #compute maximum/minimum frequencies of the channel and delta_r
-print 'Observed frequency from z=%2.2f : %2.1f MHz'%(z,nu0/(1.0+z))
+print 'Observed frequency from z=%2.2f : %2.2f MHz'%(z,nu0/(1.0+z))
 nu_min=nu0/(1.0+z)               #minimum frequency of the channel
 nu_max=nu0/(1.0+z)-channel_width #maximum frequency of the channel
 z_min=z; z_max=nu0/nu_max-1.0;
 print 'Channel redshift interval: %1.4f < z < %1.4f'%(z_min,z_max)
+print 'Channel frequency [%1.3f - %1.3f] MHz'%(nu_max,nu_min)
 delta_r=cl.comoving_distance(z_max,Omega_m,Omega_l)-r
 print 'delta_r channel = %2.2f Mpc/h'%delta_r
 grid_res=(ang_res/60.0)*(pi/180.0)*r
@@ -111,20 +116,47 @@ grid_res=(ang_res/60.0)*(pi/180.0)*r
 #grid resolution
 print '\nSpatial resolution = %2.3f Mpc/h'%grid_res
 
-#read HI/H fractions and masses of the gas particles
-nH0 =readsnap.read_block(snapshot_fname,"NH  ",parttype=0)      #HI/H
-mass=readsnap.read_block(snapshot_fname,"MASS",parttype=0)*1e10 #Msun/h
+#find the total number of particles in the simulation
+Ntotal=np.sum(Nall,dtype=np.uint64)
+print '\nTotal number of particles in the simulation:',Ntotal
 
-#compute the HI mass in each gas particle
-M_HI=0.76*nH0*mass
-Omega_HI=np.sum(M_HI,dtype=np.float64)/BoxSize**3/rho_crit
-print '\nOmega_HI = %e'%Omega_HI
+#sort the pos and vel array
+ID_unsort =readsnap.read_block(snapshot_fname,"ID  ",parttype=-1)-1 #normalized
+pos_unsort=readsnap.read_block(snapshot_fname,"POS ",parttype=-1)/1e3 #Mpc/h
+vel_unsort=readsnap.read_block(snapshot_fname,"VEL ",parttype=-1)     #km/s
+pos=np.empty((Ntotal,3),dtype=np.float32); pos[ID_unsort]=pos_unsort
+vel=np.empty((Ntotal,3),dtype=np.float32); vel[ID_unsort]=vel_unsort
+del pos_unsort, vel_unsort, ID_unsort
 
-#mean value of M_HI per grid point
-mean_M_HI=np.sum(0.76*nH0*mass,dtype=np.float64)/dims**3; del nH0,mass
-print 'Total HI mass = %e'%(np.sum(M_HI,dtype=np.float64))
-print '< M_HI > = %e Msun/h'%(mean_M_HI)
-print 'Omega_HI = %e'%(mean_M_HI*dims**3/BoxSize**3/rho_crit)
+#find the IDs and HI masses of the particles to which HI has been assigned
+if method=='Dave':
+    [IDs,M_HI]=HIL.Dave_HI_assignment(snapshot_fname,HI_frac,fac)
+elif method=='method_1': 
+    [IDs,M_HI]=HIL.method_1_HI_assignment(snapshot_fname,HI_frac,Omega_HI_ref)
+elif method=='Barnes':
+    [IDs,M_HI]=HIL.Barnes_Haehnelt(snapshot_fname,groups_fname,
+                                   groups_number,long_ids_flag,SFR_flag)
+elif method=='Paco':
+    [IDs,M_HI]=HIL.Paco_HI_assignment(snapshot_fname,groups_fname,
+                                      groups_number,long_ids_flag,SFR_flag)
+elif method=='Nagamine':
+    [IDs,M_HI]=HIL.Nagamine_HI_assignment(snapshot_fname,
+                                          correct_H2=False)
+elif method=='Rahmati':
+    [IDs,M_HI]=HIL.Rahmati_HI_assignment(snapshot_fname,fac,TREECOOL_file,
+                                         Gamma_UVB=None,correct_H2=True)
+elif method=='Bagla':
+    [IDs,M_HI]=HIL.Bagla_HI_assignment(snapshot_fname,groups_fname,
+                                       groups_number,Omega_HI_ref,method_Bagla,
+                                       f_MF,long_ids_flag,SFR_flag)
+else:
+    print 'Incorrect method selected!!!'; sys.exit()
+
+#just keep with the particles having HI masses
+M_HI=M_HI[IDs]; pos=pos[IDs]; vel=vel[IDs]; del IDs
+
+#compute the value of Omega_HI
+print 'Omega_HI = %e'%(np.sum(M_HI,dtype=np.float64)/BoxSize**3/rho_crit)
 
 #compute \delta T_b(z)---> prefactor to compute \delta T_b(x)
 #note that when computing M_H we have to use the total Omega_B, not only the
@@ -132,16 +164,10 @@ print 'Omega_HI = %e'%(mean_M_HI*dims**3/BoxSize**3/rho_crit)
 Omega_cdm=Nall[1]*Masses[1]/BoxSize**3/rho_crit
 Omega_b=Omega_m-Omega_cdm
 X_HI=np.sum(M_HI,dtype=np.float64)/(0.76*Omega_b*rho_crit*BoxSize**3)
-mean_delta_Tb=23.44*(Omega_b*h**2/0.02)*np.sqrt(0.15*(1.0+z)/(10.0*Omega_m*h**2))*X_HI #mK
-print '\nOmega_CDM=',Omega_cdm
-print 'Omega_B  =',Omega_b
-print 'X_HI =',X_HI
-print 'mean_delta_Tb =',mean_delta_Tb,'mK\n'
-
-
-#read positions, HI/H fractions and masses of the gas particles
-pos=readsnap.read_block(snapshot_fname,"POS ",parttype=0)/1e3 #Mpc/h
-vel=readsnap.read_block(snapshot_fname,"VEL ",parttype=0)     #km/s
+mean_delta_Tb=\
+    23.44*(Omega_b*h**2/0.02)*np.sqrt(0.15*(1.0+z)/(10.0*Omega_m*h**2))*X_HI #mK
+print '\nOmega_CDM = %2.3f : Omega_B = %2.3f'%(Omega_cdm,Omega_b)
+print 'X_HI = %2.4f ---> mean_delta_Tb = %2.4f mK \n'%(X_HI,mean_delta_Tb)
 
 #do RSD along the axis
 RSD(pos[:,axis],vel[:,axis],Hubble,z); del vel
@@ -150,98 +176,45 @@ RSD(pos[:,axis],vel[:,axis],Hubble,z); del vel
 #delta_r x BoxSize/dims x BoxSize/dims (Mpc/h)^3
 mean_M_HI_grid=np.sum(M_HI,dtype=np.float64)/BoxSize**3*\
     (delta_r*(BoxSize/dims)**2)
-print '\nmean HI mass per grid cell = %e Msun/h / (Mpc/h)^3'%(mean_M_HI_grid)
+print 'mean HI mass per grid cell = %e Msun/h / (Mpc/h)^3'%mean_M_HI_grid
 
-#take a slice of width delta_r
-indexes=np.where(pos[:,0]<delta_r)[0]
-pos=pos[indexes][:,1:3]; M_HI=M_HI[indexes]
-print '\nLimits of the selected slice:'
-print np.min(pos[:,0]),'< Y <',np.max(pos[:,0])
-print np.min(pos[:,1]),'< Z <',np.max(pos[:,1])
+#find the slice with the maximum value of the flux
+print '[Zmin-Zmax] Mpc/h    <Inu> [mJy/beam]    peak flux [mJy/beam]'
+peak_flux_max=0.0; slice_number=0; i=0
+axis_min=0.0; axis_max=axis_min+delta_r 
+while(axis_max<BoxSize):
+    indexes=np.where((pos[:,axis]>axis_min) & (pos[:,axis]<axis_max))[0]
+    pos2=np.empty((len(indexes),2),dtype=np.float32)
+    pos2[:,0]=pos[indexes,(axis+1)%3]; pos2[:,1]=pos[indexes,(axis+2)%3]
+    Inu_slice=HIL.peak_flux(pos2,M_HI[indexes],BoxSize,delta_r,z,dims,
+                            mean_delta_Tb,mean_M_HI_grid,ang_res,grid_res,False)
+    #substract the mean flux
+    mean_flux=np.mean(Inu_slice,dtype=np.float64)
+    Inu_slice=Inu_slice-mean_flux
 
-#compute the value of M_HI in each grid point
-M_HI_grid=np.zeros(dims**2,dtype=np.float32) 
-CIC.CIC_serial_2D(pos,dims,BoxSize,M_HI_grid,M_HI) #compute surface densities
-print '%e should be equal to %e'%(np.sum(M_HI,dtype=np.float64),np.sum(M_HI_grid,dtype=np.float64))
-print 'Omega_HI (slice) = %e'%(np.sum(M_HI_grid,dtype=np.float64)/(BoxSize**2*delta_r)/rho_crit)
+    #compute the peak flux value
+    peak_flux=np.max(Inu_slice)
+    print ' [%6.2f - %6.2f] %15.3e %18.3e'\
+        %(axis_min,axis_max,mean_flux,peak_flux)
 
-#compute delta_HI in the grid cells
-delta_HI=M_HI_grid/mean_M_HI_grid-1.0
-print np.min(delta_HI),'< delta_HI <',np.max(delta_HI)
-print '<delta_HI> = %f'%np.mean(delta_HI,dtype=np.float64)
+    #keep with the Inu of the desired slice or this with the maximum peak flux
+    if peak_flux>peak_flux_max:
+        peak_flux_max=peak_flux; slice_number=i
+        if number_slice==None:
+            Inu=Inu_slice
+    if i==number_slice:
+        Inu=Inu_slice
+    i+=1
+    axis_min=axis_max; axis_max=axis_min+delta_r
 
-#we assume that Ts>>T_CMB
-delta_Tb=mean_delta_Tb*(1.0+delta_HI)
-#*Hubble/(Hubble+(1.0+redshift)*dVdr)
-print np.min(delta_Tb),'< delta_Tb (mK) <',np.max(delta_Tb)
-print '<delta_Tb> = %e (mK)'%(np.mean(delta_Tb,dtype=np.float64))
+#write some info about the selected slice
+print '\nselected slice number =',number_slice
+print 'edges of the selected slice ---> [%2.2f-%2.2f] Mpc/h'\
+    %(slice_number*delta_r,(slice_number+1)*delta_r)
+print 'peak flux from the slice = %1.3e mJy/beam'%(np.max(Inu))
+print 'number of the slice with the highest peak flux =',slice_number
+print 'peak flux from of slices = %1.3e mJy/beam'%peak_flux_max
 
-#create an image
-"""
-f=open('borrar_temperature.dat','w')
-for i in range(dims**2):
-    x=(BoxSize/dims)*(i/dims)
-    y=(BoxSize/dims)*(i%dims)
-    f.write(str(x)+' '+str(y)+' '+str(delta_Tb[i])+'\n')
-f.close()
-"""
-
-#now compute specific intensity
-prefactor=2.0*kB*(nu0*1e6/(1.0+z))**2/c**2 #mJy
-print '\nprefactor=',prefactor
-Inu=prefactor*delta_Tb
-print 'sum of Inu = %e mJy/sr'%np.sum(Inu,dtype=np.float64)
-print np.min(Inu),'< I_nu (mJy/sr) <',np.max(Inu)
-print '<I_nu> = %e mJy/sr'%(np.mean(Inu,dtype=np.float64))
-print mean_delta_Tb*prefactor
-I_nu_mean=4.76/(pi/180.0)**2*h*Omega_HI*100.0/Hubble
-print '<I_nu> = %e Jy/sr'%I_nu_mean
-
-"""
-#create an image
-f=open('borrar.dat','w')
-for i in range(dims**2):
-    x=(BoxSize/dims)*(i/dims)
-    y=(BoxSize/dims)*(i%dims)
-    f.write(str(x)+' '+str(y)+' '+str(Inu[i])+'\n')
-f.close()
-"""
-
-#compute the smooth array
-print '\nSmoothing the field...'
-smooth=smoothing(dims,BoxSize,grid_res)
-print np.min(smooth),'< smoothing <',np.max(smooth)
-smooth=np.reshape(smooth,(dims,dims))
-
-#Fourier transform the intensity field
-Inu=np.reshape(Inu,(dims,dims))
-print 'Computing the FFT of the field...'; start_fft=time.clock()
-Inu_k=scipy.fftpack.fftn(Inu,overwrite_x=True); del Inu
-print 'done: time taken for computing the FFT=',time.clock()-start_fft
-
-#smooth the density field
-Inu_k*=smooth
-
-#compute Fourier transform back to obtain Inu smoothed
-print 'Computing the inverse FFT of the field...'; start_fft=time.clock()
-Inu=scipy.fftpack.ifftn(Inu_k,overwrite_x=True); del Inu_k
-print 'done: time taken for computing the FFT=',time.clock()-start_fft
-Inu=np.ravel(Inu)
-print np.min(Inu.imag),'< Inu.imag <',np.max(Inu.imag)
-
-Inu=np.real(Inu) #just keep with the real part
-print np.min(Inu),'< I_nu (mJy/sr) <',np.max(Inu)
-print 'sum of Inu = %e mJy/sr'%np.sum(Inu,dtype=np.float64)
-print 'points with Inu < 0.0  ---> ',len(np.where(Inu<0.0)[0])
-
-#remove negative values
-Inu[np.where(Inu<0.0)[0]]=0.0
-
-#Move from Jy/sr to Jy/beam
-Inu*=(ang_res/60.0*pi/180.0)**2
-print 'peak flux = %e mJy/beam'%(np.max(Inu))
-
-"""
 #create an image
 f=open(f_out,'w')
 for i in range(dims**2):
@@ -249,4 +222,6 @@ for i in range(dims**2):
     y=(BoxSize/dims)*(i%dims)
     f.write(str(x)+' '+str(y)+' '+str(Inu[i])+'\n')
 f.close()
-"""
+
+
+

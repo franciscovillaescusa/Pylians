@@ -16,26 +16,44 @@ pi=np.pi
 ###############################################################################
 
 ################################ INPUT ########################################
-#snapshot and halo catalogue
-snapshot_fname='../Efective_model_15Mpc/snapdir_008/snap_008'
-groups_fname='../Efective_model_15Mpc/FoF_0.2'
-groups_number=8
+if len(sys.argv)>1:
+    sa=sys.argv
 
-#'Dave','method_1','Bagla','Barnes'
-method='Bagla'
+    snapshot_fname=sa[1]; groups_fname=sa[2]; groups_number=int(sa[3])
+    method=sa[4]
 
-#1.362889 (60 Mpc/h z=3) 1.436037 (30 Mpc/h z=3) 1.440990 (15 Mpc/h z=3)
-fac=1.436037 #factor to obtain <F> = <F>_obs from the Lya : only for Dave
-HI_frac=0.95 #HI/H for self-shielded regions : for method_1
-Omega_HI_ref=1e-3 #for method_1 and Bagla
-method_Bagla=3 #only for Bagla
-long_ids_flag=False; SFR_flag=True #flags for reading the FoF file
-f_MF='../mass_function/ST_MF_z=3.dat' #file containing the mass function
+    fac=float(sa[5]); HI_frac=float(sa[6]); Omega_HI_ref=float(sa[7])
+    method_Bagla=int(sa[8]); long_ids_flag=bool(int(sa[9]))
+    SFR_flag=bool(int(sa[10])); f_MF=sa[11]
+    
+    threads=int(sa[12]); num_los=int(sa[13]) 
+    f_out=sa[14]
 
-threads=10
-num_los=5000
+    print '################# INFO ##############'
+    for element in sa:
+        element
 
-f_out='cross_section_15Mpc_z=3.dat'
+else:
+    #snapshot and halo catalogue
+    snapshot_fname='../Efective_model_15Mpc/snapdir_013/snap_013'
+    groups_fname='../Efective_model_15Mpc/FoF_0.2'
+    groups_number=13
+
+    #'Dave','method_1','Bagla','Barnes'
+    method='Dave'
+
+    #1.362889 (60 Mpc/h z=3) 1.436037 (30 Mpc/h z=3) 1.440990 (15 Mpc/h z=3)
+    fac=1.436037 #factor to obtain <F> = <F>_obs from the Lya : only for Dave
+    HI_frac=0.95 #HI/H for self-shielded regions : for method_1
+    Omega_HI_ref=1e-3 #for method_1 and Bagla
+    method_Bagla=3 #only for Bagla
+    long_ids_flag=False; SFR_flag=True #flags for reading the FoF file
+    f_MF='../mass_function/ST_MF_z=2.4.dat' #file containing the mass function
+
+    threads=15
+    num_los=5000
+
+    f_out='cross_section_Dave_15Mpc_z=2.4.dat'
 ###############################################################################
 
 #read snapshot head and obtain BoxSize, Omega_m and Omega_L
@@ -74,6 +92,9 @@ elif method=='method_1':
 elif method=='Barnes':
     [IDs,M_HI]=HIL.Barnes_Haehnelt(snapshot_fname,groups_fname,
                                    groups_number,long_ids_flag,SFR_flag)
+elif method=='Paco':
+    [IDs,M_HI]=HIL.Paco_HI_assignment(snapshot_fname,groups_fname,
+                                      groups_number,long_ids_flag,SFR_flag)
 elif method=='Bagla':
     [IDs,M_HI]=HIL.Bagla_HI_assignment(snapshot_fname,groups_fname,
                                        groups_number,Omega_HI_ref,method_Bagla,
@@ -142,7 +163,7 @@ indexes=np.array(indexes); print 'Done!'
 
 
 #do a loop over all the halos
-for l in xrange(len(pos_SO)):  
+for l in xrange(0,50000): #(len(pos_SO)):  
 
     """x_halo=10.2 #Mpc/h
     y_halo=8.3  #Mpc/h

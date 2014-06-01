@@ -45,45 +45,53 @@ if len(sys.argv)>1:
 
     fac=float(sa[5]); HI_frac=float(sa[6]); Omega_HI_ref=float(sa[7])
     method_Bagla=int(sa[8]); long_ids_flag=bool(int(sa[9]))
-    SFR_flag=bool(int(sa[10]))
+    SFR_flag=bool(int(sa[10])); f_MF=sa[11]
     
-    dims=int(sa[11]); obj=sa[12]; enviroment=sa[13]
+    dims=int(sa[12]); divisions=int(sa[13]); threads=int(sa[14])
+    obj=sa[15]; enviroment=sa[16]
 
-    mass_interval=bool(int(sa[14]))
-    min_mass=float(sa[15]); max_mass=float(sa[16])
+    mass_interval=bool(int(sa[17]))
+    min_mass=float(sa[18]); max_mass=float(sa[19])
 
-    M_HI_stars=float(sa[17]); f_out=sa[18]
+    M_HI_stars=float(sa[20]); Pk_method=sa[21]; f_out=sa[22]
+
+    print '################# INFO ##############\n',sa
 
 else:
     #snapshot and halo catalogue
-    snapshot_fname='../Efective_model_60Mpc/snapdir_013/snap_013'
-    groups_fname='../Efective_model_60Mpc/FoF_0.2'
-    groups_number=13
+    snapshot_fname='../Efective_model_60Mpc_winds/snapdir_008/snap_008'
+    groups_fname='../Efective_model_60Mpc_winds/FoF_0.2'
+    groups_number=8
 
-    #'Dave','method_1','Bagla','Barnes'
-    method='Bagla'
+    #'Dave','method_1','Bagla','Barnes','Paco','Nagamine'
+    method='Dave'
 
     #1.362889 (60 Mpc/h z=3) 1.436037 (30 Mpc/h z=3) 1.440990 (15 Mpc/h z=3)
-    fac=1.436037 #factor to obtain <F> = <F>_obs from the Lya : only for Dave
+    #1.369705 (60 Mpc/h z=3 winds)
+    fac=1.369705 #factor to obtain <F> = <F>_obs from the Lya : only for Dave
     HI_frac=0.95 #HI/H for self-shielded regions : for method_1
-    Omega_HI_ref=1e-3 #for method_1 and Bagla
+    Omega_HI_ref=1e-3 #for method_1, Bagla and Paco
     method_Bagla=3 #only for Bagla
     long_ids_flag=False; SFR_flag=True #flags for reading the FoF file
-    f_MF='../mass_function/ST_MF_z=2.4.dat' #file containing the mass function
+    f_MF='../mass_function/ST_MF_z=3.dat' #file containing the mass function
     
-    dims=512
+    dims=1024
+    divisions=7 #the SPH gas sphere will be divided into divisions^3 points
+    threads=20 #number of openmp threads to use in the SPH_gas routine
 
     obj='HI_gas'  #'CDM':'GAS':'STARS':'HI_gas':'HI_stars':'HI_baryons' 
     enviroment='ALL'  #'ALL'  'HALOS'  'FILAMENTS' 
 
     #if enviroment='HALOS' select here the mass range
-    mass_interval=True #if all halos are wanted set mass_interval=False
+    mass_interval=False #if all halos are wanted set mass_interval=False
     min_mass=1e10 #Msun/h 
-    max_mass=1e12 #Msun/h
+    max_mass=1e11 #Msun/h
 
     M_HI_stars=1.25e5 #Msun/h --> HI mass to assign to the star particles
 
-    f_out='Pk_HI_Bagla_60Mpc_method_3_z=2.4.dat'
+    Pk_method='CIC' #choose between 'SPH' or 'CIC'
+
+    f_out='Pk_HI_Dave_60Mpc_winds_z=3.dat'
 ###############################################################################
 dims3=dims**3
 
@@ -113,7 +121,13 @@ print 'Total number of particles in the simulation =',Ntotal
 ID_unsort=readsnap.read_block(snapshot_fname,"ID  ",parttype=-1)-1 #normalized
 pos_unsort=readsnap.read_block(snapshot_fname,"POS ",parttype=-1)/1e3 #Mpc/h
 pos=np.empty((Ntotal,3),dtype=np.float32); pos[ID_unsort]=pos_unsort
-del pos_unsort, ID_unsort
+
+#sort the SPH radii array (only required if SPH_gas used)
+if Pk_method=='SPH':
+    ID_unsort=readsnap.read_block(snapshot_fname,"ID  ",parttype=0)-1#normalized
+    radii_unsort=readsnap.read_block(snapshot_fname,"HSML",parttype=0)/1e3#Mpc/h
+    radii=np.empty(Ntotal,dtype=np.float32); radii[ID_unsort]=radii_unsort
+    del radii_unsort, ID_unsort
 
 #select the IDs of the object wanted
 if obj in ['CDM','GAS','STARS']:
@@ -191,14 +205,27 @@ else:
     elif method=='Barnes':
         [IDs_g,M_HI]=HIL.Barnes_Haehnelt(snapshot_fname,groups_fname,
                                          groups_number,long_ids_flag,SFR_flag)
+    elif method=='Paco':
+        [IDs_g,M_HI]=HIL.Paco_HI_assignment(snapshot_fname,groups_fname,
+                                          groups_number,long_ids_flag,SFR_flag)
+    elif method=='Nagamine':
+        [IDs_g,M_HI]=HIL.Nagamine_HI_assignment(snapshot_fname,
+                                                correct_H2=False)
     elif method=='Bagla':
         [IDs_g,M_HI]=HIL.Bagla_HI_assignment(snapshot_fname,groups_fname,
                                              groups_number,Omega_HI_ref,
-                                             method_Bagla,f_MF,
-                                             long_ids_flag,SFR_flag)
+                                             method_Bagla,f_MF,long_ids_flag,
+                                             SFR_flag)
+                                             
 
     #compute the value of Omega_HI
-    print '\nOmega_HI = %e'%(np.sum(M_HI,dtype=np.float64)/BoxSize**3/rho_crit)
+    Omega_HI=np.sum(M_HI,dtype=np.float64)/BoxSize**3/rho_crit
+    print '\nOmega_HI (simulation) = %e'%Omega_HI
+
+    #compute the total expected value of M_HI, not the one from the simulation
+    #M_HI_Total=np.sum(M_HI,dtype=np.float64)
+    M_HI_Total=Omega_HI_ref*BoxSize**3*rho_crit 
+
 
     if obj=='HI_gas':
         if enviroment=='ALL':
@@ -212,7 +239,12 @@ else:
             print 'error'; sys.exit()        
             
         #keep only with the particles of interest
-        M_HI=M_HI[IDs]; pos=pos[IDs]; del IDs, IDs_g
+        del IDs_g; M_HI=M_HI[IDs]; pos=pos[IDs]
+        if Pk_method=='SPH':
+            radii=radii[IDs]
+            if np.any(radii==0.0): #check that the SPH radii are fine
+                print 'found gas particles with R<0!!!'; sys.exit()
+        del IDs
 
     elif obj in ['HI_stars','HI_baryons']:
         if enviroment=='ALL':
@@ -234,24 +266,42 @@ else:
             M_HI=M_HI[IDs]; pos=pos[IDs]; del IDs,IDs_g
 
 
+    #only keep particles with M_HI>0
+    indexes=np.where(M_HI>0.0)[0]; M_HI=M_HI[indexes]; pos=pos[indexes]
+    if Pk_method=='SPH':
+        radii=radii[indexes]
+    del indexes
+
     #compute the value of Omega_HI
-    print 'Omega_HI = %e\n'%(np.sum(M_HI,dtype=np.float64)/BoxSize**3/rho_crit)
+    print 'Omega_HI (enviroment) = %e\n'\
+        %(np.sum(M_HI,dtype=np.float64)/BoxSize**3/rho_crit)
     
-    #compute the mean neutral hydrogen mass per grid point
-    mean_M_HI=np.sum(M_HI,dtype=np.float64)/dims3
+    #compute the mean neutral hydrogen mass per grid point from the expected HI
+    mean_M_HI=M_HI_Total/dims3
+    #mean_M_HI=np.sum(M_HI,dtype=np.float64)/dims3
     print 'mean HI mass per grid point=',mean_M_HI,'\n'
 
     #compute the value of delta_HI = rho_HI / <rho_HI> - 1
     delta_HI=np.zeros(dims3,dtype=np.float32)
-    CIC.CIC_serial(pos,dims,BoxSize,delta_HI,M_HI) #computes the density
-    print '%e should be equal to %e' %(np.sum(M_HI,dtype=np.float64),
+    if Pk_method=='CIC': #computes the density
+        print 'Computing the M_HI in the grid cells using CIC'
+        CIC.CIC_serial(pos,dims,BoxSize,delta_HI,M_HI) 
+    else:
+        print 'Computing the M_HI in the grid cells using gas SPH radii'
+        CIC.SPH_gas(pos,radii,divisions,dims,BoxSize,threads,delta_HI,M_HI) 
+    print '%e should be equal to:\n%e' %(np.sum(M_HI,dtype=np.float64),
                                        np.sum(delta_HI,dtype=np.float64))
     delta_HI=delta_HI/mean_M_HI-1.0  #computes delta
-    print 'numbers should be equal:',np.sum(delta_HI,dtype=np.float64),0.0
+    print 'numbers may be equal:',np.sum(delta_HI,dtype=np.float64),0.0
     print np.min(delta_HI),'< delta_HI <',np.max(delta_HI)
 
     #compute the HI PS
-    Pk=PSL.power_spectrum_given_delta(delta_HI,dims,BoxSize)
+    if Pk_method=='CIC':
+        Pk=PSL.power_spectrum_given_delta(delta_HI,dims,BoxSize,
+                                          do_CIC_correction=True)
+    else:
+        Pk=PSL.power_spectrum_given_delta(delta_HI,dims,BoxSize,
+                                          do_CIC_correction=False)
 
     #write total HI P(k) file
     f=open(f_out,'w')
