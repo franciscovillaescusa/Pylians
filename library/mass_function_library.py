@@ -409,6 +409,10 @@ def mass_function(groups_fname,groups_number,obj,BoxSize,bins,f_out,
             max_mass=np.max(H_mass)
 
         #compute the number of halos within each mass interval
+        bins_mass=np.logspace(np.log10(min_mass),np.log10(max_mass),bins+1)
+        mass_mean=10**(0.5*(np.log10(bins_mass[1:])+np.log10(bins_mass[:-1])))
+        dM=bins_mass[1:]-bins_mass[:-1]
+
         number=np.histogram(H_mass,bins=bins_mass)[0]
         print number; print np.sum(number,dtype=np.float64)
 
@@ -437,6 +441,10 @@ def mass_function(groups_fname,groups_number,obj,BoxSize,bins,f_out,
             max_mass=np.max(H_mass)
 
         #compute the number of halos within each mass interval
+        bins_mass=np.logspace(np.log10(min_mass),np.log10(max_mass),bins+1)
+        mass_mean=10**(0.5*(np.log10(bins_mass[1:])+np.log10(bins_mass[:-1])))
+        dM=bins_mass[1:]-bins_mass[:-1]
+
         number=np.histogram(H_mass,bins=bins_mass)[0]
         print number; print np.sum(number,dtype=np.float64)
 
@@ -464,6 +472,10 @@ def mass_function(groups_fname,groups_number,obj,BoxSize,bins,f_out,
             max_mass=np.max(S_mass)
 
         #compute the number of halos within each mass interval
+        bins_mass=np.logspace(np.log10(min_mass),np.log10(max_mass),bins+1)
+        mass_mean=10**(0.5*(np.log10(bins_mass[1:])+np.log10(bins_mass[:-1])))
+        dM=bins_mass[1:]-bins_mass[:-1]
+
         number=np.histogram(S_mass,bins=bins_mass)[0]
         print number; print np.sum(number,dtype=np.float64)
 
