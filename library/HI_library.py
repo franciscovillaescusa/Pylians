@@ -162,7 +162,7 @@ def Bagla_HI_assignment(snapshot_fname,groups_fname,groups_number,Omega_HI_ref,
     BoxSize=head.boxsize/1e3 #Mpc/h
     Nall=head.nall
     redshift=head.redshift
-    h=head.hubble; del head
+    h=head.hubble
 
     #find the total number of particles in the simulation
     Ntotal=np.sum(Nall,dtype=np.int64)
@@ -199,7 +199,7 @@ def Bagla_HI_assignment(snapshot_fname,groups_fname,groups_number,Omega_HI_ref,
         indexes=np.where((M_FoF>Mmin) & (M_FoF<Mmax))[0]
     else:
         indexes=np.where(M_FoF>Mmin)[0]
-    M_FoF=M_FoF[indexes]; Len=Len[indexes]; Offset=Offset[indexes]#; del indexes
+    M_FoF=M_FoF[indexes]; Len=Len[indexes]; Offset=Offset[indexes]; del indexes
 
     #f=open('borrar.dat','w')
     #for i in range(len(M_FoF)):
@@ -253,12 +253,32 @@ def Bagla_HI_assignment(snapshot_fname,groups_fname,groups_number,Omega_HI_ref,
         print 'FoF groups contain %d cdm+gas+star particles'%len(ID_FoF)
         del indexes
 
+    elif obj_Bagla=='CDM':
+        ID_unsort=readsnap.read_block(snapshot_fname,"ID  ",parttype=-1)-1
+        Mass_unsort=readsnap.read_block(snapshot_fname,"MASS",parttype=-1)
+        Mass=np.zeros(Ntotal,dtype=np.float32); Mass[ID_unsort]=Mass_unsort
+        del Mass_unsort,ID_unsort
+
+        Mass_CDM=head.massarr[1].astype(np.float32)
+        flag_CDM=Mass[ID_FoF]; indexes=np.where(flag_CDM!=Mass_CDM)[0]
+        ID_FoF[indexes]=Ntotal
+
+        #define the IDs array
+        if long_ids_flag:
+            IDs=np.empty(len(ID_FoF)-len(indexes),dtype=np.uint64)
+        else:
+            IDs=np.empty(len(ID_FoF)-len(indexes),dtype=np.uint32)
+        print 'FoF groups contain %d cdm particles'%(len(IDs))
+        print 'FoF groups contain %d cdm+gas+star particles'%len(ID_FoF)
+        del indexes,Mass_CDM,flag_CDM
+
     else:
         #define the IDs array
         if long_ids_flag:
             IDs=np.empty(len(ID_FoF),dtype=np.uint64)
         else:
             IDs=np.empty(len(ID_FoF),dtype=np.uint32)
+
 
     #loop over the halos containing HI and assign the HI to the gas particles
     M_HI=np.zeros(Ntotal,dtype=np.float32); No_gas_halos=0; IDs_offset=0
@@ -267,13 +287,14 @@ def Bagla_HI_assignment(snapshot_fname,groups_fname,groups_number,Omega_HI_ref,
         #select the IDs of all particles belonging to the halo
         indexes=ID_FoF[Offset[index]:Offset[index]+Len[index]]
 
-        if obj_Bagla=='GAS':
+        if obj_Bagla=='GAS' or obj_Bagla=='CDM':
             #find the IDs of the gas particles belonging to the halo
             indexes=indexes[np.where(indexes!=Ntotal)[0]]
 
-            #find the sph radii and HI/H fraction of the gas particles
-            radii=R[indexes]; nH0_part=nH0[indexes]
-
+            if obj_Bagla=='GAS':
+                #find the sph radii and HI/H fraction of the gas particles
+                radii=R[indexes]; nH0_part=nH0[indexes]
+            
         #fill the IDs array
         IDs[IDs_offset:IDs_offset+len(indexes)]=indexes
         IDs_offset+=len(indexes)
