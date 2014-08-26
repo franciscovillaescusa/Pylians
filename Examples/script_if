@@ -9,17 +9,27 @@ snapshot_folder=('/scratch/villa/SAM/CDM/'       \
                  '/scratch2/villa/SAM/NU0.3/'    \
                  '/scratch2/villa/SAM/NU0.3s8/'  \
                  '/scratch2/villa/SAM/NU0.6/'    \
-                 '/scratch2/villa/SAM/NU0.6s8/')
+                 '/scratch2/villa/SAM/NU0.6s8/'  \
+                 '/scratch/villa/SAM/CDM/'       \
+                 '/scratch/villa/SAM/CDM/')
 
 #root of the files containing the galaxy catalogues
-root_catalogue=('LG_NCDM_' 'LG_NU03_' 'LG_N3s8_' 'LG_NU06_' 'LG_N6s8_')
+root_catalogue=('LG_NCDM_' \
+                'LG_NU03_' \
+                'LG_N3s8_' \
+                'LG_NU06_' \
+                'LG_N6s8_' \
+                'LG_DC_N_' \
+                'LG_SA_N_')
 
 #name of the folders containing the 2PCF files
 root_f_out=('0.0/2PCF_RS_gal_0.0_z='      \
             '0.3/2PCF_RS_gal_0.3_z='      \
             '0.3s8/2PCF_RS_gal_0.3s8_z='  \
             '0.6/2PCF_RS_gal_0.6_z='      \
-            '0.6s8/2PCF_RS_gal_0.6s8_z=')
+            '0.6s8/2PCF_RS_gal_0.6s8_z='  \
+            '0.0_DC/2PCF_RS_gal_0.0_z='   \
+            '0.0_SA/2PCF_RS_gal_0.0_z=')
 
 #redshifts
 z=('3.06.dat' '2.07.dat' '0.99.dat' '0.51.dat' '0.00.dat')
@@ -41,7 +51,7 @@ do
     for j in ${!z[*]}
     do
 	
-	if [ "$i" == "0" ]; then
+	if [ "$i" == "0" -o "$i" -ge "5" ]; then
 	    snapshot_fname=${snapshot_folder[$i]}${suffix_snapshot_CDM[$j]}
 	else
 	    snapshot_fname=${snapshot_folder[$i]}${suffix_snapshot[$j]}
