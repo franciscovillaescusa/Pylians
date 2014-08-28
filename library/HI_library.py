@@ -70,24 +70,20 @@ def Bagla_parameters(z,h,Omega_HI_ref,f_MF):
 
     #compute the values of Mmin and Mmax: see Bagla et al. 2009
     Mmax=1e10*(200.0/60.0)**3*((1.0+z)/4.0)**(-1.5)*h #Msun/h
-    Mmin=1e10*(30.0/60.0)**3*((1.0+z)/4.0)**(-1.5)*h #Msun/h
+    Mmin=1e10*(30.0/60.0)**3*((1.0+z)/4.0)**(-1.5)*h  #Msun/h
 
     print '\nM_min (z=%2.1f) = %e Msun/h'%(z,Mmin)
     print 'M_max (z=%2.1f) = %e Msun/h\n'%(z,Mmax)
 
     #read the mass function file
-    f=open(f_MF,'r'); M,MF=[],[]
-    for line in f.readlines():
-        a=line.split(); M.append(float(a[0])); MF.append(float(a[1]))
-    f.close(); M=np.array(M); MF=np.array(MF)
+    M,MF=np.loadtxt(f_MF,unpack=True)
 
     #compute the values of f1, f2 and f3 (see Eqs. 4,5,6 of Bagla et al. 2009)
     #We have to use the fact that:  
     # Omega_HI = \int_0^infty dn/dM(M) M_HI(M) dM / rho_crit
 
     #compute the value of f1
-    method=1
-    yinit=[0.0]; M_limits=[np.min(M),np.max(M)]
+    method=1; yinit=[0.0]; M_limits=[np.min(M),np.max(M)]
     I=si.odeint(deriv_Bagla_parameters,yinit,M_limits,
                 args=(M,MF,Mmin,Mmax,method),
                 rtol=1e-8,atol=1e-6,h0=1e6,mxstep=1000000)[1][0]
@@ -95,8 +91,7 @@ def Bagla_parameters(z,h,Omega_HI_ref,f_MF):
     print 'f1 = %e ----> Omega_HI = %e'%(f1,I*f1/rho_crit)
 
     #compute the value of f2
-    method=2
-    yinit=[0.0]; M_limits=[np.min(M),np.max(M)]
+    method=2; yinit=[0.0]; M_limits=[np.min(M),np.max(M)]
     I=si.odeint(deriv_Bagla_parameters,yinit,M_limits,
                 args=(M,MF,Mmin,Mmax,method),
                 rtol=1e-8,atol=1e-6,h0=1e6,mxstep=1000000)[1][0]
@@ -104,8 +99,7 @@ def Bagla_parameters(z,h,Omega_HI_ref,f_MF):
     print 'f2 = %e ----> Omega_HI = %e'%(f2,I*f2/rho_crit)
 
     #compute the value of f3
-    method=3
-    yinit=[0.0]; M_limits=[np.min(M),np.max(M)]
+    method=3; yinit=[0.0]; M_limits=[np.min(M),np.max(M)]
     I=si.odeint(deriv_Bagla_parameters,yinit,M_limits,
                 args=(M,MF,Mmin,Mmax,method),
                 rtol=1e-8,atol=1e-6,h0=1e6,mxstep=1000000)[1][0]
@@ -147,7 +141,7 @@ def deriv_Bagla_parameters(y,x,M,MF,Mmin,Mmax,method):
 #f_MF ------------> file containing the halo mass function (M, dn/dM)
 #long_ids_flag ---> True if particle IDs are 64 bits. False otherwise
 #SFR_flag --------> True for simulations with baryons particles. False otherwise
-#obj_Bagla -------> object to assign the HI: 'ALL' or 'GAS'
+#obj_Bagla -------> object to assign the HI: 'ALL', 'CDM' or 'GAS'
 #the routine returns the IDs of the particles to whom HI has been assigned
 #and its HI masses. Note that the HI masses array has a length equal to the 
 #total number of particles in the simulation
@@ -189,10 +183,7 @@ def Bagla_HI_assignment(snapshot_fname,groups_fname,groups_number,Omega_HI_ref,
     [Mmin,Mmax,f1,f2,f3]=Bagla_parameters(redshift,h,Omega_HI_ref,f_MF)
 
     #read the mass function file
-    f=open(f_MF,'r'); M,MF=[],[]
-    for line in f.readlines():
-        a=line.split(); M.append(float(a[0])); MF.append(float(a[1]))
-    f.close(); M=np.array(M); MF=np.array(MF); del a
+    M,MF=np.loadtxt(f_MF,unpack=True)
 
     #keep only with the halos that host HI
     if method==1:
