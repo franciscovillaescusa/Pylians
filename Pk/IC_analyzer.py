@@ -56,9 +56,8 @@ Hubble=100.0*np.sqrt(Omega_m*(1.0+redshift)**3+Omega_l)  #h*km/s/Mpc
 h=head.hubble
 
 #define the arrays containing the positions and deltas and power spectra
-pos   = [[],[],[]]   #array containing the CDM, B and NU positions
-delta = [[],[],[]]   #array containing the CDM, B and NU deltas
-Pk    = [[[],[],[]], #array containing the auto- and cross-power spectra
+delta = [[],[],[]]   #array  containing the CDM, B and NU deltas
+Pk    = [[[],[],[]], #matrix containing the auto- and cross-power spectra
          [[],[],[]],
          [[],[],[]]] 
 
@@ -67,13 +66,13 @@ Pk    = [[[],[],[]], #array containing the auto- and cross-power spectra
 for ptype in particle_type:
     
     #read particle positions in #Mpc/h
-    pos[ptype]=readsnap.read_block(snapshot_fname,"POS ",parttype=ptype)/1e3 
+    pos=readsnap.read_block(snapshot_fname,"POS ",parttype=ptype)/1e3 
 
     #compute the deltas
     delta[ptype]=np.zeros(dims**3,dtype=np.float32)
-    CIC.CIC_serial(pos[ptype],dims,BoxSize,delta[ptype])
+    CIC.CIC_serial(pos,dims,BoxSize,delta[ptype])
     print '%.6e should be equal to \n%.6e\n'\
-        %(len(pos[ptype]),np.sum(delta[ptype],dtype=np.float64))
+        %(len(pos),np.sum(delta[ptype],dtype=np.float64)); del pos
 
     #compute the density constrast within each grid cell
     delta[ptype]=delta[ptype]*1.0/len(pos)-1.0;
