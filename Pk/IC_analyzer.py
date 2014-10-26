@@ -1,8 +1,6 @@
 #This code can be used to compute the CDM, baryon and neutrinos power spectra
 #from an IC N-body file. It also computes the CDM-baryon, CDM-neutrinos and
 #baryon-neutrinos cross-power spectra and the overall matter power spectrum.
-#The code also computes the above spectra from the CAMB matter power spectrum
-#and transfer files.
 
 #By default the code will compute all the above power spectra. If the N-body
 #does not content a given particle type (e.g. neutrinos) the generated file
@@ -19,64 +17,32 @@ import sys
 
 rho_crit=2.77536627e11 #h^2 Msun/Mpc^3
 ################################## INPUT ######################################
-####### CAMB #######
-f_Pk_DM='./CAMB_TABLES/ics_matterpow_99.dat'
-f_transfer='./CAMB_TABLES/ics_transfer_99.dat'
-
-f_camb_c  = 'CDM_Pk_CAMB.dat'
-f_camb_b  = 'B_Pk_CAMB.dat'
-f_camb_n  = 'NU_Pk_CAMB.dat'
-f_camb_cb = 'CDMB_Pk_CAMB.dat'
-f_camb_cn = 'CDMNU_Pk_CAMB.dat'
-f_camb_bn = 'BNU_Pk_CAMB.dat'
-
-####### IC file #######
 snapshot_fname='ics'
 dims=512
 
-f_out_c  = 'Pk_CDM_z=99.dat'
-f_out_b  = 'Pk_B_z=99.dat'
-f_out_n  = 'Pk_NU_z=99.dat'
-f_out_cb = 'Pk_CDMB_z=99.dat'
-f_out_cn = 'Pk_CDMNU_z=99.dat'
-f_out_bn = 'Pk_BNU_z=99.dat'
-f_out_m  = 'Pk_matter_z=99.dat'
+Omega_c = 0.2685
+Omega_b = 0.049
+Omega_n = 0.0
+z       = 99
+
+particle_type = [0,1,2]
+
+f_out_c  = 'Pk_CDM_z='    +str(z)+ '.dat'
+f_out_b  = 'Pk_B_z='      +str(z)+ '.dat'
+f_out_n  = 'Pk_NU_z='     +str(z)+ '.dat'
+f_out_cb = 'Pk_CDMB_z='   +str(z)+ '.dat'
+f_out_cn = 'Pk_CDMNU_z='  +str(z)+ '.dat'
+f_out_bn = 'Pk_BNU_z='    +str(z)+ '.dat'
+f_out_m  = 'Pk_matter_z=' +str(z)+ '.dat'
 ###############################################################################
 
-"""
-#This is to read the positions of the particles in the glass file
-pos_1=readsnap.read_block('../N-GenIC/GLASS/dummy_glass_CDM_B_64_64.dat',
-                          "POS ",parttype=1) #kpc/h
+#some verbose
+Omega_m = Omega_c + Omega_b + Omega_n
+print '\nValue of the cosmological parameters: (check!!!!)'
+print 'Omega_CDM = ',Omega_c
+print 'Omega_B   = ',Omega_b
+print 'Omega_NU  = ',Omega_n,'\n'
 
-pos_2=readsnap.read_block('../N-GenIC/GLASS/dummy_glass_CDM_B_64_64.dat',
-                          "POS ",parttype=2) #kpc/h
-
-print pos_1
-print pos_2
-print len(pos_1),len(pos_2)
-"""
-
-####################### CAMB ###########################
-# read CAMB matter power spectrum file
-k_DM,Pk_DM=np.loadtxt(f_Pk_DM,unpack=True)
-
-# read CAMB transfer function file
-k,Tcdm,Tb,dumb,dumb,Tnu,Tm=np.loadtxt(f_transfer,unpack=True)
-
-#DM P(k)
-Pk_DM=10**(np.interp(np.log10(k),np.log10(k_DM),np.log10(Pk_DM)))
-
-#compute the different P(k)
-Pk_C  = Pk_DM*(Tcdm/Tm)**2;   np.savetxt(f_camb_c ,np.transpose([k,Pk_C]))
-Pk_B  = Pk_DM*(Tb/Tm)**2;     np.savetxt(f_camb_b ,np.transpose([k,Pk_B]))
-Pk_N  = Pk_DM*(Tnu/Tm)**2;    np.savetxt(f_camb_n ,np.transpose([k,Pk_N]))
-Pk_CB = Pk_DM*Tcdm*Tb/Tm**2;  np.savetxt(f_camb_cb,np.transpose([k,Pk_CB]))
-Pk_CN = Pk_DM*Tcdm*Tnu/Tm**2; np.savetxt(f_camb_cn,np.transpose([k,Pk_CN]))
-Pk_BN = Pk_DM*Tb*Tnu/Tm**2;   np.savetxt(f_camb_bn,np.transpose([k,Pk_BN]))
-
-
-
-####################### IC file ###########################
 #read snapshot head and obtain BoxSize, Omega_m and Omega_L
 print '\nREADING SNAPSHOTS PROPERTIES'
 head=readsnap.snapshot_header(snapshot_fname)
@@ -89,120 +55,104 @@ redshift=head.redshift
 Hubble=100.0*np.sqrt(Omega_m*(1.0+redshift)**3+Omega_l)  #h*km/s/Mpc
 h=head.hubble
 
-#compute total number of particles
-Ntotal=np.sum(Nall,dtype=np.int64)
-print 'Total number of particles in the simulation =',Ntotal
-
-#compute the values of Omega_CDM and Omega_B
-Omega_c = Nall[1]*Masses[1]/BoxSize**3/rho_crit
-Omega_b = Nall[0]*Masses[0]/BoxSize**3/rho_crit
-Omega_n = Nall[2]*Masses[2]/BoxSize**3/rho_crit
-print '\nOmega_CDM = %.4f\nOmega_B   = %0.4f\nOmega_NU  = %.4f'\
-    %(Omega_c,Omega_b,Omega_n)
-print 'Omega_m   = %.4f\n'%Omega_m
+#define the arrays containing the positions and deltas and power spectra
+pos   = [[],[],[]]   #array containing the CDM, B and NU positions
+delta = [[],[],[]]   #array containing the CDM, B and NU deltas
+Pk    = [[[],[],[]], #array containing the auto- and cross-power spectra
+         [[],[],[]],
+         [[],[],[]]] 
 
 
-
-######################################
-#first: compute auto-power spectra
-######################################
-
-pos   = [[],[],[]] #define the array that hosts the CDM, B and NU positions
-M     = [[],[],[]] #define the array that hosts the CDM, B and NU masses
-delta = [[],[],[]] #define the array that hosts the CDM, B and NU deltas
-
-for ptype in [0,1,2]:
-
-    #positions in #Mpc/h
+#do a loop over all particle types and compute the deltas
+for ptype in particle_type:
+    
+    #read particle positions in #Mpc/h
     pos[ptype]=readsnap.read_block(snapshot_fname,"POS ",parttype=ptype)/1e3 
-    M[ptype]=np.empty(len(pos[ptype]),dtype=np.float32)
-    M[ptype][:]=Masses[ptype]
 
-    if ptype==0:
-        print 'Omega_B   = %.4f'\
-            %(np.sum(M[ptype],dtype=np.float64)/BoxSize**3/rho_crit)
-        f_out=f_out_b
-    elif ptype==1:
-        print 'Omega_CDM = %.4f'\
-            %(np.sum(M[ptype],dtype=np.float64)/BoxSize**3/rho_crit) 
-        f_out=f_out_c
-    elif ptype==2:
-        print 'Omega_NU  = %.4f'\
-            %(np.sum(M[ptype],dtype=np.float64)/BoxSize**3/rho_crit)
-        f_out=f_out_n    
-
-    #compute the mean mass per grid cell
-    mean_M=np.sum(M[ptype],dtype=np.float64)/dims**3
-
-    #compute the mass within each grid cell
+    #compute the deltas
     delta[ptype]=np.zeros(dims**3,dtype=np.float32)
-    CIC.CIC_serial(pos[ptype],dims,BoxSize,delta[ptype],M[ptype])
+    CIC.CIC_serial(pos[ptype],dims,BoxSize,delta[ptype])
     print '%.6e should be equal to \n%.6e\n'\
-     %(np.sum(M[ptype],dtype=np.float64),np.sum(delta[ptype],dtype=np.float64))
+        %(len(pos[ptype]),np.sum(delta[ptype],dtype=np.float64))
 
     #compute the density constrast within each grid cell
-    delta[ptype]/=mean_M; delta[ptype]-=1.0
+    delta[ptype]=delta[ptype]*1.0/len(pos)-1.0;
     print '%.3e < delta < %.3e\n'%(np.min(delta[ptype]),np.max(delta[ptype]))
+                                   
 
-    #compute the P(k)
-    Pk=PSL.power_spectrum_given_delta(delta[ptype],dims,BoxSize)
+#compute the auto-power spectrum when there is only one component
+if len(particle_type)==1:
 
-    #write P(k) to output file
-    np.savetxt(f_out,np.transpose([Pk[0],Pk[1]])); print '\n\n'
+    ptype=particle_type[0]
+    if ptype==0:   f_out=f_out_b
+    elif ptype==1: f_out=f_out_c
+    elif ptype==2: f_out=f_out_n
+    print '\nComputing the power spectrum of the particle type: ',ptype
+    data=PSL.power_spectrum_given_delta(delta[ptype],dims,BoxSize)
+    k=data[0]; Pk[ptype][ptype]=data[1]; del data
+    np.savetxt(f_out,np.transpose([k,Pk[ptype][ptype]])); print '\n'
 
 
-#######################################
-#second: compute cross-power spectra
-#######################################
-for ptype1 in [0,1,2]:
-    for ptype2 in xrange(ptype1+1,3):
+#if there are two or more particles compute auto- and cross-power spectra
+for ptype1 in particle_type:
+    for ptype2 in particle_type[ptype1+1:]:
 
-        #compute the cross-P(k)
-        print '\ncomputing cross-P(k) of fields %d and %d'%(ptype1,ptype2)
-        Pk=PSL.cross_power_spectrum_given_delta(delta[ptype1],delta[ptype2],
-                                                dims,BoxSize)
+        #choose the name of the output files
         if ptype1==0:
+            f_out1 = f_out_b
             if ptype2==1:
-                f_out=f_out_cb
+                f_out2  = f_out_c
+                f_out12 = f_out_cb
             elif ptype2==2:
-                f_out=f_out_bn
+                f_out2  = f_out_n
+                f_out12 = f_out_bn
+
         elif ptype1==1:
+            f_out1 = f_out_c
             if ptype2==2:
-                f_out=f_out_cn
+                f_out2  = f_out_n 
+                f_out12 = f_out_cn
 
-        #write P(k) to output file
-        np.savetxt(f_out,np.transpose([Pk[0],Pk[1]]))
+        #some verbose
+        print '\nComputing the auto- and cross-power spectra of types: '\
+            ,ptype1,'-',ptype2
+        print 'saving results in:'; print f_out1; print f_out2; print f_out12
 
-    delta[ptype1]=[]
+        #This routine computes the auto- and cross-power spectra
+        data=PSL.cross_power_spectrum_given_delta(delta[ptype1],delta[ptype2],
+                                                  dims,BoxSize)
+
+        k                  = data[0]
+        Pk[ptype1][ptype2] = data[1];   Pk[ptype2][ptype1] = data[1]; 
+        Pk[ptype1][ptype1] = data[2]
+        pk[ptype2][ptype2] = data[3]
+
+        #save power spectra results in the output files
+        np.savetxt(f_out1,  np.transpose([k,Pk[ptype1][ptype1]]))
+        np.savetxt(f_out2,  np.transpose([k,Pk[ptype2][ptype2]]))
+        np.savetxt(f_out12, np.transpose([k,Pk[ptype1][ptype2]]))
 
 
 
-####################################################
-#third: compute total matter auto-power spectrum   
-####################################################
+#compute total matter auto-power spectrum   
+print '\ncomputing total matter P(k)'
+Pk_m = np.zeros(len(k),dtype=np.float64)
 
-print '/ncomputing total matter P(k)'
-pos=np.vstack([pos[0],pos[1],pos[2]])
-M=np.hstack([M[0],M[1],M[2]])
+for ptype1 in particle_type:
+    for ptype2 in particle_type:
 
-#compute the mean mass per grid cell
-mean_M=np.sum(M,dtype=np.float64)/dims**3
+        if ptype1==0:  factor1 = Omega_b
+        if ptype1==1:  factor1 = Omega_c
+        if ptype1==2:  factor1 = Omega_n
 
-#compute the mass within each grid cell
-delta=np.zeros(dims**3,dtype=np.float32)
-CIC.CIC_serial(pos,dims,BoxSize,delta,M); del pos
-print '%.6e should be equal to \n%.6e\n'\
-    %(np.sum(M,dtype=np.float64),np.sum(delta,dtype=np.float64)); del M
+        if ptype2==0:  factor2 = Omega_b
+        if ptype2==1:  factor2 = Omega_c
+        if ptype2==2:  factor2 = Omega_n
+        
+        Pk_m += factor1*factor2 * Pk[ptype1][ptype2]
 
-#compute the density constrast within each grid cell
-delta/=mean_M; delta-=1.0
-print '%.3e < delta < %.3e\n'%(np.min(delta),np.max(delta))
-
-#compute the P(k)
-Pk=PSL.power_spectrum_given_delta(delta,dims,BoxSize)
-
-#write P(k) to output file
-np.savetxt(f_out_m,np.transpose([Pk[0],Pk[1]]))
+Pk_m /= Omega_m**2
+np.savetxt(f_out_m,np.transpose([k,Pk_m])) #write results to output file
 
 
 
