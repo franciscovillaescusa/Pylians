@@ -75,7 +75,7 @@ for ptype in particle_type:
         %(len(pos),np.sum(delta[ptype],dtype=np.float64))
 
     #compute the density constrast within each grid cell
-    delta[ptype]=delta[ptype]*1.0/len(pos)-1.0; del pos
+    delta[ptype]=delta[ptype]*dims**3*1.0/len(pos)-1.0; del pos
     print '%.3e < delta < %.3e\n'%(np.min(delta[ptype]),np.max(delta[ptype]))
                                    
 
