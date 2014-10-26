@@ -125,7 +125,7 @@ for ptype1 in particle_type:
         k                  = data[0]
         Pk[ptype1][ptype2] = data[1];   Pk[ptype2][ptype1] = data[1]; 
         Pk[ptype1][ptype1] = data[2]
-        pk[ptype2][ptype2] = data[3]
+        Pk[ptype2][ptype2] = data[3]
 
         #save power spectra results in the output files
         np.savetxt(f_out1,  np.transpose([k,Pk[ptype1][ptype1]]))
