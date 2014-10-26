@@ -72,10 +72,10 @@ for ptype in particle_type:
     delta[ptype]=np.zeros(dims**3,dtype=np.float32)
     CIC.CIC_serial(pos,dims,BoxSize,delta[ptype])
     print '%.6e should be equal to \n%.6e\n'\
-        %(len(pos),np.sum(delta[ptype],dtype=np.float64)); del pos
+        %(len(pos),np.sum(delta[ptype],dtype=np.float64))
 
     #compute the density constrast within each grid cell
-    delta[ptype]=delta[ptype]*1.0/len(pos)-1.0;
+    delta[ptype]=delta[ptype]*1.0/len(pos)-1.0; del pos
     print '%.3e < delta < %.3e\n'%(np.min(delta[ptype]),np.max(delta[ptype]))
                                    
 
