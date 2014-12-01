@@ -93,8 +93,8 @@ if len(particle_type)==1:
 
 
 #if there are two or more particles compute auto- and cross-power spectra
-for ptype1 in particle_type:
-    for ptype2 in particle_type[ptype1+1:]:
+for ptype1,index in zip(particle_type,range(len(particle_type))):
+    for ptype2 in particle_type[index+1:]:
 
         #choose the name of the output files
         if ptype1==0:
