@@ -438,7 +438,7 @@ def DDR_pairs(bins,Rmin,Rmax,BoxSize,dims,indexes1,indexes2,pos1,pos2):
             comm.send(myrank,dest=0,tag=1)
             final=comm.recv(source=0,tag=2)
 
-        print 'cpu ',myrank,' finished: transfering data to master'
+        #print 'cpu ',myrank,' finished: transfering data to master'
         comm.send(pairs,dest=0,tag=10)
 ################################################################################
 
@@ -676,11 +676,192 @@ def read_results(fname,case):
 ################################################################################
 
 
+################################################################################
+#this function computes the all the distances between the particles and the 
+#values of delta(i)*delta(j) for the pairs. It can be computed serially with one
+#single core or via several cores through omp
+#pos ---------------------> positions of the particles
+#delta -------------------> array containing the delta = (n - <n>) / <n>
+#BoxSize -----------------> Size of the simulation box
+#bins --------------------> number of bins to compute the correlation function
+#Rmin --------------------> minimum value to compute xi(r)
+#Rmax --------------------> maximum value to compute xi(r)
+#pairs -------------------> array containing the number of pairs
+#xi ----------------------> array containing the sum delta(i)*delta(j)
+#N1 ----------------------> number of the particle from which start
+#N2 ----------------------> number of the particle to finish
+#serial ------------------> True for serial (1 core) and False for several cores
+#threads -----------------> Number of cpus to be used for omp
+def all_distances_grid(pos,delta,BoxSize,bins,Rmin,Rmax,pairs,xi,N1,N2,
+                       serial=True,threads=1):
+
+    l=pos.shape[0]
+
+    support_serial = """
+       #include <iostream>
+       using namespace std;
+    """
+    support_omp = """
+       #include <iostream>
+       #include<omp.h>
+       using namespace std;
+    """
+
+    code_serial = """
+       float middle=BoxSize/2.0; 
+       float dx,dy,dz,r,x1,y1,z1,x2,y2,z2;
+       float delta_r=log10(Rmax/Rmin)/bins;
+       int bin,i,j;
+
+       for (i=N1;i<N2;i++){
+           x1=pos(i,0); y1=pos(i,1); z1=pos(i,2);
+           for (j=i+1;j<l;j++){
+               x2=pos(j,0); y2=pos(j,1); z2=pos(j,2);
+               dx=(fabs(x1-x2)<middle) ? x1-x2 : BoxSize-fabs(x1-x2);
+               dy=(fabs(y1-y2)<middle) ? y1-y2 : BoxSize-fabs(y1-y2);
+               dz=(fabs(z1-z2)<middle) ? z1-z2 : BoxSize-fabs(z1-z2);
+               r=sqrt(dx*dx+dy*dy+dz*dz);
+
+               if (r>=Rmin && r<=Rmax){
+                   bin=(int)(log10(r/Rmin)/delta_r);
+                   pairs(bin)+=1; xi(bin)+=delta(i)*delta(j);
+               }
+           }   
+       }
+    """
+    code_omp = """
+       omp_set_num_threads(threads);
+       float middle=BoxSize/2.0;
+       float dx,dy,dz,r,x1,y1,z1,x2,y2,z2;
+       float delta_r=log10(Rmax/Rmin)/bins;
+       int bin,i,j;
+
+       #pragma omp parallel for private(x1,y1,z1,x2,y2,z2,dx,dy,dz,r,bin,j,N1,N2) shared(pairs,xi) 
+       for (i=N1;i<N2;i++){
+           x1=pos(i,0); y1=pos(i,1); z1=pos(i,2);
+           for (j=i+1;j<l;j++){
+               x2=pos(j,0); y2=pos(j,1); z2=pos(j,2);
+               dx=(fabs(x1-x2)<middle) ? x1-x2 : BoxSize-fabs(x1-x2);
+               dy=(fabs(y1-y2)<middle) ? y1-y2 : BoxSize-fabs(y1-y2);
+               dz=(fabs(z1-z2)<middle) ? z1-z2 : BoxSize-fabs(z1-z2);
+               r=sqrt(dx*dx+dy*dy+dz*dz);
+
+               if (r>=Rmin && r<=Rmax){
+                   bin=(int)(log10(r/Rmin)/delta_r);
+                   #pragma omp atomic
+                       pairs(bin)+=1; 
+                   #pragma omp atomic
+                       xi(bin)+=delta(i)*delta(j);
+               }
+           }   
+       }
+    """
+
+    if serial==True:
+        wv.inline(code_serial,
+                  ['pos','delta','l','BoxSize','Rmin','Rmax','bins','pairs',
+                   'xi','N1','N2'],
+                  type_converters = wv.converters.blitz,
+                  support_code = support_serial,libraries = ['m'])
+    else:
+        wv.inline(code_omp,
+                  ['pos','delta','l','BoxSize','Rmin','Rmax','bins','pairs',
+                   'xi','N1','N2','threads'],
+                  type_converters = wv.converters.blitz, 
+                  extra_compile_args=['-O3 -fopenmp'],
+                  extra_link_args=['-lgomp'],
+                  support_code = support_omp,libraries = ['m','gomp'])
+
+    return pairs
+################################################################################
+
+
+
+################################################################################
+#This function computes the correlation function from the points in a grid
+#from the particle N1 to the particle N2. The distances between the pairs have
+#to be computed previously and the indexes_coord are used to iterate only among
+#the particles contributing to the correlation function.
+#N1 ----------------------> number of the particle from which start
+#N2 ----------------------> number of the particle to finish
+#dims --------------------> number of points in the grid per dimension
+#delta -------------------> array containing the delta = (n - <n>) / <n>
+#pairs -------------------> array containing the number of pairs 
+#xi ----------------------> array containing the sum delta(i)*delta(j)
+#indexes_coord -----------> array with the i/j/k indexes of the neighbors
+#indexes_distances -------> array with the bins for distances between neighbors
+def distances_grid(N1,N2,dims,delta,pairs,xi,indexes_coord,indexes_distances):
+
+    #perform a sanity checks
+    if len(indexes_coord)!=len(indexes_distances):
+        print 'length of coord and distances indexes are different!!!'
+        sys.exit()
+
+    #for every particle we have to iterate among l neighbors contributing to xi
+    l=len(indexes_coord)
+
+    support_serial = """
+       #include <iostream>
+       using namespace std;
+    """
+    code_serial = """
+       int i,j,index,index_x,index_y,index_z,id_x,id_y,id_z,bin;
+       int dims2=dims*dims;
+       float cont_i;
+
+       for (i=N1;i<N2;i++){
+           index_x = (i/dims2)%dims;
+           index_y = (i/dims)%dims;
+           index_z = (i%dims);
+           cont_i  = delta(i);
+
+           for (j=0;j<l;j++){
+               id_x  = (index_x + indexes_coord(j,0))%dims;
+               id_y  = (index_y + indexes_coord(j,1))%dims;
+               id_z  = (index_z + indexes_coord(j,2))%dims;
+               index = dims2*id_x + dims*id_y + id_z;
+               if (index>i){
+                   bin = indexes_distances(j);
+                   pairs(bin) += 1;
+                   xi(bin)    += cont_i*delta(index);
+               }
+           }   
+       }
+    """
+
+    wv.inline(code_serial,
+              ['N1','N2','dims','delta','xi','indexes_coord',
+               'indexes_distances','l','pairs'],
+              type_converters = wv.converters.blitz,
+              extra_compile_args=['-O3'],
+              support_code = support_serial,libraries = ['m'])
+
+    return pairs
+################################################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 
 ############ EXAMPLE OF USAGE: TPCF ############
+
 """
 points_g=150000
 points_r=200000
