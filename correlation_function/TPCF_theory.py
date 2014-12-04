@@ -19,7 +19,7 @@ def correlation_function_from_Pk(k,Pk,R):
     k_limits=np.array([k[0],k[-1]])    
 
     I=si.odeint(deriv,yinit,k_limits,args=(k,Pk,R),
-                rtol=1e-7,atol=1e-7,
+                rtol=1e-7,atol=1e-12,
                 mxstep=10000000)[1][0]/(2.0*pi**2)
 
     return I
