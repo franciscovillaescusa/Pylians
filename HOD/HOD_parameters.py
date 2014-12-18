@@ -259,7 +259,7 @@ for g in range(100):
                 wp_aux=wp[elements,1]; wp_HOD_aux=wp_HOD[elements]
                 Cov_aux=Cov[elements,:][:,elements]
                 diff=np.matrix(wp_HOD_aux-wp_aux)
-                chi2=diff*Cov_aux.I*diff.T
+                chi2=diff*Cov_aux.I*diff.T;  chi2=chi2[0,0]
 
                 print 'X2('+str(min_bin)+'-'+str(max_bin)+')=',chi2_nocov,chi2
                 g=open(results_file,'a')
