@@ -111,6 +111,7 @@ if myrank==0:
 
     #read positions and IDs of DM particles: sort the IDs array
     DM_pos=readsnap.read_block(snapshot_fname,"POS ",parttype=-1)
+    DM_vel=readsnap.read_block(snapshot_fname,"VEL ",parttype=-1)
     #IDs should go from 0 to N-1, instead from 1 to N
     DM_ids=readsnap.read_block(snapshot_fname,"ID  ",parttype=-1)-1
     if np.min(DM_ids)!=0 or np.max(DM_ids)!=(len(DM_pos)-1):
@@ -213,10 +214,10 @@ for g in range(100):
         seed=955
 
         #create the galaxy catalogue through the HOD parameters
-        pos_g=HOD.hod_fast(DM_pos,sorted_ids,IDs,halo_mass,halo_pos,
-                           halo_radius,halo_len,halo_offset,BoxSize,
+        pos_g=HOD.hod_fast(DM_pos,DM_vel,sorted_ids,IDs,halo_mass,halo_pos,
+                           halo_vel,halo_radius,halo_len,halo_offset,BoxSize,
                            min_mass,max_mass,fiducial_density,M1,
-                           alpha,seed,verbose=True)/1e3
+                           alpha,seed,model='standard',verbose=True)/1e3
 
         #compute the 2pt correlation function
         r,xi_r,error_xi=CF.TPCF(pos_g,pos_r,BoxSize,DD_action,
