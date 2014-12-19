@@ -1,11 +1,4 @@
-#LATEST MODIFICATION: 10/11/2013
 #This code computes the Xi^2 for a set of different HOD parameters
-
-#to generate always the same results for a particular value of M1 & alpha
-#edit the HOD_library.py code and comment out the lines with the seeds
-
-#the range over which M1 and alpha wants to be varied has to be specified 
-#below: not in the INPUT
 
 #Be careful with the IDs. In Gadget the IDs start from 1 whereas when we sort
 #them the first one will be 0, for instance:
@@ -16,16 +9,19 @@
 #array([0, 1, 7, 4, 3, 6, 8, 2, 5])
 #i.e. b[1] will return 1, whereas it should be 0
 
+#The code will create/read the random catalogue and also compute the number of 
+#pairs in it if needed
+
+#IMPORTANT!!!! check that halo velocities are correct (not sqrt(a) factors...)
+
 from mpi4py import MPI
 import numpy as np
 import scipy.integrate as si
-import snap_chooser as SC
 import readsnap
 import readsubf
 import HOD_library as HOD
 import correlation_function_library as CF
-import sys
-import os
+import sys,os
 import random
 
 #function used to compute wp(rp): d(wp) / dr = 2r*xi(r) / sqrt(r^2-rp^2)
@@ -63,63 +59,97 @@ if len(sys.argv)>1:
 
 else:
     #### SNAPSHOTS TO SELECT GALAXIES WITHIN CDM HALOS ####
-    snapshot_fname='../../snapdir_003/snap_003'
-    groups_fname='../../'
-    groups_number=3
+    snapshot_fname = '../snapdir_003/snap_003'
+    groups_fname   = '../'
+    groups_number  = 3
 
     #### HALO CATALOGUE PARAMETERS ####
-    mass_criteria='m200' #'t200' 'm200' or 'c200'
-    min_mass=3e10 #Msun/h
-    max_mass=2e15 #Msun/h
+    mass_criteria = 'm200' #'t200' 'm200' or 'c200'
+    min_mass      = 3e10   #Msun/h
+    max_mass      = 2e15   #Msun/h
 
-    ### HOD PARAMETERS ###
-    fiducial_density=0.00111 #mean number density for galaxies with Mr<-21
-    #M1_min=6.0e13;     M1_max=1.0e14;   M1_bins=20
-    #alpha_min=1.05;  alpha_max=1.60;  alpha_bins=20
-    
-    M1_min=6.9e+13; M1_max= 6.9e+13; M1_bins=100
-    alpha_min=1.20;  alpha_max=1.20;  alpha_bins=100
+    #### HOD PARAMETERS ####
+    fiducial_density = 0.00111 #mean number density for galaxies with Mr<-21
+    M1_min = 1.15e+14;   M1_max = 1.15e14   #M1 range
+    alpha_min = 1.27;    alpha_max =1.27    #alpha range
+    seed = 955    #if None random seeds will be selected
+    iterations = 200   #number of random points in the M1-alpha plane
 
     #### RANDOM CATALOG ####
-    random_file='/home/villa/disksom2/Correlation_function/Random_catalogue/random_catalogue_4e5.dat'
+    create_random_catalogue = False #create only the first time
+    random_catalogue_fname = 'random_catalogue_1e6.dat'
+    random_points = 1000000  #number of points in the random catalogue
+    compute_RR_pairs = True  #compute the number of RR pairs (True or False)
+    RR_name = 'RR_1e6.dat' #name for the file containing number of random pairs
 
     #### PARAMETERS ####
-    BoxSize=500.0 #Mpc/h
-    Rmin=0.1 #Mpc/h
-    Rmax=75.0 #Mpc/h
-    bins=60
+    Rmin = 0.1   #Mpc/h
+    Rmax = 75.0  #Mpc/h
+    bins = 60
 
     #### PARTIAL RESULTS NAMES ####
-    DD_name='DD.dat' #name for the file containing DD results
-    RR_name='../RR_0.1_75_60_4e5.dat' #name for the file containing RR results
-    DR_name='DR.dat' #name for the file containing DR results
+    DD_name = 'DD.dat' #name for the file containing DD results
+    DR_name = 'DR.dat' #name for the file containing DR results
 
     #### ACTIONS ####
-    DD_action='compute' #'compute' or 'read' (from DD_name file)
-    RR_action='read' #'compute' or 'read' (from RR_name file)
-    DR_action='compute' #'compute' or 'read' (from DR_name file)
+    DD_action = 'compute' #'compute' or 'read' (from DD_name file)
+    RR_action = 'read'    #'compute' or 'read' (from RR_name file)
+    DR_action = 'compute' #'compute' or 'read' (from DR_name file)
     
     #### wp FILE ####
-    wp_file='../w_p_21.dat'
-    wp_covariance_file='../wp_covar_21.0.dat'
+    wp_file            = 'w_p_21.dat'
+    wp_covariance_file = 'wp_covar_21.0.dat'
 
     #### OUTPUT ####
-    results_file='borrar.dat'
+    results_file='xi_0.0eV_z=0.dat'
 ######################################################
+
+
+#read snapshot head and obtain BoxSize, Omega_m and Omega_L                   
+head=readsnap.snapshot_header(snapshot_fname)
+BoxSize=head.boxsize/1e3 #Mpc/h                                               
+Nall=head.nall
+Masses=head.massarr*1e10 #Msun/h                                              
+Omega_m=head.omega_m
+Omega_l=head.omega_l
+redshift=head.redshift
+Hubble=100.0*np.sqrt(Omega_m*(1.0+redshift)**3+Omega_l)  #h*km/s/Mpc          
+h=head.hubble
+
+
+#create/read the random catalogue 
+if myrank==0:
+    if create_random_catalogue:
+        print 'creating random catalogue...'
+        pos_r = np.random.random((random_points,3)).astype(np.float32)
+        np.save(random_catalogue_fname,pos_r); print 'done'
+        pos_r *= BoxSize  #multiply for the correct units
+    else:
+        print 'reading random catalogue...'
+        pos_r = np.load(random_catalogue_fname+'.npy')*BoxSize #Mpc/h
+        print 'done'
+
+#compute the number of pairs in the random catalogue
+if compute_RR_pairs:
+    if myrank==0:
+        print 'computing number of random pairs...'
+        CF.DD_file(pos_r,BoxSize,RR_name,bins,Rmin,Rmax); print 'done'
+    else:
+        if compute_RR_pairs:
+            pos_r=None;  CF.DD_file(pos_r,BoxSize,RR_name,bins,Rmin,Rmax)
+
 
 if myrank==0:
 
-    #read positions and IDs of DM particles: sort the IDs array
-    DM_pos=readsnap.read_block(snapshot_fname,"POS ",parttype=-1)
-    DM_vel=readsnap.read_block(snapshot_fname,"VEL ",parttype=-1)
+    #read positions, velocities and IDs of DM particles: sort the IDs array
+    DM_pos=readsnap.read_block(snapshot_fname,"POS ",parttype=-1)  #kpc/h
+    DM_vel=readsnap.read_block(snapshot_fname,"VEL ",parttype=-1)  #Mpc/h
     #IDs should go from 0 to N-1, instead from 1 to N
     DM_ids=readsnap.read_block(snapshot_fname,"ID  ",parttype=-1)-1
     if np.min(DM_ids)!=0 or np.max(DM_ids)!=(len(DM_pos)-1):
-        print 'Error!!!!'
-        print 'IDs should go from 0 to N-1'
+        print 'Error!!!!'; print 'IDs should go from 0 to N-1'
     print len(DM_ids),np.min(DM_ids),np.max(DM_ids)
-    sorted_ids=DM_ids.argsort(axis=0)
-    del DM_ids
+    sorted_ids=DM_ids.argsort(axis=0); del DM_ids
     #the particle whose ID is N is located in the position sorted_ids[N]
     #i.e. DM_ids[sorted_ids[N]]=N
     #the position of the particle whose ID is N would be:
@@ -127,76 +157,60 @@ if myrank==0:
 
     #read the IDs of the particles belonging to the CDM halos
     #again the IDs should go from 0 to N-1
-    halos_ID=readsubf.subf_ids(groups_fname,groups_number,0,0,
-                               long_ids=True,read_all=True)
-    IDs=halos_ID.SubIDs-1
-    del halos_ID
-
-    print 'subhalos IDs=',np.min(IDs),np.max(IDs)
+    halos_ID = readsubf.subf_ids(groups_fname,groups_number,0,0,
+                                 long_ids=True,read_all=True)
+    IDs=halos_ID.SubIDs-1; del halos_ID
+    print 'subhalos IDs =[',np.min(IDs),'-',np.max(IDs),']'
 
     #read CDM halos information
-    halos=readsubf.subfind_catalog(groups_fname,groups_number,
-                                   group_veldisp=True,masstab=True,
-                                   long_ids=True,swap=False)
+    halos = readsubf.subfind_catalog(groups_fname,groups_number,
+                                     group_veldisp=True,masstab=True,
+                                     long_ids=True,swap=False)
     if mass_criteria=='t200':
-        halos_mass=halos.group_m_tophat200*1e10   #masses in Msun/h
-        halos_radius=halos.group_r_tophat200      #radius in kpc/h
+        halos_mass   = halos.group_m_tophat200*1e10 #masses in Msun/h
+        halos_radius = halos.group_r_tophat200      #radius in kpc/h
     elif mass_criteria=='m200':
-        halos_mass=halos.group_m_mean200*1e10     #masses in Msun/h
-        halos_radius=halos.group_r_mean200        #radius in kpc/h
+        halos_mass   = halos.group_m_mean200*1e10   #masses in Msun/h
+        halos_radius = halos.group_r_mean200        #radius in kpc/h
     elif mass_criteria=='c200':    
-        halos_mass=halos.group_m_crit200*1e10     #masses in Msun/h
-        halos_radius=halos.group_r_crit200        #radius in kpc/h
+        halos_mass   = halos.group_m_crit200*1e10   #masses in Msun/h
+        halos_radius = halos.group_r_crit200        #radius in kpc/h
     else:
-        print 'bad mass_criteria'
-        sys.exit()
-    halos_pos=halos.group_pos
-    halos_len=halos.group_len
-    halos_offset=halos.group_offset
-    halos_indexes=np.where((halos_mass>min_mass) & (halos_mass<max_mass))[0]
+        print 'bad mass_criteria';  sys.exit()
+    halos_pos          = halos.group_pos
+    halos_len          = halos.group_len
+    halos_offset       = halos.group_offset
+    halos_main_subhalo = halos.group_firstsub
+    halos_vel          = halos.sub_vel[halos_main_subhalo]/np.sqrt(1.0+redshift)
+    halos_indexes = np.where((halos_mass>min_mass) & (halos_mass<max_mass))[0]
     del halos
     
-    print ' '
-    print 'total halos found=',len(halos_pos)
-    print 'halos number density=',len(halos_pos)/BoxSize**3
+    print '\ntotal halos found =',len(halos_pos)
+    print 'halos number density =',len(halos_pos)/BoxSize**3
 
     #keep only the halos in the given mass range 
-    halo_mass=halos_mass[halos_indexes]
-    halo_pos=halos_pos[halos_indexes]
-    halo_radius=halos_radius[halos_indexes]
-    halo_len=halos_len[halos_indexes]
-    halo_offset=halos_offset[halos_indexes]
+    halo_mass=halos_mass[halos_indexes]; halo_pos=halos_pos[halos_indexes]
+    halo_vel=halos_vel[halos_indexes];   halo_radius=halos_radius[halos_indexes]
+    halo_len=halos_len[halos_indexes];   halo_offset=halos_offset[halos_indexes]
     del halos_indexes
-
-    if np.any(halo_len==[]):
-        print 'something bad'
-
-    #read the random catalogue (new version)
-    dt=np.dtype((np.float32,3))
-    pos_r=np.fromfile(random_file,dtype=dt)*BoxSize #Mpc/h
+    if np.any(halo_len==[]):  print 'something wrong!!!'
 
     #read the wp file
-    f=open(wp_file,'r');  wp=[]
-    for line in f.readlines():
-        a=line.split()
-        wp.append([float(a[0]),float(a[1]),float(a[2])])
-    f.close();  wp=np.array(wp)
+    wp = np.loadtxt(wp_file)
 
     #read covariance matrix file
-    f=open(wp_covariance_file,'r')
-    Cov=[]
+    f=open(wp_covariance_file,'r');  Cov=[]
     for line in f.readlines():
         a=line.split()
         for value in a:
             Cov.append(float(value))
     f.close(); Cov=np.array(Cov)
     if len(Cov)!=len(wp)**2:
-        print 'problem with point numbers in the covariance file'
-        sys.exit()
-    Cov=np.reshape(Cov,(len(wp),len(wp)))
-    Cov=np.matrix(Cov)
+        print 'problem with point numbers in the covariance file'; sys.exit()
+    Cov=np.reshape(Cov,(len(wp),len(wp)));  Cov=np.matrix(Cov)
 
-for g in range(100):
+
+for g in range(iterations):
 
     ##### MASTER #####
     if myrank==0:
@@ -205,66 +219,66 @@ for g in range(100):
         #print 'M1=';      M1=float(raw_input())
         #print 'alpha=';   alpha=float(raw_input())
         
-        #M1=1.0e14+0.4e14*np.random.random()
-        #alpha=1.10+0.3*np.random.random()
-        #seed=np.random.randint(0,3000,1)[0]
-
-        M1=1.15e14
-        alpha=1.27
-        seed=955
+        M1    = M1_min    + (M1_max-M1_min)*np.random.random()
+        alpha = alpha_min + (alpha_max-alpha_min)*np.random.random()
+        if seed==None:
+            seed  = np.random.randint(0,3000,1)[0]
 
         #create the galaxy catalogue through the HOD parameters
-        pos_g=HOD.hod_fast(DM_pos,DM_vel,sorted_ids,IDs,halo_mass,halo_pos,
+        hod = HOD.hod_fast(DM_pos,DM_vel,sorted_ids,IDs,halo_mass,halo_pos,
                            halo_vel,halo_radius,halo_len,halo_offset,BoxSize,
                            min_mass,max_mass,fiducial_density,M1,
-                           alpha,seed,model='standard',verbose=True)/1e3
+                           alpha,seed,model='standard',verbose=True)
 
-        #compute the 2pt correlation function
-        r,xi_r,error_xi=CF.TPCF(pos_g,pos_r,BoxSize,DD_action,
-                                RR_action,DR_action,DD_name,RR_name,
-                                DR_name,bins,Rmin,Rmax)
+        pos_g = hod.pos_galaxies/1e3 #Mpc/h
+        vel_g = hod.vel_galaxies     #km/s
 
-        f=open('correlation_function.dat','w')
-        for i in range(len(r)):
-            f.write(str(r[i])+' '+str(xi_r[i])+' '+str(error_xi[i])+'\n')
-        f.close()
+        #only keep the catalogues with the correct galaxy number density
+        if abs((hod.galaxy_density-fiducial_density)/fiducial_density)<0.02:
+
+            #compute the 2pt correlation function
+            r,xi_r,error_xi=CF.TPCF(pos_g,pos_r,BoxSize,DD_action,
+                                    RR_action,DR_action,DD_name,RR_name,
+                                    DR_name,bins,Rmin,Rmax)
+
+            #save correlation function to file
+            np.savetxt('correlation_function.dat',np.transpose([r,xi_r,error_xi]))
                                     
-        r_max=np.max(r)
-        h=1e-13 #discontinuity at r=rp. We integrate from r=rp+h to r_max
-        yinit=np.array([0.0])
+            r_max = np.max(r);  yinit=np.array([0.0])
+            h = 1e-13 #discontinuity at r=rp. We integrate from r=rp+h to r_max
 
-        f=open('projected_correlation_function.dat','w')
-        wp_HOD=[]
-        for rp in wp[:,0]:
-            x=np.array([rp+h,r_max])
-            y=si.odeint(deriv,yinit,x,args=(r,xi_r,rp),mxstep=100000)
-            wp_HOD.append(y[1][0])
-            f.write(str(rp)+' '+str(y[1][0])+'\n')
-        wp_HOD=np.array(wp_HOD)
-        f.close()
+            f=open('projected_correlation_function.dat','w')
+            wp_HOD=[]
+            for rp in wp[:,0]:
+                x=np.array([rp+h,r_max])
+                y=si.odeint(deriv,yinit,x,args=(r,xi_r,rp),mxstep=100000)
+                wp_HOD.append(y[1][0])
+                f.write(str(rp)+' '+str(y[1][0])+'\n')
+            wp_HOD=np.array(wp_HOD)
+            f.close()
 
-        print 'M1=',M1
-        print 'alpha=',alpha
-
-        chi2_bins=(wp_HOD-wp[:,1])**2/wp[:,2]**2
+            chi2_bins = (wp_HOD-wp[:,1])**2/wp[:,2]**2
             
-        for min_bin in [2]:
-            for max_bin in [12]:
-                elements=np.arange(min_bin,max_bin)
+            for min_bin in [2]:
+                for max_bin in [12]:
+                    elements = np.arange(min_bin,max_bin)
                 
-                #X^2 without covariance matrix
-                chi2_nocov=np.sum(chi2_bins[elements])
+                    #X^2 without covariance matrix
+                    chi2_nocov = np.sum(chi2_bins[elements])
 
-                #X^2 with covariance matrix 
-                wp_aux=wp[elements,1]; wp_HOD_aux=wp_HOD[elements]
-                Cov_aux=Cov[elements,:][:,elements]
-                diff=np.matrix(wp_HOD_aux-wp_aux)
-                chi2=diff*Cov_aux.I*diff.T;  chi2=chi2[0,0]
+                    #X^2 with covariance matrix 
+                    wp_aux = wp[elements,1]; wp_HOD_aux = wp_HOD[elements]
+                    Cov_aux = Cov[elements,:][:,elements]
+                    diff = np.matrix(wp_HOD_aux-wp_aux)
+                    chi2 = diff*Cov_aux.I*diff.T;  chi2=chi2[0,0]
 
-                print 'X2('+str(min_bin)+'-'+str(max_bin)+')=',chi2_nocov,chi2
-                g=open(results_file,'a')
-                g.write(str(M1)+ ' '+str(alpha)+' '+str(seed)+' '+str(chi2)+'\n')
-                g.close()
+                    print 'M1 =',M1;  print 'alpha =',alpha
+                    print 'X2('+str(min_bin)+'-'+str(max_bin)+')=',chi2_nocov,chi2
+                    g=open(results_file,'a')
+                    g.write(str(M1)+ ' '+str(alpha)+' '+str(hod.Mmin)+\
+                                ' '+str(seed)+' '+str(chi2)+' '+\
+                                str(hod.galaxy_density)+'\n')
+                    g.close()
 
 
     ##### SLAVES #####
