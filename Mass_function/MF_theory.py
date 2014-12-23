@@ -12,8 +12,8 @@ f_Pk_DM    = './CAMB_TABLES/ics_matterpow_0.dat'
 f_transfer = './CAMB_TABLES/ics_transfer_0.dat'
 
 do_CDM    = False  #whether use the matter or only CDM power spectrum
-Omega_CDM = 0.2208   #only set if do_CDM=True
-Omega_B   = 0.05     #only set if do_CDM=True
+Omega_CDM = 0.2685  #set the values for do_CDM=True or do_CDM=False   
+Omega_B   = 0.0490  #set the values for do_CDM=True or do_CDM=False   
 
 f_out = 'Crocce_MF_z=0.dat'
 ##############################################################################
