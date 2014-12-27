@@ -12,6 +12,11 @@
 #The code will create/read the random catalogue and also compute the number of 
 #pairs in it if needed
 
+#The code can also be used to find the minium chi2 in the results file.
+#For this type:
+#python HOD_parameters.py results_file.txt
+#where results_file.txt is the fine containing the chi2 values, M1...etc
+
 #IMPORTANT!!!! check that halo velocities are correct (not sqrt(a) factors...)
 
 from mpi4py import MPI
@@ -38,6 +43,19 @@ myrank=comm.Get_rank()
 ########################### INPUT ###############################
 if len(sys.argv)>1:
     sa=sys.argv
+
+    #look for the minimum
+    if len(sys.argv)==2:
+        results_file=sa[1]
+        M1,alpha,Mmin,seed,chi2,gal_density=np.loadtxt(results_file,unpack=True)
+        index = np.where(chi2==np.min(chi2))
+        print 'M1           =',M1[index][0]
+        print 'alpha        =',alpha[index][0]
+        print 'Mmin         =',Mmin[index][0]
+        print 'seed         =',seed[index][0]
+        print 'gal. density =',gal_density[index][0]
+        print 'chi2         =',chi2[index][0]
+        sys.exit()
 
     snapshot_fname=sa[1]; groups_fname=sa[2]; groups_number=sa[3]
 
@@ -235,6 +253,9 @@ for g in range(iterations):
 
         #only keep the catalogues with the correct galaxy number density
         if abs((hod.galaxy_density-fiducial_density)/fiducial_density)<0.02:
+
+            #save the positions of the galaxies into a file                   
+	    np.savetxt('galaxy_catalogue.dat',np.hstack([pos_g,vel_g]))
 
             #compute the 2pt correlation function
             r,xi_r,error_xi=CF.TPCF(pos_g,pos_r,BoxSize,DD_action,
