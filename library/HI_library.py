@@ -727,10 +727,18 @@ def Barnes_Haehnelt(snapshot_fname,groups_fname,groups_number,long_ids_flag,
 #snapshot_fname ---> name of the N-body snapshot
 #groups_fname -----> name of the folder containing the FoF/Subfind halos
 #groups_number ----> number of the FoF/Subfind file to read
-#long_ids_flag ---> True if particle IDs are 64 bits. False otherwise
-#SFR_flag --------> True for simulations with baryons particles. False otherwise
+#long_ids_flag ----> True if particle IDs are 64 bits. False otherwise
+#SFR_flag ---------> True for hydro simulations. False otherwise
+#Omega_cdm --------> Value of Omega_CDM. For hydro simulations set to None
+#Omega_b ----------> Value of Omega_B.   For hydro simulations set to None
+#Paco_object ------> Type of particle to assign HI: 'GAS' or 'pureCDM'
+#                    if 'GAS' it will only assign HI to the gas particles
+#                    and each particle within the same halo will have a 
+#                    HI mass depending on its properties. If pureCDM it will
+#                    distribute the HI equally within all the particles
+#                    belonging to the dark matter halo
 def Paco_HI_assignment(snapshot_fname,groups_fname,groups_number,long_ids_flag,
-                       SFR_flag):
+                       SFR_flag,Omega_cdm=None,Omega_b=None,Paco_object='GAS'):
     
     #read snapshot head and obtain BoxSize, Omega_m and Omega_L
     head=readsnap.snapshot_header(snapshot_fname)
@@ -747,17 +755,19 @@ def Paco_HI_assignment(snapshot_fname,groups_fname,groups_number,long_ids_flag,
     print 'Total number of particles in the simulation: %d\n'%Ntotal
 
     #compute the value of Omega_b
-    Omega_cdm=Nall[1]*Masses[1]/BoxSize**3/rho_crit
-    Omega_b=Omega_m-Omega_cdm
+    if Omega_cdm==None:
+        Omega_cdm=Nall[1]*Masses[1]/BoxSize**3/rho_crit
+    if  Omega_b==None:
+        Omega_b=Omega_m-Omega_cdm
     print 'Omega_cdm =',Omega_cdm; print 'Omega_b   =',Omega_b
     print 'Omega_m   =',Omega_m,'\n'
 
     #Paco parameters of the function M_HI(M)
     #c0=2.7       #3.4 (z=2.4)   : 3.2 (z=3.0)  : 2.7 (z=4.0)
     #f_HI=0.34    #0.19 (z=2.4) : 0.222 (z=3.0)  : 0.34 (z=4.0)
-    z_t    = [2.4,3.0,4.0]
-    c0_t   = [3.4,3.2,2.7]
-    f_HI_t = [0.19,0.222,0.34]
+    z_t    = [2.4,  3.0,   4.0]
+    c0_t   = [3.4,  3.2,   2.7]
+    f_HI_t = [0.19, 0.222, 0.34]
 
     c0=np.interp(redshift,z_t,c0_t); f_HI=np.interp(redshift,z_t,f_HI_t)
     f_H=0.76*Omega_b/Omega_m
@@ -806,33 +816,44 @@ def Paco_HI_assignment(snapshot_fname,groups_fname,groups_number,long_ids_flag,
     print 'Omega_HI = %e\n'%(np.sum(M_HI_halo,dtype=np.float64)/BoxSize**3/
                              rho_crit)
 
-    #sort the R array (note that only gas particles have an associated R)
-    ID_unsort=readsnap.read_block(snapshot_fname,"ID  ",parttype=0)-1
-    R_unsort=readsnap.read_block(snapshot_fname,"HSML",parttype=0)/1e3 #Mpc/h
-    nH0_unsort=readsnap.read_block(snapshot_fname,"NH  ",parttype=0)   #HI/H
-    #sanity check: the radius of any gas particle has to be larger than 0!!!
-    if np.min(R_unsort)<=0.0:
-        print 'something wrong with the HSML radii'
-        sys.exit()
-    R=np.zeros(Ntotal,dtype=np.float32); R[ID_unsort]=R_unsort
-    nH0=np.zeros(Ntotal,dtype=np.float32); nH0[ID_unsort]=nH0_unsort
-    del R_unsort, nH0_unsort, ID_unsort
+    if Paco_object=='GAS':
 
-    #keep only the IDs of gas particles within halos. The radius of CDM and 
-    #star particles will be equal to 0. We use that fact to idenfify the gas
-    #particles. We set the IDs of cdm or star particles to Ntotal. Note that 
-    #the normalized IDs goes from 0 to Ntotal-1. Since ID_FoF is a uint array
-    #we can't use negative numbers
-    flag_gas=R[ID_FoF]; indexes=np.where(flag_gas==0.0)[0]
-    ID_FoF[indexes]=Ntotal
-    #define the IDs array
-    if long_ids_flag:
-        IDs=np.empty(len(ID_FoF)-len(indexes),dtype=np.uint64)
+        #sort the R array (note that only gas particles have an associated R)
+        ID_unsort=readsnap.read_block(snapshot_fname,"ID  ",parttype=0)-1
+        R_unsort=readsnap.read_block(snapshot_fname,"HSML",parttype=0)/1e3#Mpc/h
+        nH0_unsort=readsnap.read_block(snapshot_fname,"NH  ",parttype=0)   #HI/H
+        #sanity check: the radius of any gas particle has to be larger than 0!!!
+        if np.min(R_unsort)<=0.0:
+            print 'something wrong with the HSML radii'; sys.exit()
+        R=np.zeros(Ntotal,dtype=np.float32); R[ID_unsort]=R_unsort
+        nH0=np.zeros(Ntotal,dtype=np.float32); nH0[ID_unsort]=nH0_unsort
+        del R_unsort, nH0_unsort, ID_unsort
+
+        #keep only the IDs of gas particles within halos. The radius of CDM and 
+        #star particles will be equal to 0. We use that fact to idenfify the gas
+        #particles. We set the IDs of cdm or star particles to Ntotal. Note 
+        #that  the normalized IDs goes from 0 to Ntotal-1. Since ID_FoF is a 
+        #uint array we can't use negative numbers
+        flag_gas=R[ID_FoF]; indexes=np.where(flag_gas==0.0)[0]
+        ID_FoF[indexes]=Ntotal
+        #define the IDs array
+        if long_ids_flag:
+            IDs=np.empty(len(ID_FoF)-len(indexes),dtype=np.uint64)
+        else:
+            IDs=np.empty(len(ID_FoF)-len(indexes),dtype=np.uint32)
+        print 'FoF groups contain %d gas particles'%len(IDs)
+        print 'FoF groups contain %d cdm+gas+star particles'%len(ID_FoF)
+        del indexes
+
     else:
-        IDs=np.empty(len(ID_FoF)-len(indexes),dtype=np.uint32)
-    print 'FoF groups contain %d gas particles'%len(IDs)
-    print 'FoF groups contain %d cdm+gas+star particles'%len(ID_FoF)
-    del indexes
+        
+        #define the IDs array
+        if long_ids_flag:
+            IDs=np.empty(len(ID_FoF),dtype=np.uint64)
+        else:
+            IDs=np.empty(len(ID_FoF),dtype=np.uint32)
+
+
 
     #make a loop over the different FoF halos and populate with HI
     No_gas_halos=0; M_HI=np.zeros(Ntotal,dtype=np.float32); IDs_offset=0
@@ -840,25 +861,24 @@ def Paco_HI_assignment(snapshot_fname,groups_fname,groups_number,long_ids_flag,
 
         indexes=ID_FoF[Offset[index]:Offset[index]+Len[index]]
 
-        #find how many gas particles there are in the FoF group
-        indexes=indexes[np.where(indexes!=Ntotal)[0]]
+        if Paco_object=='GAS':
+            #find how many gas particles there are in the FoF group
+            indexes=indexes[np.where(indexes!=Ntotal)[0]]
 
-        #find the sph radii and HI/H fraction of the gas particles
-        radii=R[indexes]; nH0_part=nH0[indexes]
+            #find the sph radii and HI/H fraction of the gas particles
+            radii=R[indexes]; nH0_part=nH0[indexes]
 
         #fill the IDs array
         IDs[IDs_offset:IDs_offset+len(indexes)]=indexes
         IDs_offset+=len(indexes)
 
         Num_gas=len(indexes)
-        #Num_cdm_star=Len[index]-Num_gas
-        #print Num_gas,Num_cdm_star
         if Num_gas>0:
-            #M_HI[indexes]+=M_HI_halo[index]/Num_gas
-            M_HI[indexes]+=M_HI_halo[index]*(nH0_part**0.17*radii**0.35)\
-                /np.sum(nH0_part**0.17*radii**0.35,dtype=np.float64)
-            #M_HI[indexes]+=M_HI_halo[index]*(nH0_part**0.17*radii**0.2)\
-            #    /np.sum(nH0_part**0.17*radii**0.2,dtype=np.float64)
+            if Paco_object=='GAS':
+                M_HI[indexes]+=M_HI_halo[index]*(nH0_part**0.17*radii**0.35)\
+                    /np.sum(nH0_part**0.17*radii**0.35,dtype=np.float64)
+            else:
+                M_HI[indexes]+=M_HI_halo[index]/Num_gas
         else:
             No_gas_halos+=1
     print '\nNumber of halos with no gas particles=',No_gas_halos
@@ -959,7 +979,7 @@ def Nagamine_HI_assignment(snapshot_fname,FactorSN,MaxSfrTimescale,
 #if Gamma_UVB is set to None the value of the photoionization rate will be read
 #from the TREECOOL file, otherwise it is used the Gamma_UVB value
 def Rahmati_HI_assignment(snapshot_fname,fac,TREECOOL_file,Gamma_UVB=None,
-                          correct_H2=False):
+                          correct_H2=False,IDs=None):
 
     #read snapshot head and obtain BoxSize, Omega_m and Omega_L
     print '\nREADING SNAPSHOTS PROPERTIES'
@@ -1008,7 +1028,8 @@ def Rahmati_HI_assignment(snapshot_fname,fac,TREECOOL_file,Gamma_UVB=None,
                     f,n0,alpha_1,alpha_2,beta,SF_temperature=1e4)
     
     #read the gas particles IDs and masses
-    IDs=readsnap.read_block(snapshot_fname,"ID  ",parttype=0)-1 #normalized
+    if IDs==None:
+        IDs=readsnap.read_block(snapshot_fname,"ID  ",parttype=0)-1 #normalized
     mass=readsnap.read_block(snapshot_fname,"MASS",parttype=0)*1e10 #Msun/h
 
     #create the array M_HI and fill it
