@@ -41,29 +41,31 @@ if len(sys.argv)>1:
     method_Bagla=int(sa[8]); long_ids_flag=bool(int(sa[9]))
     SFR_flag=bool(int(sa[10])); f_MF=sa[11]
     
-    dims=int(sa[12]); f_out=sa[13]
+    dims=int(sa[12]); do_RSD=bool(int(sa[13])); f_out=sa[14]
 
     print '################# INFO ##############\n',sa
 
 else:
-    snapshot_fname='../Efective_model_60Mpc/snapdir_008/snap_008'
-    groups_fname='../Efective_model_60Mpc/FoF_0.2'
-    groups_number=8
+    snapshot_fname = '../fiducial/snapdir_016/snap_016'
+    groups_fname   = '../fiducial'
+    groups_number  = 16
 
     #'Dave','method_1','Bagla','Barnes','Paco','Nagamine'
-    method='Bagla'
+    method = 'Dave'
 
     #1.362889 (60 Mpc/h z=3) 1.436037 (30 Mpc/h z=3) 1.440990 (15 Mpc/h z=3)
-    fac=1.440990 #factor to obtain <F> = <F>_obs from the Lya : only for Dave
-    HI_frac=0.95 #HI/H for self-shielded regions : for method_1
-    Omega_HI_ref=1e-3 #for method_1, Bagla and Paco and for computing x_HI
-    method_Bagla=3 #only for Bagla
-    long_ids_flag=False; SFR_flag=True #flags for reading the FoF file
-    f_MF='../mass_function/ST_MF_z=3.dat' #file containing the mass function
+    fac = 1.435028 #factor to obtain <F> = <F>_obs from the Lya : only for Dave
+    HI_frac = 0.95 #HI/H for self-shielded regions : for method_1
+    Omega_HI_ref = 1e-3 #for method_1, Bagla and Paco and for computing x_HI
+    method_Bagla = 3 #only for Bagla
+    long_ids_flag = False;   SFR_flag = True #flags for reading the FoF file
+    f_MF = '../mass_function/ST_MF_z=3.dat' #file containing the mass function
 
-    dims=512
+    dims = 512
 
-    f_out='Pk_21cm_Bagla_60Mpc_z=3.dat2'
+    do_RSD = False   #whether compute the 21cm P(k) in real or redshift-space
+
+    f_out = 'borrar.dat'
 
     #f_out=['Pk_21cm_Paco_120Mpc_X_z=3.dat',
     #       'Pk_21cm_Paco_120Mpc_Y_z=3.dat',
@@ -93,9 +95,10 @@ ID_unsort=readsnap.read_block(snapshot_fname,"ID  ",parttype=-1)-1 #normalized
 print 'sorting the POS array...'
 pos_unsort=readsnap.read_block(snapshot_fname,"POS ",parttype=-1)/1e3 #Mpc/h
 pos=np.empty((Ntotal,3),dtype=np.float32); pos[ID_unsort]=pos_unsort; del pos_unsort
-print 'sorting the VEL array...'
-vel_unsort=readsnap.read_block(snapshot_fname,"VEL ",parttype=-1) #km/s
-vel=np.empty((Ntotal,3),dtype=np.float32); vel[ID_unsort]=vel_unsort; del vel_unsort
+if do_RSD:
+    print 'sorting the VEL array...'
+    vel_unsort=readsnap.read_block(snapshot_fname,"VEL ",parttype=-1) #km/s
+    vel=np.empty((Ntotal,3),dtype=np.float32); vel[ID_unsort]=vel_unsort; del vel_unsort
 del ID_unsort
 
 #find the IDs and HI masses of the particles to which HI has been assigned
@@ -120,7 +123,9 @@ else:
     print 'Incorrect method selected!!!'; sys.exit()
 
 #keep only the particles having HI masses
-M_HI=M_HI[IDs]; pos=pos[IDs]; vel=vel[IDs]; del IDs
+M_HI=M_HI[IDs]; pos=pos[IDs] 
+if do_RSD:   vel=vel[IDs]
+del IDs
 
 #mean HI mass per grid point
 mean_M_HI=np.sum(M_HI,dtype=np.float64)/dims**3
@@ -142,20 +147,26 @@ print '\nOmega_CDM=',Omega_cdm; print 'Omega_B  =',Omega_b;
 print 'X_HI (simulation) =',X_HI; print 'mean_delta_Tb =',mean_delta_Tb,'mK'
 
 
+if do_RSD: axes=3
+else:      axes=1
+    
 Pk_axis=[]
-for axis in range(0,3):
+for axis in range(0,axes):
 
     print '\nComputing the 21 cm P(k) along axis:',axis
 
-    #create a copy of the pos array
-    pos_RSD=np.copy(pos)
-
-    #do RSD along the axis
-    RSD(pos_RSD,vel,Hubble,redshift,axis)
-
     #compute the value of M_HI in each grid point
     M_HI_grid=np.zeros(dims**3,dtype=np.float32)
-    CIC.CIC_serial(pos_RSD,dims,BoxSize,M_HI_grid,M_HI); del pos_RSD
+    if do_RSD:
+        #create a copy of the pos array
+        pos_RSD=np.copy(pos)
+
+        #do RSD along the axis
+        RSD(pos_RSD,vel,Hubble,redshift,axis)
+
+        CIC.CIC_serial(pos_RSD,dims,BoxSize,M_HI_grid,M_HI); del pos_RSD
+    else:
+        CIC.CIC_serial(pos,dims,BoxSize,M_HI_grid,M_HI); del pos
     print 'Omega_HI = %e'\
         %(np.sum(M_HI_grid,dtype=np.float64)/BoxSize**3/rho_crit)
 
