@@ -1,4 +1,5 @@
 #This library contains the routines used to compute quantities in redshift-space
+import numpy as np
 
 ############## AVAILABLE ROUTINES ##############
 #pos_redshift_space
