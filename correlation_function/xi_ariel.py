@@ -2,6 +2,7 @@ from mpi4py import MPI
 import numpy as np
 import CIC_library as CIC
 import correlation_function_library as CFL
+import redshift_space_library as RSL
 import readsnap
 import sys,os
 import scipy.weave as wv
@@ -19,25 +20,28 @@ if len(sys.argv)>1:
     sa=sys.argv
 
     snapshot_fname = sa[1];  bins = int(sa[2]);  
-    Rmin = float(sa[3]);     Rmax = float(sa[4]);   bins_type = sa[5]
-    dims = int(sa[6]);       f_out = sa[7];         particle_type = []
+    Rmin = float(sa[3]);     Rmax = float(sa[4]);        bins_type = sa[5]
+    dims = int(sa[6]);       do_RSD = bool(int(sa[7]));  axis = int(sa[8])
+    f_out = sa[9];           particle_type = []
     
     for i in xrange(6):
-        if int(sa[8+i])==1:  particle_type.append(i)
+        if int(sa[10+i])==1:  particle_type.append(i)
             
     print sa; print 'particle_type =',particle_type
     
 else:
-    snapshot_fname = '../snapdir_003/snap_003'
+    snapshot_fname = '1/snapdir_003/snap_003'
 
     bins = 50
     Rmin = 10.0   #Mpc/h
     Rmax = 150.0  #Mpc/h
     bins_type = 'log'  #whether use 'linear' bins or 'log' bins in xi(r)
 
-    dims = 160
+    dims   = 160
+    do_RSD = False  #whether compute the CF in real or redshift space
+    axis   = 0      #axis along which go to redshift-space (only if do_RSD=True)
 
-    f_out = 'xi_matter_z=0.dat'
+    f_out = 'xi_matter_160_z=0.dat'
 
     particle_type = [1,2] #types of particle to use to compute the CF
 
@@ -71,9 +75,18 @@ if myrank==0:
     #make a loop over all particle types and sum their masses in the grid
     for ptype in particle_type:
 
-        #read particle positions and masses
+        #read particle positions 
         pos  = readsnap.read_block(snapshot_fname,"POS ",
                                    parttype=ptype)/1e3  #Mpc/h
+
+        #displace particle positions to redshift-space
+        if do_RSD:
+            vel  = readsnap.read_block(snapshot_fname,"VEL ",
+                                       parttype=ptype)  #km/s
+            RSL.pos_redshift_space(pos,vel,BoxSize,Hubble,redshift,axis)
+            del vel
+
+        #read particle masses
         mass = readsnap.read_block(snapshot_fname,"MASS",
                                    parttype=ptype)*1e10 #Msun/h
 
