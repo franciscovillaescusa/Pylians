@@ -18,6 +18,7 @@
 #NGP_serial
 #TSC_serial
 #SPH_gas
+#   Volw
 ##########################################
 
 #Library to compute the density of a point-set distribution using the 
@@ -716,28 +717,46 @@ def SPH_gas(positions,radii,divisions,dims,BoxSize,threads,
             densities,weights=None):
                        
     n_max=850**3 #maximum number of elements weave can deal with
-    units=np.array([dims*1.0/BoxSize]); total_siz=positions.shape[0]
-    pi=np.pi
+    units=np.array([dims*1.0/BoxSize]); total_siz=positions.shape[0]; pi=np.pi
+
+    #check that the number of elements in the positions and radii are the same
+    if len(positions)!=len(radii):
+        print 'number of elements in the positions and radii are different!!!'
+        sys.exit()
 
     ######### select volume_divisions x theta_divisions x phi_divisions #######
     ####### points equally spaced (in volume) within a sphere of radius 1 #####
     volume_divisions=theta_divisions=phi_divisions=divisions
     sphere_points=volume_divisions*theta_divisions*phi_divisions
 
-    #Divide a sphere of radius 1 into spherical shells of the same volume
-    V_shell=(4.0*pi/3.0)/volume_divisions; R0=0.0; Radii=[R0]
+    #Divide a sphere of radius 1 into spherical shells of the same volume,
+    #taking into account the SPH density profile
+    V_shell=1.0/volume_divisions; R0=0.0; Radii_sphere=[R0]
     for i in xrange(volume_divisions):
-        #compute the radii of the spherical shell: V_shell = 4*pi/3*(R1^3-R0^3)
-        R1=(3.0*V_shell/(4.0*pi)+R0**3)**(1.0/3.0); Radii.append(R1); R0=R1
-    Radii=np.array(Radii); Radii=0.5*(Radii[1:]+Radii[:-1])
+        #compute the radii of the spherical shell: 
+        #R1=(3.0*V_shell/(4.0*pi)+R0**3)**(1.0/3.0); Radii.append(R1); R0=R1
+        Final=False; Rmin=R0; Rmax=1.0; Vol0=Volw(R0); tol=1e-5
+        while not(Final):
+            test_R=0.5*(Rmin+Rmax)
+            Vol1=Volw(test_R); rel_diff=((Vol1-Vol0) - V_shell)/V_shell
+
+            if np.absolute(rel_diff)<tol:
+                print 'R = [%f,%f] ---> Vol = %f'%(test_R,R0,Vol1-Vol0)
+                Final=True; R1=test_R; R0=R1; Radii_sphere.append(R1)
+            else:
+                if rel_diff<0.0:
+                    Rmin=test_R
+                else:
+                    Rmax=test_R
+    Radii_sphere=np.array(Radii_sphere)
+    Radii_sphere=0.5*(Radii_sphere[1:]+Radii_sphere[:-1])
 
     #Divide a sphere of radius 1 into slices in theta of the same area
     A_slice=4.0*pi/theta_divisions; theta0=0.0; thetas=[theta0]
     for i in xrange(theta_divisions):
         #compute the theta using 2*pi*(cos(theta0)-cos(theta1)) = A_slice
         argument=np.max([-1.0,np.cos(theta0)-A_slice/(2.0*pi)])
-        theta1=np.arccos(argument)
-        thetas.append(theta1); theta0=theta1
+        theta1=np.arccos(argument); thetas.append(theta1); theta0=theta1
     thetas=np.array(thetas); thetas=0.5*(thetas[1:]+thetas[:-1])
 
     #Divide a circle into phi_divisions of the same length
@@ -745,7 +764,7 @@ def SPH_gas(positions,radii,divisions,dims,BoxSize,threads,
 
     #compute the positions of the selected points
     sphere_pos=[]
-    for R in Radii:
+    for R in Radii_sphere:
         for theta in thetas:
             for phi in phis:
                 sphere_pos.append([R*np.sin(theta)*np.cos(phi),
@@ -842,6 +861,14 @@ def SPH_gas(positions,radii,divisions,dims,BoxSize,threads,
 
     return densities
 
+#This function returns \int_0^r w(r,h) d^3r: u=r/h
+def Volw(u):
+    if u<0.5:
+        return 32.0*(1.0/3.0*u**3-6.0/5.0*u**5+u**6)
+    elif u<=1.0:
+        return 16.0/15.0*u**3*(36.0*u**2-10.0*u**3-45.0*u+20.0)-1.0/15.0
+    else:
+        print 'error: u=r/h can not be larger than 1'
 ################################################################################
 
 
@@ -850,7 +877,7 @@ def SPH_gas(positions,radii,divisions,dims,BoxSize,threads,
 
 ############################### EXAMPLE OF USAGE ###############################
 if len(sys.argv)==2:
-    if sys.argv[1]=='compile':
+    if sys.argv[0]=='CIC_library.py' and sys.argv[1]=='compile':
 
 #########################################################################
         ### CIC_serial without weights ###
@@ -1067,7 +1094,7 @@ if len(sys.argv)==2:
         BoxSize=100.0 #Mpc/h
         dims=128
 
-        divisions=4
+        divisions=2
         threads=1
 
         pos=(np.random.random((n,3))*BoxSize).astype(np.float32) #positions
@@ -1091,7 +1118,7 @@ if len(sys.argv)==2:
         BoxSize=100.0 #Mpc/h
         dims=128
 
-        divisions=4
+        divisions=2
         threads=1
 
         #pos=(np.random.random((n,3))*BoxSize).astype(np.float32) #positions
