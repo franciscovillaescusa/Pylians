@@ -17,6 +17,8 @@
         #updated time 19 Oct 2012 by wgcui
 
 #For simulations with SFR, set SFR=True
+#The physical velocities of the halos are found multiplying the field 
+#GroupVel by (1+z)
 
 import numpy as np
 import os
