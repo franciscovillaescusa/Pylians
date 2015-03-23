@@ -15,6 +15,7 @@
 #cross_power_spectrum_2D
 #multipole
       #modes_multipole
+#EH_Pk
 ################################################
 
 ######## COMPILATION ##########
@@ -33,6 +34,7 @@ import CIC_library as CIC
 import numpy as np
 import scipy.fftpack
 import scipy.weave as wv
+import mass_function_library as MFL
 import sys
 import time
 
@@ -835,7 +837,40 @@ def modes_multipole(dims,delta_k2,ell,axis):
     return Pk,number_of_modes
 ##############################################################################
 
+#This routine computes the Eisenstein & Hu matter power spectrum, with no wiggles.
+#It returns [k,Pk_EH]
+#Omega_m -----------> value of Omega_matter, at z=0
+#Omega_b -----------> value of Omega_baryon, at z=0
+#h -----------------> value of the hubble constant, at z=0, in 100 km/s/(Mpc) units
+#ns ----------------> value of the spectral index
+#sigma_8 -----------> value of sigma8 at z=0
+def EH_Pk(Omega_m,Omega_b,h,ns,sigma8):
 
+    #define the k-binning
+    k = np.logspace(-3,3,10000)
+
+    ommh2 = Omega_m*h**2;  ombh2 = Omega_b*h**2
+    
+    theta = 2.728 / 2.7
+    s = 44.5*np.log(9.83/ommh2)/np.sqrt(1.0+10.0*np.exp(0.75*np.log(ombh2)))*h
+    a = 1.0-0.328*np.log(431.0*ommh2)*ombh2/ommh2 +\
+        0.380*np.log(22.3*ommh2)*(ombh2/ommh2)*(ombh2/ommh2)
+    gamma = a+(1.0-a)/(1.0+np.exp(4*np.log(0.43*k*s)))
+    gamma *= (Omega_m * h)
+    q = k*theta*theta/gamma
+    L0 = np.log(2.0*np.exp(1.0)+1.8*q)
+    C0 = 14.2+731./(1.0+62.5*q)
+    tmp = L0/(L0+C0*q*q)
+
+    Pk_EH = k**ns*tmp**2
+
+    #Normalize the amplitude of the P(k) to have the correct sigma8 value
+    Norm = sigma8/MFL.sigma(k,Pk_EH,8.0)
+    Pk_EH *= Norm**2
+
+    print 'sigma8 =',MFL.sigma(k,Pk_EH,8.0)
+
+    return [k,Pk_EH]
 
 
 
@@ -1008,3 +1043,15 @@ if len(sys.argv)==2:
         [k,Pk]=multipole(delta,dims,BoxSize,ell,axis,aliasing_method='CIC')
         print Pk
 
+        ################################################################
+        ### EH_Pk ### 
+        Omega_m = 0.3175
+        Omega_b = 0.0490
+        h       = 0.6711
+        sigma8  = 0.8338
+        ns      = 0.9624
+
+        [k,Pk] = EH_Pk(Omega_m,Omega_b,h,ns,sigma8)
+        print k;  print Pk
+        
+        
