@@ -25,8 +25,8 @@ import scipy.integrate as si
 import readsnap
 import readsubf
 import HOD_library as HOD
-import correlation_function_library as CF
-import sys,os
+import correlation_function_library as CFL
+import sys,os,imp
 import random
 
 #function used to compute wp(rp): d(wp) / dr = 2r*xi(r) / sqrt(r^2-rp^2)
@@ -42,11 +42,10 @@ myrank=comm.Get_rank()
 
 ########################### INPUT ###############################
 if len(sys.argv)>1:
-    sa=sys.argv
 
     #look for the minimum
     if len(sys.argv)==2:
-        results_file=sa[1]
+        results_file=sys.argv[1]
         M1,alpha,Mmin,seed,chi2,gal_density=np.loadtxt(results_file,unpack=True)
         index = np.where(chi2==np.min(chi2))
         print 'M1           =',M1[index][0]
@@ -57,26 +56,15 @@ if len(sys.argv)>1:
         print 'chi2         =',chi2[index][0]
         sys.exit()
 
-    snapshot_fname=sa[1]; groups_fname=sa[2]; groups_number=sa[3]
-
-    mass_criteria=sa[4]; min_mass=float(sa[5]); max_mass=float(sa[6])
-
-    fiducial_density=float(sa[7])
-    M1_min=float(sa[8]); M1_max=float(sa[9]); M1_bins=int(sa[10]); 
-    alpha_min=float(sa[11]); alpha_max=float(sa[12]); alpha_bins=int(sa[13])
-    
-    random_file=sa[14]
-
-    BoxSize=float(sa[15])
-    Rmin=float(sa[16]); Rmax=float(sa[17]); bins=int(sa[18])
-
-    DD_name=sa[19];   RR_name=sa[20];   DR_name=sa[21]
-    DD_action=sa[22]; RR_action=sa[23]; DR_action=sa[24]
-
-    wp_file=sa[25]; results_file=sa[26]
+    parameter_file = sys.argv[1]
+    print '\nLoading the parameter file ',parameter_file
+    if os.path.exists(parameter_file):
+        parms = imp.load_source("name",parameter_file)
+        globals().update(vars(parms))
+    else:   print 'file does not exists!!!'
 
 else:
-    #### SNAPSHOTS TO SELECT GALAXIES WITHIN CDM HALOS ####
+    #### SNAPSHOT TO SELECT GALAXIES WITHIN CDM HALOS ####
     snapshot_fname = '../snapdir_003/snap_003'
     groups_fname   = '../'
     groups_number  = 3
@@ -94,11 +82,7 @@ else:
     iterations = 200   #number of random points in the M1-alpha plane
 
     #### RANDOM CATALOG ####
-    create_random_catalogue = False #create only the first time
-    random_catalogue_fname = 'random_catalogue_1e6.dat'
-    random_points = 1000000  #number of points in the random catalogue
-    compute_RR_pairs = True  #compute the number of RR pairs (True or False)
-    RR_name = 'RR_1e6.dat' #name for the file containing number of random pairs
+    random_points = 500000  #number of points in the random catalogue
 
     #### PARAMETERS ####
     Rmin = 0.1   #Mpc/h
@@ -106,68 +90,49 @@ else:
     bins = 60
 
     #### PARTIAL RESULTS NAMES ####
-    DD_name = 'DD.dat' #name for the file containing DD results
-    DR_name = 'DR.dat' #name for the file containing DR results
-
-    #### ACTIONS ####
-    DD_action = 'compute' #'compute' or 'read' (from DD_name file)
-    RR_action = 'read'    #'compute' or 'read' (from RR_name file)
-    DR_action = 'compute' #'compute' or 'read' (from DR_name file)
+    DD_name = 'DD.dat';  DR_name = 'DR.dat' 
     
     #### wp FILE ####
     wp_file            = 'w_p_21.dat'
     wp_covariance_file = 'wp_covar_21.0.dat'
 
     #### OUTPUT ####
-    results_file='xi_0.0eV_z=0.dat'
+    results_file = 'xi_0.0eV_z=0.dat'
 ######################################################
 
-
 #read snapshot head and obtain BoxSize, Omega_m and Omega_L                   
-head=readsnap.snapshot_header(snapshot_fname)
-BoxSize=head.boxsize/1e3 #Mpc/h                                               
-Nall=head.nall
-Masses=head.massarr*1e10 #Msun/h                                              
-Omega_m=head.omega_m
-Omega_l=head.omega_l
-redshift=head.redshift
-Hubble=100.0*np.sqrt(Omega_m*(1.0+redshift)**3+Omega_l)  #h*km/s/Mpc          
-h=head.hubble
+head     = readsnap.snapshot_header(snapshot_fname)
+BoxSize  = head.boxsize/1e3  #Mpc/h                                               
+Nall     = head.nall
+Masses   = head.massarr*1e10 #Msun/h                                              
+Omega_m  = head.omega_m
+Omega_l  = head.omega_l
+redshift = head.redshift
+Hubble   = 100.0*np.sqrt(Omega_m*(1.0+redshift)**3+Omega_l)  #h*km/s/Mpc          
+h        = head.hubble
 
+#obtain the positions of the random particles reading/creating a random catalogue
+pos_r,RR_name = CFL.create_random_catalogue(random_points,Rmin,Rmax,bins,BoxSize)
 
-#create/read the random catalogue 
-if myrank==0:
-    if create_random_catalogue:
-        print 'creating random catalogue...'
-        pos_r = np.random.random((random_points,3)).astype(np.float32)
-        np.save(random_catalogue_fname,pos_r); print 'done'
-        pos_r *= BoxSize  #multiply for the correct units
-    else:
-        print 'reading random catalogue...'
-        pos_r = np.load(random_catalogue_fname+'.npy')*BoxSize #Mpc/h
-        print 'done'
+#we set here the actions                                                      
+DD_action = 'compute'
+RR_action = 'read'      #if needed, the RR pairs are computed above           
+DR_action = 'compute'
 
-#compute the number of pairs in the random catalogue
-if compute_RR_pairs:
-    if myrank==0:
-        print 'computing number of random pairs...'
-        CF.DD_file(pos_r,BoxSize,RR_name,bins,Rmin,Rmax); print 'done'
-    else:
-        if compute_RR_pairs:
-            pos_r=None;  CF.DD_file(pos_r,BoxSize,RR_name,bins,Rmin,Rmax)
-
+#Only the master will read the positions of the galaxies                      
+pos_g = None
 
 if myrank==0:
 
     #read positions, velocities and IDs of DM particles: sort the IDs array
-    DM_pos=readsnap.read_block(snapshot_fname,"POS ",parttype=-1)  #kpc/h
-    DM_vel=readsnap.read_block(snapshot_fname,"VEL ",parttype=-1)  #Mpc/h
+    DM_pos = readsnap.read_block(snapshot_fname,"POS ",parttype=-1)  #kpc/h
+    DM_vel = readsnap.read_block(snapshot_fname,"VEL ",parttype=-1)  #km/s
     #IDs should go from 0 to N-1, instead from 1 to N
-    DM_ids=readsnap.read_block(snapshot_fname,"ID  ",parttype=-1)-1
+    DM_ids = readsnap.read_block(snapshot_fname,"ID  ",parttype=-1)-1
     if np.min(DM_ids)!=0 or np.max(DM_ids)!=(len(DM_pos)-1):
         print 'Error!!!!'; print 'IDs should go from 0 to N-1'
     print len(DM_ids),np.min(DM_ids),np.max(DM_ids)
-    sorted_ids=DM_ids.argsort(axis=0); del DM_ids
+    sorted_ids = DM_ids.argsort(axis=0); del DM_ids
     #the particle whose ID is N is located in the position sorted_ids[N]
     #i.e. DM_ids[sorted_ids[N]]=N
     #the position of the particle whose ID is N would be:
@@ -177,7 +142,7 @@ if myrank==0:
     #again the IDs should go from 0 to N-1
     halos_ID = readsubf.subf_ids(groups_fname,groups_number,0,0,
                                  long_ids=True,read_all=True)
-    IDs=halos_ID.SubIDs-1; del halos_ID
+    IDs = halos_ID.SubIDs-1;  del halos_ID
     print 'subhalos IDs =[',np.min(IDs),'-',np.max(IDs),']'
 
     #read CDM halos information
@@ -195,24 +160,24 @@ if myrank==0:
         halos_radius = halos.group_r_crit200        #radius in kpc/h
     else:
         print 'bad mass_criteria';  sys.exit()
-    halos_pos          = halos.group_pos
+    halos_pos          = halos.group_pos        #kpc/h
     halos_len          = halos.group_len
     halos_offset       = halos.group_offset
     halos_main_subhalo = halos.group_firstsub
     halos_vel          = halos.sub_vel[halos_main_subhalo]/np.sqrt(1.0+redshift)
-    halos_indexes = np.where((halos_mass>min_mass) & (halos_mass<max_mass))[0]
     del halos
     
     print '\ntotal halos found =',len(halos_pos)
     print 'halos number density =',len(halos_pos)/BoxSize**3
 
     #keep only the halos in the given mass range 
-    halo_mass=halos_mass[halos_indexes]; halo_pos=halos_pos[halos_indexes]
-    halo_vel=halos_vel[halos_indexes];   halo_radius=halos_radius[halos_indexes]
-    halo_len=halos_len[halos_indexes];   halo_offset=halos_offset[halos_indexes]
-    del halos_indexes
+    halos_indexes = np.where((halos_mass>min_mass) & (halos_mass<max_mass))[0]
+    halo_mass = halos_mass[halos_indexes];  halo_pos    = halos_pos[halos_indexes]
+    halo_vel  = halos_vel[halos_indexes];   halo_radius = halos_radius[halos_indexes]
+    halo_len  = halos_len[halos_indexes];   halo_offset = halos_offset[halos_indexes]
+    del halos_indexes; 
     if np.any(halo_len==[]):  print 'something wrong!!!'
-
+    
     #read the wp file
     wp = np.loadtxt(wp_file)
 
@@ -228,6 +193,7 @@ if myrank==0:
     Cov=np.reshape(Cov,(len(wp),len(wp)));  Cov=np.matrix(Cov)
 
 
+min_chi2 = 1e5  #we will save galaxy catalogues whose chi2 is lower than min_chi2
 for g in range(iterations):
 
     ##### MASTER #####
@@ -237,11 +203,10 @@ for g in range(iterations):
         #print 'M1=';      M1=float(raw_input())
         #print 'alpha=';   alpha=float(raw_input())
         
-        M1    = M1_min    + (M1_max-M1_min)*np.random.random()
+        M1    = M1_min    + (M1_max-M1_min)      *np.random.random()
         alpha = alpha_min + (alpha_max-alpha_min)*np.random.random()
-        if seed==None:
-            seed  = np.random.randint(0,3000,1)[0]
-
+        if seed == None:   seed = np.random.randint(0,3000,1)[0]
+            
         #create the galaxy catalogue through the HOD parameters
         hod = HOD.hod_fast(DM_pos,DM_vel,sorted_ids,IDs,halo_mass,halo_pos,
                            halo_vel,halo_radius,halo_len,halo_offset,BoxSize,
@@ -254,32 +219,23 @@ for g in range(iterations):
         #only keep the catalogues with the correct galaxy number density
         if abs((hod.galaxy_density-fiducial_density)/fiducial_density)<0.02:
 
-            #save the positions of the galaxies into a file                   
-	    np.savetxt('galaxy_catalogue.dat',np.hstack([pos_g,vel_g]))
-
             #compute the 2pt correlation function
-            r,xi_r,error_xi=CF.TPCF(pos_g,pos_r,BoxSize,DD_action,
-                                    RR_action,DR_action,DD_name,RR_name,
-                                    DR_name,bins,Rmin,Rmax)
-
-            #save correlation function to file
-            np.savetxt('correlation_function.dat',np.transpose([r,xi_r,error_xi]))
-                                    
-            r_max = np.max(r);  yinit=np.array([0.0])
+            r,xi_r,error_xi = CFL.TPCF(pos_g,pos_r,BoxSize,
+                                       DD_action,RR_action,DR_action,
+                                       DD_name,RR_name,DR_name,
+                                       bins,Rmin,Rmax)
+                                       
+            #compute the projected 2pt correlation function
+            r_max = np.max(r);  yinit = np.array([0.0]);  wp_HOD = []
             h = 1e-13 #discontinuity at r=rp. We integrate from r=rp+h to r_max
-
-            f=open('projected_correlation_function.dat','w')
-            wp_HOD=[]
             for rp in wp[:,0]:
-                x=np.array([rp+h,r_max])
-                y=si.odeint(deriv,yinit,x,args=(r,xi_r,rp),mxstep=100000)
+                x = np.array([rp+h,r_max])
+                y = si.odeint(deriv,yinit,x,args=(r,xi_r,rp),mxstep=100000)
                 wp_HOD.append(y[1][0])
-                f.write(str(rp)+' '+str(y[1][0])+'\n')
             wp_HOD=np.array(wp_HOD)
-            f.close()
 
+            #compute the value of the chi2
             chi2_bins = (wp_HOD-wp[:,1])**2/wp[:,2]**2
-            
             for min_bin in [2]:
                 for max_bin in [12]:
                     elements = np.arange(min_bin,max_bin)
@@ -293,6 +249,15 @@ for g in range(iterations):
                     diff = np.matrix(wp_HOD_aux-wp_aux)
                     chi2 = diff*Cov_aux.I*diff.T;  chi2=chi2[0,0]
 
+                    if chi2<min_chi2:
+                        min_chi2 = chi2
+                        #save the positions, CF and projected-CF of the mock catalogue
+                        np.savetxt('galaxy_catalogue.dat',np.hstack([pos_g,vel_g]))
+                        np.savetxt('correlation_function.dat',
+                                   np.transpose([r,xi_r,error_xi]))
+                        np.savetxt('projected_correlation_function.dat',
+                                   np.transpose([wp[:,0],wp_HOD]))
+
                     print 'M1 =',M1;  print 'alpha =',alpha
                     print 'X2('+str(min_bin)+'-'+str(max_bin)+')=',chi2_nocov,chi2
                     g=open(results_file,'a')
@@ -304,9 +269,10 @@ for g in range(iterations):
 
     ##### SLAVES #####
     else:
-        pos_g=None; pos_r=None
-        CF.TPCF(pos_g,pos_r,BoxSize,DD_action,RR_action,DR_action,
-                DD_name,RR_name,DR_name,bins,Rmin,Rmax)
+        r,xi_r,error_xi = CFL.TPCF(pos_g,pos_r,BoxSize,
+                                   DD_action,RR_action,DR_action,
+                                   DD_name,RR_name,DR_name,
+                                   bins,Rmin,Rmax)
 
 
 
