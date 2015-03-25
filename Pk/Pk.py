@@ -129,9 +129,9 @@ for i,ptype1 in enumerate(particle_type):
         Pk[index2][ptype2] = data[3]
 
         #save power spectra results in the output files
-        np.savetxt(f_out1,  np.transpose([k,Pk[index1][index1]]))
-        np.savetxt(f_out2,  np.transpose([k,Pk[index2][index2]]))
-        np.savetxt(f_out12, np.transpose([k,Pk[index1][index2]]))
+        np.savetxt(fout1,  np.transpose([k,Pk[index1][index1]]))
+        np.savetxt(fout2,  np.transpose([k,Pk[index2][index2]]))
+        np.savetxt(fout12, np.transpose([k,Pk[index1][index2]]))
 
 
 
@@ -140,7 +140,7 @@ print '\ncomputing total matter P(k)'
 Pk_m = np.zeros(len(k),dtype=np.float64)
 
 #dictionary giving the value of Omega for each component
-Omega_dict = {0:Omega_g, 1:Omega_c, 2:Omega_n: 4:Omega_s}
+Omega_dict = {0:Omega_g, 1:Omega_c, 2:Omega_n, 4:Omega_s}
 
 for ptype1 in particle_type:
     for ptype2 in particle_type:
