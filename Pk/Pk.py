@@ -99,7 +99,7 @@ if len(particle_type) == 1:
     print '\nComputing the power spectrum of the particle type: ',ptype
     data = PSL.power_spectrum_given_delta(delta[index],dims,BoxSize)
     k=data[0]; Pk[index][index]=data[1]; del data
-    np.savetxt(f_out,np.transpose([k,Pk[index][index]])); print '\n'
+    np.savetxt(fout,np.transpose([k,Pk[index][index]])); print '\n'
     sys.exit()
 
 #if there are two or more particles compute auto- and cross-power spectra
