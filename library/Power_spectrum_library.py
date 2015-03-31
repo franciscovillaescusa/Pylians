@@ -5,6 +5,7 @@
 
 ############## AVAILABLE ROUTINES ##############
 #power_spectrum_given_delta
+      #NGP_correction
       #CIC_correction
       #TSC_correction
       #lin_histogram
@@ -48,7 +49,7 @@ import time
 #delta ----------------> array containing the values of delta(r)
 #dims -----------------> number of cell per dimension used to compute the P(k)
 #BoxSize --------------> size of the simulation box
-#aliasing_method ------> method used to compute the deltas(r): CIC, TSC, other
+#aliasing_method ------> method used to compute the deltas(r): NGP, CIC, TSC, other
 #Notice that if delta(r) is computed using using a different kernel (not CIC),
 #as the SPH kernel for baryons, set do_CIC_correction=False
 def power_spectrum_given_delta(delta,dims,BoxSize,aliasing_method='CIC'):
@@ -69,11 +70,10 @@ def power_spectrum_given_delta(delta,dims,BoxSize,aliasing_method='CIC'):
     print 'Applying the CIC correction to the modes...';start_cic=time.clock()
     #since we are using complex numbers: 1) compute the correction over a
     #np.ones(dims3) array  2) multiply the results
-    if aliasing_method in ['CIC','TSC']:
-        if aliasing_method=='CIC':
-            [array,k]=CIC_correction(dims)
-        else:
-            [array,k]=TSC_correction(dims)
+    if aliasing_method in ['NGP','CIC','TSC']:
+        if   aliasing_method=='NGP':   [array,k]=NGP_correction(dims)
+        elif aliasing_method=='CIC':   [array,k]=CIC_correction(dims)
+        else:                          [array,k]=TSC_correction(dims)
         delta_k*=array; del array
     else:
         [array,k]=CIC_correction(dims); del array
@@ -111,6 +111,45 @@ def power_spectrum_given_delta(delta,dims,BoxSize,aliasing_method='CIC'):
 
     return [k,Pk]
 
+
+###################################################################
+#this function computes:
+#1) the NGP correction to the modes amplitude 
+#2) the module of k for a given point in the fourier grid
+def NGP_correction(dims):
+    array=np.empty(dims**3,dtype=np.float32)
+    mod_k=np.empty(dims**3,dtype=np.float32)
+
+    support = "#include <math.h>"
+    code = """
+       int dims2=dims*dims;
+       int dims3=dims2*dims;
+       int middle=dims/2;
+       int i,j,k;
+       float value_i,value_j,value_k;
+
+       for (long l=0;l<dims3;l++){
+           i=l/dims2;
+           j=(l%dims2)/dims;
+           k=(l%dims2)%dims;
+
+           i = (i>middle) ? i-dims : i;
+           j = (j>middle) ? j-dims : j;
+           k = (k>middle) ? k-dims : k;
+
+           value_i = (i==0) ? 1.0 : pow((i*M_PI/dims)/sin(i*M_PI/dims),1);
+           value_j = (j==0) ? 1.0 : pow((j*M_PI/dims)/sin(j*M_PI/dims),1);
+           value_k = (k==0) ? 1.0 : pow((k*M_PI/dims)/sin(k*M_PI/dims),1);
+
+           array(l)=value_i*value_j*value_k;
+           mod_k(l)=sqrt(i*i+j*j+k*k);
+       } 
+    """
+    wv.inline(code,['dims','array','mod_k'],
+              type_converters = wv.converters.blitz,
+              support_code = support,libraries = ['m'],
+              extra_compile_args =['-O3'])
+    return [array,mod_k]
 
 ###################################################################
 #this function computes:
