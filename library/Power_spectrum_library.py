@@ -930,16 +930,17 @@ class CAMB_Pk:
         self.k = k
 
         #Interpolate to find P(k)_matter in the same ks as the transfer functions
-        Pk_m = 10**(np.interp(np.log10(k),np.log10(k_m),np.log10(Pk_m))
+        Pk_m = 10**(np.interp(np.log10(k),np.log10(k_m),np.log10(Pk_m)))
+        self.Pk_m = Pk_m
 
         #compute the different power spectra and save them
-        self.Pk_c  = Pk_m*(Tcdm/Tm)**2   
-        self.Pk_b  = Pk_m*(Tb/Tm)**2     
-        self.Pk_n  = Pk_m*(Tnu/Tm)**2    
+        self.Pk_c = Pk_m*(Tcdm/Tm)**2   
+        self.Pk_b = Pk_m*(Tb/Tm)**2     
+        self.Pk_n = Pk_m*(Tnu/Tm)**2    
 
-        self.Pk_x_c_b  = Pk_m*Tcdm*Tb/Tm**2   
-        self.Pk_x_c_n  = Pk_m*Tcdm*Tnu/Tm**2  
-        self.Pk_x_b_n  = Pk_m*Tb*Tnu/Tm**2    
+        self.Pk_x_c_b = Pk_m*Tcdm*Tb/Tm**2   
+        self.Pk_x_c_n = Pk_m*Tcdm*Tnu/Tm**2  
+        self.Pk_x_b_n = Pk_m*Tb*Tnu/Tm**2    
 
         #compute the CDM+B transfer function
         if Omega_cdm!=None and Omega_b!=None:
