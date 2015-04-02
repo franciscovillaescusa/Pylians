@@ -17,6 +17,7 @@
 #multipole
       #modes_multipole
 #EH_Pk
+#CAMB_Pk
 ################################################
 
 ######## COMPILATION ##########
@@ -910,8 +911,42 @@ def EH_Pk(Omega_m,Omega_b,h,ns,sigma8):
     print 'sigma8 =',MFL.sigma(k,Pk_EH,8.0)
 
     return [k,Pk_EH]
+##############################################################################
 
+#This routine reads the CAMB P(k) and transfer function files and returns 
+#all the different power spectra
+#f_Pk ----------------> file containing the CAMB matter power spectrum
+#f_transfer ----------> file containing the CAMB transfer functions
+#Omega_cdm -----------> Value of Omega_cdm (only if the CDM+B P(k) is wanted)
+#Omega_b 00-----------> Value of Omega_n   (only if the CDM+B P(k) is wanted)
+class CAMB_Pk:
+    def __init__(self,f_Pk,f_transfer,Omega_cdm=None,Omega_b=None):
+        
+        # read CAMB matter power spectrum file
+        k_m,Pk_m = np.loadtxt(f_Pk,unpack=True)
 
+        # read CAMB transfer function file
+        k,Tcdm,Tb,dumb,dumb,Tnu,Tm = np.loadtxt(f_transfer,unpack=True)
+        self.k = k
+
+        #Interpolate to find P(k)_matter in the same ks as the transfer functions
+        Pk_m = 10**(np.interp(np.log10(k),np.log10(k_m),np.log10(Pk_m))
+
+        #compute the different power spectra and save them
+        self.Pk_c  = Pk_m*(Tcdm/Tm)**2   
+        self.Pk_b  = Pk_m*(Tb/Tm)**2     
+        self.Pk_n  = Pk_m*(Tnu/Tm)**2    
+
+        self.Pk_x_c_b  = Pk_m*Tcdm*Tb/Tm**2   
+        self.Pk_x_c_n  = Pk_m*Tcdm*Tnu/Tm**2  
+        self.Pk_x_b_n  = Pk_m*Tb*Tnu/Tm**2    
+
+        #compute the CDM+B transfer function
+        if Omega_cdm!=None and Omega_b!=None:
+            Tcdmb = (Omega_CDM*Tcdm+Omega_B*Tb)/(Omega_CDM+Omega_B)
+        
+            self.Pk_cb = Pk_m*(Tcdmb/Tm)**2  
+            self.Pk_x_cb_n = Pk_m*Tcdmb*Tnu/Tm**2
 
 
 
