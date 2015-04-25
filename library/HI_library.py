@@ -1017,7 +1017,7 @@ def Rahmati_HI_assignment(snapshot_fname,fac,TREECOOL_file,Gamma_UVB=None,
     #find the value of the photoionization rate
     if Gamma_UVB==None:
         data=np.loadtxt(TREECOOL_file); logz=data[:,0]; Gamma_UVB=data[:,1]
-        Gamma_UVB=np.interp(np.log10(redshift),logz,Gamma_UVB); del data
+        Gamma_UVB=np.interp(np.log10(1.0+redshift),logz,Gamma_UVB); del data
         print 'Gamma_UVB(z=%2.2f) = %e s^{-1}'%(redshift,Gamma_UVB)
     
     #Correct to reproduce the Lya forest mean flux
