@@ -138,6 +138,7 @@ for i,ptype1 in enumerate(particle_type):
 #compute total matter auto-power spectrum   
 print '\ncomputing total matter P(k)'
 Pk_m = np.zeros(len(k),dtype=np.float64)
+f_out_m = 'Pk_matter_z='+z+'.dat'
 
 #dictionary giving the value of Omega for each component
 Omega_dict = {0:Omega_g, 1:Omega_c, 2:Omega_n, 4:Omega_s}
