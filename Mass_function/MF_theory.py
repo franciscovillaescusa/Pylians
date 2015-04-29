@@ -7,7 +7,7 @@ import sys,os,imp
 if len(sys.argv)>1:
 
     parameter_file = sys.argv[1]
-    if myrank==0:  print '\nLoading the parameter file ',parameter_file
+    print '\nLoading the parameter file:',parameter_file
     if os.path.exists(parameter_file):
         parms = imp.load_source("name",parameter_file)
         globals().update(vars(parms))
