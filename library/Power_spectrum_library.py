@@ -997,12 +997,12 @@ def CF_Taruya(delta,dims,BoxSize,MAS='CIC'):
     xi_delta = np.real(np.ravel(xi_delta))
 
     xi    = np.histogram(d_grid,bins=distances,weights=xi_delta)[0]
-    modes = np.histogram(d_grid,bins=distances)[0]
-    xi    = xi/modes
+    modes = np.histogram(d_grid,bins=distances)[0]; del d_grid
+    xi    /= modes
 
     distances_bin = 0.5*(distances[:-1]+distances[1:])
 
-    return distances,xi
+    return distances_bin,xi
 ################################################################################
 
 
