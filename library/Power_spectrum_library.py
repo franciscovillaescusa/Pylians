@@ -18,6 +18,7 @@
       #modes_multipole
 #EH_Pk
 #CAMB_Pk
+#CF_Taruya
 ################################################
 
 ######## COMPILATION ##########
@@ -949,7 +950,60 @@ class CAMB_Pk:
             self.Pk_cb = Pk_m*(Tcdmb/Tm)**2  
             self.Pk_x_cb_n = Pk_m*Tcdmb*Tnu/Tm**2
 
+################################################################################
+#This routine computes the 2-point correlation function using the Taruya et al.
+#estimator (Eq. 4.2 of 0906.0507)
+#delta --------------> array containing the value of delta(r)
+#dims ---------------> number of cells per dimension
+#BoxSize ------------> Size of the simulation box
+#MAS ----------------> Mass assignment scheme ('NGP','CIC','TSC' or 'None')
+#The MAS is needed to correct the modes amplitudes
+def CF_Taruya(delta,dims,BoxSize,MAS='CIC'):
 
+    dims3 = dims**3;  start = time.clock()
+
+    #compute delta(k) by FFT delta(r)
+    delta = np.reshape(delta,(dims,dims,dims))
+    print '\nComputing the FFT of the field...'
+    delta_k = scipy.fftpack.ifftn(delta,overwrite_x=True); del delta
+    delta_k = np.ravel(delta_k)
+
+    #correct modes amplitude to account for MAS
+    print 'Correcting modes amplitude...'
+    if MAS in ['NGP','CIC','TSC']:
+        if   MAS=='NGP':   [array,k] = NGP_correction(dims)
+        elif MAS=='CIC':   [array,k] = CIC_correction(dims)
+        else:              [array,k] = TSC_correction(dims)
+        delta_k *= array;  del array
+    else:
+        [array,k] = CIC_correction(dims);  del array
+        print 'aliasing correction not performed'
+
+    #compute the value of r in each point of the grid 
+    d_grid  = k*BoxSize/dims; del k
+    print np.min(d_grid),'< d <',np.max(d_grid)
+
+    #define the array with the bins in r
+    distances = np.linspace(0.0,BoxSize/2.0,dims/2+1)
+
+    #compute |delta(k)|^2
+    print 'Computing |delta(k)|^2...'
+    delta_k = (np.absolute(delta_k))**2
+
+    #compute xi(r) by FFT |delta(k)|^2
+    delta_k = np.reshape(delta_k,(dims,dims,dims))
+    print 'Computing the IFFT of the field...' 
+    xi_delta = scipy.fftpack.fftn(delta_k,overwrite_x=True); del delta_k
+    xi_delta = np.real(np.ravel(xi_delta))
+
+    xi    = np.histogram(d_grid,bins=distances,weights=xi_delta)[0]
+    modes = np.histogram(d_grid,bins=distances)[0]
+    xi    = xi/modes
+
+    distances_bin = 0.5*(distances[:-1]+distances[1:])
+
+    return distances,xi
+################################################################################
 
 
 
@@ -1130,3 +1184,18 @@ if len(sys.argv)==2:
         print k;  print Pk
         
         
+        ################################################################
+        ### CF_Taruya ### 
+        n=100**3; dims=128; BoxSize=500.0 #Mpc/h
+
+        np.random.seed(seed=1)
+        pos=(np.random.random((n,3))*BoxSize).astype(np.float32)
+
+        #compute delta using CIC
+        delta=np.zeros(dims**3,dtype=np.float32) 
+        CIC.CIC_serial(pos,dims,BoxSize,delta) #compute densities
+        delta=delta/(n*1.0/dims**3)-1.0
+
+        #compute CF using Taruya et al estimator
+        r,xi = CF_Taruya(delta,dims,BoxSize,MAS='CIC')
+        print r,xi
