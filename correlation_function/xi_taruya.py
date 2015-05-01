@@ -43,7 +43,7 @@ if Nall[2]>0:
         %(np.sum(mass_nu,dtype=np.float64)/BoxSize**3/rho_crit)
     pos  = np.vstack([pos,pos_nu]);    del pos_nu
     mass = np.hstack([mass,mass_nu]);  del mass_nu
-print 'Omega_m   = %.f'%(np.sum(mass,dtype=np.float64)/BoxSize**3/rho_crit)
+print 'Omega_m   = %.4f'%(np.sum(mass,dtype=np.float64)/BoxSize**3/rho_crit)
 
 #compute the mean mass in each cell
 mean_mass = np.sum(mass,dtype=np.float64)*1.0/dims3
