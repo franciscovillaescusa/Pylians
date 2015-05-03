@@ -64,7 +64,7 @@ if Nall[2]>0:
 print 'Omega_m   = %.4f'%(np.sum(mass,dtype=np.float64)/BoxSize**3/rho_crit)
 
 if do_RSD:
-    pos_redshift_space(pos,vel,BoxSize,Hubble,redshift,axis)
+    RSL.pos_redshift_space(pos,vel,BoxSize,Hubble,redshift,axis)
 
 #compute the mean mass in each cell
 mean_mass = np.sum(mass,dtype=np.float64)*1.0/dims3
