@@ -22,6 +22,7 @@ else:
     snapshot_fname = 'snapdir_003/snap_003'
     MAS            = 'CIC'
     dims           = 512
+    bins_CF        = 'None'  #if 'None' bins_CF = dims/2+1
     do_RSD         = False
     axis           = 0
     fout           = 'CF_test_512.txt'
@@ -78,7 +79,7 @@ delta = delta/mean_mass - 1.0
 print '%.6e should be close to 0'%np.mean(delta,dtype=np.float64)
 
 #compute the correlation function
-r,xi = PSL.CF_Taruya(delta,dims,BoxSize,MAS='CIC')
+r,xi = PSL.CF_Taruya(delta,dims,BoxSize,bins_CF,MAS)
 
 #save results to file
 np.savetxt(fout,np.transpose([r,xi]))

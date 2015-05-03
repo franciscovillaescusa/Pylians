@@ -956,11 +956,15 @@ class CAMB_Pk:
 #delta --------------> array containing the value of delta(r)
 #dims ---------------> number of cells per dimension
 #BoxSize ------------> Size of the simulation box
+#bins_CF ------------> Number of bins between 0 and BoxSize/2 to compute CF
 #MAS ----------------> Mass assignment scheme ('NGP','CIC','TSC' or 'None')
+#If bins_CF='None' then bins_CF = dims/2+1
 #The MAS is needed to correct the modes amplitudes
-def CF_Taruya(delta,dims,BoxSize,MAS='CIC'):
+def CF_Taruya(delta,dims,BoxSize,bins_CF='None',MAS='CIC'):
 
     dims3 = dims**3;  start = time.clock()
+
+    if bins_CF=='None':  bins_CF = dims/2+1
 
     #compute delta(k) by FFT delta(r)
     delta = np.reshape(delta,(dims,dims,dims))
@@ -984,7 +988,7 @@ def CF_Taruya(delta,dims,BoxSize,MAS='CIC'):
     print np.min(d_grid),'< d <',np.max(d_grid)
 
     #define the array with the bins in r
-    distances = np.linspace(0.0,BoxSize/2.0,dims/2+1)
+    distances = np.linspace(0.0,BoxSize/2.0,bins_CF)
 
     #compute |delta(k)|^2
     print 'Computing |delta(k)|^2...'
