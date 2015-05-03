@@ -4,14 +4,27 @@ import numpy as np
 import readsnap
 import CIC_library as CIC
 import Power_spectrum_library as PSL
-import sys
+import redshift_space_library as RSL
+import sys,os,imp
 
 rho_crit=2.77536627e11 #h^2 Msun/Mpc^3
 #################################### INPUT ##################################
-snapshot_fname = 'snapdir_003/snap_003'
-MAS            = 'CIC'
-dims           = 512
-fout           = 'CF_test_512.txt'
+if len(sys.argv)>1:
+
+    parameter_file = sys.argv[1]
+    print '\nLoading the parameter file ',parameter_file
+    if os.path.exists(parameter_file):
+        parms = imp.load_source("name",parameter_file)
+        globals().update(vars(parms))
+    else:   print 'file does not exists!!!'
+
+else:
+    snapshot_fname = 'snapdir_003/snap_003'
+    MAS            = 'CIC'
+    dims           = 512
+    do_RSD         = False
+    axis           = 0
+    fout           = 'CF_test_512.txt'
 #############################################################################
 dims3 = dims**3
 
@@ -33,6 +46,8 @@ delta = np.zeros(dims3,dtype=np.float32)
 #read the positions and masses of the CDM particles
 pos  = readsnap.read_block(snapshot_fname,"POS ",parttype=1)/1e3  #Mpc/h
 mass = readsnap.read_block(snapshot_fname,"MASS",parttype=1)*1e10 #Msun/h
+if do_RSD:
+    vel = readsnap.read_block(snapshot_fname,"VEL ",parttype=1) #km/s
 print 'Omega_CDM = %.4f'%(np.sum(mass,dtype=np.float64)/BoxSize**3/rho_crit)
 
 #if there are neutrinos read their positions and masses
@@ -43,7 +58,13 @@ if Nall[2]>0:
         %(np.sum(mass_nu,dtype=np.float64)/BoxSize**3/rho_crit)
     pos  = np.vstack([pos,pos_nu]);    del pos_nu
     mass = np.hstack([mass,mass_nu]);  del mass_nu
+    if do_RSD:
+        vel_nu = readsnap.read_block(snapshot_fname,"VEL ",parttype=2) #km/s
+        vel    = np.vstack([vel,vel_nu]);  del vel_nu
 print 'Omega_m   = %.4f'%(np.sum(mass,dtype=np.float64)/BoxSize**3/rho_crit)
+
+if do_RSD:
+    pos_redshift_space(pos,vel,BoxSize,Hubble,redshift,axis)
 
 #compute the mean mass in each cell
 mean_mass = np.sum(mass,dtype=np.float64)*1.0/dims3
