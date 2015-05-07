@@ -120,7 +120,7 @@ elif method=='Bagla':
     [IDs,M_HI]=HIL.Bagla_HI_assignment(snapshot_fname,groups_fname,
                                        groups_number,Omega_HI_ref,method_Bagla,
                                        f_MF,long_ids_flag,SFR_flag)
-elif method=='Rahmati_HI_assignment':
+elif method=='Rahmati':
     [IDs,M_HI]=HIL.Rahmati_HI_assignment(snapshot_fname,fac,TREECOOL_file,
                                          Gamma_UVB=None,correct_H2=True,IDs=None)
                                          
