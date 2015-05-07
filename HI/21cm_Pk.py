@@ -60,6 +60,7 @@ else:
     method_Bagla = 3 #only for Bagla
     long_ids_flag = False;   SFR_flag = True #flags for reading the FoF file
     f_MF = '../mass_function/ST_MF_z=3.dat' #file containing the mass function
+    TREECOOL_file = 'TREECOOL_bestfit_g1.3'
 
     dims = 512
 
@@ -119,6 +120,10 @@ elif method=='Bagla':
     [IDs,M_HI]=HIL.Bagla_HI_assignment(snapshot_fname,groups_fname,
                                        groups_number,Omega_HI_ref,method_Bagla,
                                        f_MF,long_ids_flag,SFR_flag)
+elif method=='Rahmati_HI_assignment':
+    [IDs,M_HI]=HIL.Rahmati_HI_assignment(snapshot_fname,fac,TREECOOL_file,
+                                         Gamma_UVB=None,correct_H2=True,IDs=None)
+                                         
 else:
     print 'Incorrect method selected!!!'; sys.exit()
 
