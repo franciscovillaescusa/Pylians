@@ -6,6 +6,7 @@ import numpy as np
 import readsnap
 import CIC_library as CIC
 import Power_spectrum_library as PSL
+import redshift_space_library as RSL
 import sys
 
 
@@ -16,6 +17,9 @@ snapshot_fname = 'ics'
 dims = 512
 
 particle_type = [0,1,2]
+
+do_RSD = False
+axis   = 0
 ###############################################################################
 dims3 = dims**3
 
@@ -76,6 +80,10 @@ for ptype in particle_type:
     
     #read particle positions in #Mpc/h
     pos = readsnap.read_block(snapshot_fname,"POS ",parttype=ptype)/1e3 
+
+    if do_RSD:
+        vel = readsnap.read_block(snapshot_fname,"VEL ",parttype=ptype) #km/s
+        RSL.pos_redshift_space(pos,vel,BoxSize,Hubble,redshift,axis); del vel
 
     #find the index of the particle type in the delta array
     index = index_dict[ptype]
