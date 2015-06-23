@@ -7,6 +7,7 @@ import sys,os
 def deriv1(y,x,k,Pk,R):
     Pkp = 10**(np.interp(np.log10(x),np.log10(k),np.log10(Pk)))
     kR=x*R;  return [x**2*Pkp*np.sin(kR)/kR]
+    #kR=x*R;  return [x**2*Pkp*np.sin(kR)/kR*np.exp(-x**2/5.0**2)]
     
 def deriv2(y,x,k,Pk,R,A,ns):
     if x<k[0]:  Pkp = A*x**ns
