@@ -21,6 +21,10 @@
 ##### Ariel Sanchez estimator ######
 #all_distances_grid
 #distances_grid
+
+##### Taruya estimator #####
+
+
 ################################################
 
 ######## COMPILATION ##########
@@ -898,11 +902,6 @@ def distances_grid(N1,N2,dims,delta,pairs,xi,indexes_coord,indexes_distances):
 
     return pairs
 ################################################################################
-
-
-
-
-
 
 
 
