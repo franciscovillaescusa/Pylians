@@ -98,13 +98,15 @@ print 'comoving distance to z = %2.2f ---> %f Mpc/h'%(z,r)
 """
 
 ###### linear growth factor ######
-z       = 0.0
-Omega_m = 0.3175
-Omega_l = 0.6825
-h       = 0.6711
+"""
+z       = 1.0
+Omega_m = 0.308
+Omega_l = 0.692
+h       = 0.6781
 
 Da = linear_growth_factor(z,Omega_m,Omega_l,h)
 print 'Linear growth factor at z = %.1f : %.3e'%(z,Da)
+"""
 
 ###### absorption distance ######
 """
