@@ -143,8 +143,8 @@ def Rahmati(snapshot_fname, TREECOOL_file, T_block=True, Gamma_UVB=None,
 
         #compute the H2/HI fraction
         R_surf = np.zeros(Nall[0],dtype=np.float32)
-        if correct_H2   == 'BR':       R_surf[IDs]=(P/3.5e4)**0.92
-        elif correct_H2 == 'THINGS':   R_surf[IDs]=(P/1.7e4)**0.8
+        if correct_H2   == 'BR':       R_surf = (P/3.5e4)**0.92
+        elif correct_H2 == 'THINGS':   R_surf = (P/1.7e4)**0.8
         #R_surf[IDs]=1.0/(1.0+(35.0*(0.1/nH/0.76)**(gamma))**0.92)
         else:
             print 'bad choice of correct_H2!!!'; sys.exit()
