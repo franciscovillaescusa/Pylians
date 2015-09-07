@@ -34,7 +34,7 @@ pi = np.pi
 #SF_temperature ----------> The value to set the temperature of the SF particles
 #self_shielding_correction --> whether to correct HI fraction for self-shielding
 #correct_H2 --------------> correct HI fraction for presence of H2:
-#                           'BR': Blitz-Rosolowsky, 'THINGS' or False    
+#                           'BR': Blitz-Rosolowsky, 'THINGS', 'KMT' or 'None'
 def Rahmati(snapshot_fname, TREECOOL_file, T_block=True, Gamma_UVB=None,
             SF_temperature=1e4, self_shielding_correction=True,
             correct_H2='BR'):
@@ -127,7 +127,7 @@ def Rahmati(snapshot_fname, TREECOOL_file, T_block=True, Gamma_UVB=None,
     nH0 = nH0.astype(np.float32)
 
     #correct for the presence of H2
-    if correct_H2!=False:
+    if correct_H2 in ['BR','THINGS']:
         print 'correcting HI/H to account for the presence of H2...'
         #compute the pression of the gas particles
         #h^2Msun/kpc^3
@@ -154,6 +154,13 @@ def Rahmati(snapshot_fname, TREECOOL_file, T_block=True, Gamma_UVB=None,
         nH0[indexes]=nH0[indexes]/(1.0+R_surf[indexes]); del indexes,R_surf
         #M_HI[indexes]=M_HI[indexes]*(1.0-R_surf[indexes]); del indexes,R_surf
 
+    if correct_H2=='KMT':
+        print 'correcting HI/H to account for the presence of H2 using KMT...'
+        H2_frac = H2_fraction(snapshot_fname)  #H2/NH = H2/(H2+HI)
+        nH0 = nH0*(1.0-H2_frac)                #(NH/H)*(HI/NH)
+        if np.any(nH0<0.0):
+            print 'HI/H cant be negative!!!!'; sys.exit()
+
     return nH0
 ##############################################################################
 
@@ -176,8 +183,8 @@ def gas_metallicity(snapshot_fname):
 
     offset = 0
     for filenum in xrange(files):
-        if files==1:  fname      = snapshot_fname
-        else:         fname      = snapshot_fname+'.'+str(filenum)
+        if files==1:  fname = snapshot_fname
+        else:         fname = snapshot_fname+'.'+str(filenum)
         
         npart = readsnap.snapshot_header(fname).npart  #particles in that file
 
@@ -196,7 +203,7 @@ def gas_metallicity(snapshot_fname):
                 Z = np.reshape(Z,(npart[0],15))
             
                 metal = np.sum(Z[:,1:],axis=1,dtype=np.float64)\
-                    /mass[offset:offset+npart[0]]/0.02
+                    /(mass[offset:offset+npart[0]])/0.0127
                 metallicity[offset:offset+npart[0]] = metal;  offset += npart[0]
 
                 f.seek(npart[4]*15*4,1);  block_found = True
@@ -235,20 +242,20 @@ def H2_fraction(snapshot_fname):
     Z = gas_metallicity(snapshot_fname)
 
     Msun    = 1.99e33   #g
-    Mpc     = 3.0857e24 #cm
+    kpc     = 3.0857e21 #cm
     sigma_d = Z*1e-21   #cm^2
     mu_H    = 2.3e-24   #g
 
-    # read the density of the gas particles in h^2 Msun/Mpc^3 in proper units
-    rho = readsnap.read_block(snapshot_fname,"RHO ",parttype=0)*1e19
-    rho = rho*h**2*(1.0+redshift)**3  #Msun/Mpc^3
+    # read the density of the gas particles in h^2 Msun/kpc^3 in proper units
+    rho = readsnap.read_block(snapshot_fname,"RHO ",parttype=0)*1e10 
+    rho = rho*h**2*(1.0+redshift)**3  #Msun/kpc^3
  
-    # read the SPH radii of the gas particles in Mpc/h in proper units
-    R = readsnap.read_block(snapshot_fname,"HSML",parttype=0)/1e3
-    R = (R/h)/(1.0+redshift)          #Mpc
+    # read the SPH radii of the gas particles in kpc/h in proper units
+    R = readsnap.read_block(snapshot_fname,"HSML",parttype=0) #ckpc/h
+    R = (R/h)/(1.0+redshift)                                  #kpc
 
     # compute the gas surface density in g/cm^2
-    sigma = (rho*R)*(Msun/Mpc**2)     #g/cm^2
+    sigma = (rho*R)*(Msun/kpc**2)  #g/cm^2
     del rho, R
 
     # read the star formation rate. Only star-forming particles will host H2
@@ -270,12 +277,9 @@ def H2_fraction(snapshot_fname):
 ##############################################################################
 
 
-
 # Returns the snapshot_fname and halo_file for a given region and physics
 class Region:
-    def __init__(self,region,physics):
-
-        snap_number = '091'  #'091'(z=0) : 
+    def __init__(self,region,physics,snap_number):
 
         phys_dict   = {'CSF':'/CSF2015/', 'AGN':'/BH2015/'}
         root_folder = '/pico/home/userexternal/fvillaes/Dianoga/D'+\
