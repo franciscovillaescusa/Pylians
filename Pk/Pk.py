@@ -37,7 +37,7 @@ z = '%.3f'%redshift
 #set the label of the output files
 root_fout = {'0':'GAS',  '01':'CDMG',  '02':'GNU',    '04':'Gstars',
              '1':'CDM',                '12':'CDMNU',  '14':'CDMStars',
-             '2':'NU',                                '14':'NUStars',
+             '2':'NU',                                '24':'NUStars',
              '4':'Stars'                                             } 
 
 #compute the values of Omega_cdm, Omega_nu, Omega_gas and Omega_s
