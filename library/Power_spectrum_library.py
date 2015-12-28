@@ -19,6 +19,7 @@
 #EH_Pk
 #CAMB_Pk
 #CF_Taruya
+#Gaussian_smoothing
 ################################################
 
 ######## COMPILATION ##########
@@ -1007,9 +1008,50 @@ def CF_Taruya(delta,dims,BoxSize,bins_CF='None',MAS='CIC'):
     distances_bin = 0.5*(distances[:-1]+distances[1:])
 
     return distances_bin,xi
+
+
 ################################################################################
+# This function computes the smoothing factor for a Gaussian kernel
+# If we have a field F(x) then its Fourier-transform is F(k), and we smooth
+# it by doing FFT^{-1}F(k)*exp(-k^2*R^2/2.0)
+# This routine returns the array exp(-k^2*R^2/2.0)
+# field -------------> 1D array with dims^3 elements with the value of the field
+# dims --------------> value of dims
+# R -----------------> The smoothing scale: sigma=R
+# BoxSize -----------> The size of the simulation box
+def Gaussian_smoothing(dims,R,BoxSize):
 
+    smooth_array = np.empty(dims**3,dtype=np.float32)
+    R = np.array([R]);  BoxSize = np.array([BoxSize])
 
+    support = "#include <math.h>"
+    code = """
+       long dims2=dims*dims;
+       long dims3=dims*dims*dims;
+       int middle=dims/2;
+       int i,j,k;
+       float kR;
+
+       for (long l=0;l<dims3;l++){
+           i=l/dims2;
+           j=(l%dims2)/dims;
+           k=(l%dims2)%dims;
+
+           i = (i>middle) ? i-dims : i;
+           j = (j>middle) ? j-dims : j;
+           k = (k>middle) ? k-dims : k;
+
+           kR=sqrt(i*i+j*j+k*k)*2.0*M_PI/BoxSize(0)*R(0);
+           smooth_array(l)=exp(-kR*kR/2.0);
+       } 
+    """
+    wv.inline(code,['dims','smooth_array','R','BoxSize'],
+              type_converters = wv.converters.blitz,
+              support_code = support,libraries = ['m'],
+              extra_compile_args =['-O3'])
+
+    return smooth_array
+################################################################################
 
 ############################### EXAMPLE OF USAGE ###############################
 if len(sys.argv)==2:
@@ -1203,3 +1245,31 @@ if len(sys.argv)==2:
         #compute CF using Taruya et al estimator
         r,xi = CF_Taruya(delta,dims,BoxSize,MAS='CIC')
         print r,xi
+
+        ################################################################
+        ### Gaussian_smoothing ### 
+        dims = 128;  BoxSize = 1000.0 #Mpc/h
+        R = 20.0  #Mpc/h
+
+        # create a density field
+        field = np.random.random(dims**3)
+        print 'field pre-smoothing =';  print field
+        print '< field > =',np.mean(field,dtype=np.float64)
+
+        # go to Fourier space
+        field   = np.reshape(field,(dims,dims,dims))
+        field_k = scipy.fftpack.ifftn(field,overwrite_x=True);  del field
+        field_k = np.ravel(field_k)
+
+        # compute the smoothing array
+        smoothing_array = Gaussian_smoothing(dims,R,BoxSize)
+        field_k *= smoothing_array
+        field_k = np.reshape(field_k,(dims,dims,dims))
+        
+        # go back to real-space
+        field = scipy.fftpack.fftn(field_k,overwrite_x=True);  del field_k
+        field = np.real(np.ravel(field))
+        print 'field post-smoothing =';  print field
+        print '< field > =',np.mean(field,dtype=np.float64)
+        
+        
