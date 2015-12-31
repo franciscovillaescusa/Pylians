@@ -1,82 +1,111 @@
+# This script reads an input CF or Pk file (from CAMB for instance) and computes
+# the CF or Pk in the same bins and using the same modes as those measured from
+# the simulations. This is to provide a more fair comparison between theory and
+# results from simulations. It is relatively important for bins with few modes
 import numpy as np
 import Power_spectrum_library as PSL
 import sys,os
 
 
 ################################## INPUT ####################################
-#input_file = '../correlation_function/CF_m_z=10.dat'
-#obj_type   = 'CF'  #choose among 'CF' or 'Pk'
-#f_out      = 'expected_CF.txt'
+obj_type    = 'Pk'  #choose among 'CF' or 'Pk'
 
-input_file = '../CAMB_TABLES/ics_matterpow_0.dat'
-obj_type   = 'Pk'  #choose among 'CF' or 'Pk'
-f_out      = 'expected_Pk_z=0.txt'
+##################### CF ####################
+#input_file = '../correlation_function/CF_m_z=10.dat'
+#f_out      = 'expected_CF.txt'
+#############################################
+
+##################### Pk ####################
+input_files = ['CAMB_TABLES/ics_matterpow_0.dat',
+               'CAMB_TABLES/ics_matterpow_0.5.dat',
+               'CAMB_TABLES/ics_matterpow_1.dat',
+               'CAMB_TABLES/ics_matterpow_2.dat',
+               'CAMB_TABLES/ics_matterpow_5.dat',
+               'CAMB_TABLES/ics_matterpow_9.dat',
+               'CAMB_TABLES/ics_matterpow_20.dat',
+               'CAMB_TABLES/ics_matterpow_99.dat']
+
+f_outs      = ['expected_Pk_z=0.txt',
+               'expected_Pk_z=0.5.txt',
+               'expected_Pk_z=1.txt',
+               'expected_Pk_z=2.txt',
+               'expected_Pk_z=5.txt',
+               'expected_Pk_z=9.txt',
+               'expected_Pk_z=20.txt',
+               'expected_Pk_z=99.txt']
+#############################################
 
 BoxSize = 2000.0 #Mpc/h
-dims    = 512
+dims    = 768
 #############################################################################
 
 # compute the value of |k| in each cell of the grid
 [array,k] = PSL.CIC_correction(dims);  del array
 
-if obj_type=='CF':
+if obj_type=='Pk':
 
-    # read input file
-    r_input,xi_input = np.loadtxt(input_file,unpack=True)
+    bins_r=int(np.sqrt(3*int(0.5*(dims+1))**2))+1
+    
+    # count modes
+    count = PSL.lin_histogram(bins_r,0.0,bins_r*1.0,k)
+
+    # define k-binning and value of k in it
+    bins_k = np.linspace(0.0, bins_r, bins_r+1)
+    k = k.astype(np.float64) #to avoid problems with np.histogram
+    k = 2.0*np.pi/BoxSize*np.histogram(k,bins_k,weights=k)[0]/count
+
+    # keep only with modes below 1.1*k_Nyquist
+    k_N = np.pi*dims/BoxSize;  indexes = np.where(k<1.1*k_N);  k = k[indexes]
+    
+
+    # do a loop over the different input files
+    for input_file,f_out in zip(input_files,f_outs):
+
+        # read input file
+        k_input,Pk_input = np.loadtxt(input_file,unpack=True)
+
+        # compute the value of P(k) in each cell
+        delta_k2 = np.interp(k,k_input,Pk_input)
+
+        # compute the P(k)=<delta_k^2>
+        Pk = PSL.lin_histogram(bins_r,0.0,bins_r*1.0,k,weights=delta_k2)
+        Pk = Pk/count;  Pk = Pk[indexes]
+
+        # save results to file ignoring DC mode
+        np.savetxt(f_out,np.transpose([k[1:],Pk[1:]]))
+
+
+elif obj_type=='CF':
 
     bins_CF = dims/2+1
 
     # compute the value of r in each point of the grid 
-    d_grid = k*BoxSize/dims;  del k
+    d_grid = k*BoxSize/dims;  del k;  
     print np.min(d_grid),'< d <',np.max(d_grid)
 
-    # define the array with the bins in r
-    distances = np.linspace(0.0,BoxSize/2.0,bins_CF)
 
-    # compute xi(r) in each point of the grid
-    xi_delta = np.interp(d_grid,r_input,xi_input)
-
-    xi    = np.histogram(d_grid,bins=distances,weights=xi_delta)[0]
-    modes = np.histogram(d_grid,bins=distances)[0];  del d_grid
-    xi    /= modes
-
+    # define the bins in r and the value of r in them
+    distances     = np.linspace(0.0, BoxSize/2.0, bins_CF)
     distances_bin = 0.5*(distances[:-1]+distances[1:])
 
-    # save results to file
-    np.savetxt(f_out,np.transpose([distances_bin,xi]))
+    # compute the number of modes in each bin
+    modes = np.histogram(d_grid, bins=distances)[0];  del d_grid
 
-elif obj_type=='Pk':
-
-    bins_r=int(np.sqrt(3*int(0.5*(dims+1))**2))+1
+    # do a loop over the different input files
+    for input_file,f_out in zip(input_files,f_outs):
     
-    # read input file
-    k_input,Pk_input = np.loadtxt(input_file,unpack=True)
+        # read input file
+        r_input,xi_input = np.loadtxt(input_file,unpack=True)
 
-    # count modes
-    count = PSL.lin_histogram(bins_r,0.0,bins_r*1.0,k)
+        # compute xi(r) in each point of the grid
+        xi_delta = np.interp(d_grid, r_input, xi_input)
 
-    # compute the value of P(k) in each cell
-    delta_k2 = np.interp(k,k_input*BoxSize/(2.0*np.pi),Pk_input)
+        # compute the value of the correlation function
+        xi = np.histogram(d_grid, bins=distances, weights=xi_delta)[0]
+        xi /= modes
 
-    #compute the P(k)=<delta_k^2>
-    Pk = PSL.lin_histogram(bins_r,0.0,bins_r*1.0,k,weights=delta_k2)
-    Pk = Pk/count
-
-    #final processing
-    bins_k = np.linspace(0.0,bins_r,bins_r+1)
-    #compute the bins in k-space and give them physical units (h/Mpc), (h/kpc)
-    k=k.astype(np.float64) #to avoid problems with np.histogram
-    k=2.0*np.pi/BoxSize*np.histogram(k,bins_k,weights=k)[0]/count
-
-    #ignore the first bin (fundamental frequency)
-    k=k[1:]; Pk=Pk[1:]
-
-    #keep only with modes below 1.1*k_Nyquist
-    k_N=np.pi*dims/BoxSize; indexes=np.where(k<1.1*k_N)
-    k=k[indexes]; Pk=Pk[indexes]; del indexes
-
-    # save results to file
-    np.savetxt(f_out,np.transpose([k,Pk]))
+        # save results to file
+        np.savetxt(f_out,np.transpose([distances_bin,xi]))
 
 else:
     print 'bad object type choice!!!';  sys.exit()
