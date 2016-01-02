@@ -44,19 +44,21 @@ dims    = 768
 
 if obj_type=='Pk':
 
-    bins_r=int(np.sqrt(3*int(0.5*(dims+1))**2))+1
-    
+    # here k is in dimensionless units: k=0,1,sqrt(2),sqrt(3),2....
+    bins_r = int(np.sqrt(3*int(0.5*(dims+1))**2))+1
+    k_N = np.pi*dims/BoxSize  #Nyquist frequency    
+
     # count modes
-    count = PSL.lin_histogram(bins_r,0.0,bins_r*1.0,k)
+    count = PSL.lin_histogram(bins_r, 0.0, bins_r*1.0, k)
 
     # define k-binning and value of k in it
     bins_k = np.linspace(0.0, bins_r, bins_r+1)
     k = k.astype(np.float64) #to avoid problems with np.histogram
-    k = 2.0*np.pi/BoxSize*np.histogram(k,bins_k,weights=k)[0]/count
+    k_bin = np.histogram(k,bins_k,weights=k)[0]/count  #value of k in the k-bin
 
     # keep only with modes below 1.1*k_Nyquist
-    k_N = np.pi*dims/BoxSize;  indexes = np.where(k<1.1*k_N);  k = k[indexes]
-    
+    indexes = np.where(k_bin*2.0*np.pi/BoxSize<1.1*k_N)
+    k_bin = k_bin[indexes]*2.0*np.pi/BoxSize
 
     # do a loop over the different input files
     for input_file,f_out in zip(input_files,f_outs):
@@ -65,15 +67,14 @@ if obj_type=='Pk':
         k_input,Pk_input = np.loadtxt(input_file,unpack=True)
 
         # compute the value of P(k) in each cell
-        delta_k2 = np.interp(k,k_input,Pk_input)
+        delta_k2 = np.interp(k*2.0*np.pi/BoxSize, k_input, Pk_input)
 
         # compute the P(k)=<delta_k^2>
-        Pk = PSL.lin_histogram(bins_r,0.0,bins_r*1.0,k,weights=delta_k2)
+        Pk = PSL.lin_histogram(bins_r, 0.0, bins_r*1.0, k, weights=delta_k2)
         Pk = Pk/count;  Pk = Pk[indexes]
-
+        
         # save results to file ignoring DC mode
-        np.savetxt(f_out,np.transpose([k[1:],Pk[1:]]))
-
+        np.savetxt(f_out,np.transpose([k_bin[1:],Pk[1:]]))
 
 elif obj_type=='CF':
 
