@@ -36,6 +36,7 @@
 
 
 import CIC_library as CIC
+import readsnap
 import numpy as np
 import scipy.fftpack
 import scipy.weave as wv
