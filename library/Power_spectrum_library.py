@@ -495,7 +495,7 @@ def Power_spectrum_snapshot(snapshot_fname,dims,particle_type,do_RSD,axis,
         print '%.3e < delta < %.3e\n'%(np.min(delta),np.max(delta))
 
         # compute the P(k)
-        Pk = PSL.power_spectrum_given_delta(delta,dims,BoxSize)
+        Pk = power_spectrum_given_delta(delta,dims,BoxSize)
 
         # write P(k) to output file
         f_out = 'Pk_m_z='+z+'.dat'
@@ -553,7 +553,7 @@ def Power_spectrum_snapshot(snapshot_fname,dims,particle_type,do_RSD,axis,
         ptype = particle_type[0];  index = index_dict[ptype]
         fout = 'Pk_'+root_fout[str(ptype)]+'_z='+z+'.dat'
         print '\nComputing the power spectrum of the particle type: ',ptype
-        data = PSL.power_spectrum_given_delta(delta[index],dims,BoxSize)
+        data = power_spectrum_given_delta(delta[index],dims,BoxSize)
         k = data[0];  Pk[index][index] = data[1];  del data
         np.savetxt(fout,np.transpose([k,Pk[index][index]])); print '\n'
         sys.exit()
@@ -581,9 +581,9 @@ def Power_spectrum_snapshot(snapshot_fname,dims,particle_type,do_RSD,axis,
             print 'saving results in:';  print fout1,'\n',fout2,'\n',fout12
 
             # This routine computes the auto- and cross-power spectra
-            data = PSL.cross_power_spectrum_given_delta(delta[index1],
-                                                        delta[index2],dims,
-                                                        BoxSize)
+            data = cross_power_spectrum_given_delta(delta[index1],
+                                                    delta[index2],dims,
+                                                    BoxSize)
                                                         
             k                  = data[0]
             Pk[index1][index2] = data[1];   Pk[index2][index1] = data[1]; 
