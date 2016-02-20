@@ -598,8 +598,12 @@ def Power_spectrum_snapshot(snapshot_fname,dims,particle_type,do_RSD,axis,
     #####################################################################
 
     #####################################################################
-    # compute total matter auto-power spectrum   
+    # compute the power spectrum of the sum of all components
     print '\ncomputing P(k) of all components'
+
+    # dictionary giving the value of Omega for each component
+    Omega_dict = {0:Omega_g, 1:Omega_c, 2:Omega_n, 4:Omega_s}
+
     Pk_m = np.zeros(len(k),dtype=np.float64);  name = '_';  Omega_tot = 0.0
     for ptype in particle_type:  
         name += root_fout[str(ptype)]+'_'
@@ -607,9 +611,6 @@ def Power_spectrum_snapshot(snapshot_fname,dims,particle_type,do_RSD,axis,
     
     if do_RSD:  f_out_m = 'Pk'+name+'RS_'+str(axis)+'_z='+z+'.dat'
     else:       f_out_m = 'Pk'+name+'z='+z+'.dat'
-
-    # dictionary giving the value of Omega for each component
-    Omega_dict = {0:Omega_g, 1:Omega_c, 2:Omega_n, 4:Omega_s}
 
     for ptype1 in particle_type:
         for ptype2 in particle_type:
