@@ -1,520 +1,170 @@
-#DESCRIPTION: 
-#This code computes the auto- (cross-) power spectrum (PS) and the quadrupole 
-#of many different objects:
-
-# 'CDM' -------------- only CDM
-# 'NU' --------------- only neutrinos
-# 'DM-NU' ------------ CDM+NU-NU
-# 'DM' --------------- CDM+NU, CDM alone. NU alone and CDM-NU cross
-
-# 'halos' ------------ SUBFIND halos
-# 'subhalos' --------- SUBFIND subhalos
-# 'FoF_halos' -------- FoF halos
-
-# 'DM-halos' --------- CDM+NU - SUBFIND halos
-# 'DM-subhalos' ------ CDM+NU - SUBFIND subhalos
-# 'DM-FoF_halos' ----- CDM+NU - FoF halos
-
-# 'CDM-halos' -------- CDM - SUBFIND halos
-# 'CDM-subhalos' ----- CDM - SUBFIND subhalos
-# 'CDM-FoF_halos' ---- CDM - FoF halos
-
-# 'quadrupole-CDM' --- quadrupole CDM only
-
-#VARIABLES:
-#snapshot_fname --> name of the N-body snapshot
-#groups_fname ----> folder containing the SUBFIND/FoF information
-#groups_number ---> number of the group folder
-#obj -------------> type of object over which compute the PS. Select from above
-#mass_interval ---> Select halos by min/max mass: True/False.  
-#min_mass --------> min mass of the dark matter halos (in 1e10 Msun/h units)
-#max_mass --------> max mass of the dark matter halos (in 1e10 Msun/h units)
-#do_RSD ----------> compute the PS in redshift-space: True/False
-#axis ------------> axis along which compute the PS: 0, 1 or 2
-#dims ------------> number of points per dimension to use in the grid
-#f_out -----------> name of the output file
-
-#USAGE:
-#copy this file in the folder containing the snapshot/SUBFIND/FoF file. 
-#Set the variables and type python Pk.py
-
-#VERSION HISTORY:
-#Version 2.3.1
-#Computes the quadrupole along any axis
-
-#Version 2.3
-#Computes the quadrupole
-
-#Version 2.2
-#includes the posibility of measuring the power spectrums in redshift-space
-#along a given axis
-
-#Version 2.1
-#use the halo library to read the positions of the halos, subhalos and FoF
-
+#This code can be used to compute the CDM, baryon and neutrinos power spectra
+#from an N-body snapshot file. It also computes the CDM-baryon, CDM-neutrinos 
+#and baryon-neutrinos cross-power spectra and the overall matter power spectrum
 
 import numpy as np
 import readsnap
+import CIC_library as CIC
 import Power_spectrum_library as PSL
-import halos_library as HL
+import redshift_space_library as RSL
 import sys
 
-#Pos is an array containing the positions of the particles along one axis
-#Vel is an array containing the velocities of the particle along the above axis
-def RSD(Pos,Vel,Hubble,redshift):
-    #transform coordinates to redshift space
-    delta_y=(Vel/Hubble)*(1.0+redshift)  #displacement in Mpc/h
-    Pos+=delta_y #add distorsion to position of particle in real-space
-    del delta_y
 
-    #take care of the boundary conditions
-    beyond=np.where(Pos>BoxSize)[0]; Pos[beyond]-=BoxSize
-    beyond=np.where(Pos<0.0)[0];     Pos[beyond]+=BoxSize
-    del beyond
-    
-rho_crit=2.77536627e11 #h^2 Msun/Mpc^3
+rho_crit = 2.77536627e11 #h^2 Msun/Mpc^3
 ################################## INPUT ######################################
-if len(sys.argv)>1:
-    sa=sys.argv
-
-    snapshot_fname=sa[1]; groups_fname=sa[2]; groups_number=sa[3]
-    obj=sa[4]
-
-    mass_interval=bool(int(sa[5]))
-    min_mass=float(sa[6]); max_mass=float(sa[7])
-
-    do_RSD=bool(int(sa[8])); axis=int(sa[9])
-
-    dims=int(sa[10])
-    f_out=sa[11]
-else:
-    snapshot_fname='/home/villa/disksom2/ICTP/CDM/0/snapdir_022/snap_022'
-    groups_fname='/home/villa/disksom2/ICTP/CDM/0/'
-    groups_number=22 
-
-    obj='CDM' 
-
-    mass_interval=True
-    min_mass=1.6e3
-    max_mass=3.0e5
-
-    do_RSD=False #do redshift-space distortions----True or False
-    axis=0 #axis along which the RSD are computed: 0-X, 1-Y, 2-Z
-
-    dims=512
-    f_out = 'borrar.dat'
+snapshot_fname = 'ics'
+dims           = 512
+particle_type  = [0,1,2]
+do_RSD         = False
+axis           = 0
 ###############################################################################
+dims3 = dims**3
 
 #read snapshot head and obtain BoxSize, Omega_m and Omega_L
-head=readsnap.snapshot_header(snapshot_fname)
-BoxSize=head.boxsize/1e3 #Mpc/h
-Nall=head.nall
-Masses=head.massarr*1e10 #Msun/h
-Omega_m=head.omega_m
-Omega_l=head.omega_l
-redshift=head.redshift
-Hubble=100.0*np.sqrt(Omega_m*(1.0+redshift)**3+Omega_l)  #h*km/s/Mpc
+print '\nREADING SNAPSHOTS PROPERTIES'
+head     = readsnap.snapshot_header(snapshot_fname)
+BoxSize  = head.boxsize/1e3  #Mpc/h
+Nall     = head.nall
+Masses   = head.massarr*1e10 #Msun/h
+Omega_m  = head.omega_m
+Omega_l  = head.omega_l
+redshift = head.redshift
+Hubble   = 100.0*np.sqrt(Omega_m*(1.0+redshift)**3+Omega_l)  #km/s/(Mpc/h)
+h        = head.hubble
 
+z = '%.3f'%redshift
 
-####################### CDM, NU, CDM-NU and DM=CDM+NU ########################
-if obj=='DM':
-    #read CDM and NU positions
-    Pos1=readsnap.read_block(snapshot_fname,"POS ",parttype=1)/1e3 #Mpc/h
-    Pos2=readsnap.read_block(snapshot_fname,"POS ",parttype=2)/1e3 #Mpc/h
+#set the label of the output files
+root_fout = {'0':'GAS',  '01':'CDMG',  '02':'GNU',    '04':'Gstars',
+             '1':'CDM',                '12':'CDMNU',  '14':'CDMStars',
+             '2':'NU',                                '24':'NUStars',
+             '4':'Stars'                                             } 
 
-    #move to redshift-space 
-    if do_RSD:
-        Vel=readsnap.read_block(snapshot_fname,"VEL ",parttype=1) #km/s
-        RSD(Pos1[:,axis],Vel[:,axis],Hubble,redshift); del Vel
+#compute the values of Omega_cdm, Omega_nu, Omega_gas and Omega_s
+Omega_c = Masses[1]*Nall[1]/BoxSize**3/rho_crit
+Omega_n = Masses[2]*Nall[2]/BoxSize**3/rho_crit
+Omega_g, Omega_s = 0.0, 0.0
+if Nall[0]>0:
+    if Masses[0]>0:  
+        Omega_g = Masses[0]*Nall[0]/BoxSize**3/rho_crit
+        Omega_s = Masses[4]*Nall[4]/BoxSize**3/rho_crit
+    else:    
+        mass = readsnap.read_block(snapshot_fname,"MASS",parttype=0)*1e10 #Msun/h
+        Omega_g = np.sum(mass,dtype=np.float64)/BoxSize**3/rho_crit; del mass
+        mass = readsnap.read_block(snapshot_fname,"MASS",parttype=4)*1e10 #Msun/h
+        Omega_s = np.sum(mass,dtype=np.float64)/BoxSize**3/rho_crit; del mass
 
-        Vel=readsnap.read_block(snapshot_fname,"VEL ",parttype=2) #km/s
-        RSD(Pos2[:,axis],Vel[:,axis],Hubble,redshift); del Vel
+#some verbose
+print 'Omega_gas  = ',Omega_g
+print 'Omega_cdm  = ',Omega_c
+print 'Omega_nu   = ',Omega_n
+print 'Omega_star = ',Omega_s
+print 'Omega_m    = ',Omega_m
 
-    #computes OmegaCDM and OmegaNU
-    OmegaCDM = Nall[1]*Masses[1]/(BoxSize**3*rho_crit)
-    OmegaNU  = Nall[2]*Masses[2]/(BoxSize**3*rho_crit)
-    print 'OmegaCDM=',OmegaCDM; print 'OmegaNU= ',OmegaNU
-    print 'OmegaDM= ',OmegaCDM+OmegaNU
+#define the arrays containing the positions and deltas and power spectra
+delta = [[],[],[],[]]     #array  containing the gas, CDM, NU and stars deltas
+Pk    = [[[],[],[],[]],   #matrix containing the auto- and cross-power spectra
+         [[],[],[],[]],
+         [[],[],[],[]],
+         [[],[],[],[]]]
 
-    #computes CDM & NU P(k), CDM-NU cross-P(k) and DM P(k)
-    A=PSL.power_spectrum_full_analysis(Pos1,Pos2,OmegaCDM,OmegaNU,dims,BoxSize)
-    k=A.k
-    Pk_CDM=A.Pk1; dPk_CDM=A.dPk1
-    Pk_NU=A.Pk2; dPk_NU=A.dPk2
-    Pk_CDM_NU=A.Pk12
-    Pk_DM=A.Pk
-    print np.min(A.check),'< diff <',np.max(A.check)
+#dictionary relating the particle type to the index in the delta and Pk arrays
+index_dict = {0:0, 1:1, 2:2, 4:3} #delta of stars (ptype=4) is delta[3] not delta[4]
 
-    #write P(k) files
-    f1=open(f_out+'_CDM','w'); f2=open(f_out+'_NU','w')
-    f3=open(f_out+'_CDM-NU','w'); f4=open(f_out+'_DM','w')
-    for i in range(len(k)):
-        f1.write(str(k[i])+' '+str(Pk_CDM[i])+' '+str(dPk_CDM[i])+'\n')
-        f2.write(str(k[i])+' '+str(Pk_NU[i])+' '+str(dPk_NU[i])+'\n')
-        f3.write(str(k[i])+' '+str(Pk_CDM_NU[i])+'\n')
-        f4.write(str(k[i])+' '+str(Pk_DM[i])+'\n')
-    f1.close(); f2.close(); f3.close(); f4.close()
-
-
-################################ CDM ONLY #################################
-
-elif obj=='CDM':
-    #read CDM positions
-    Pos=readsnap.read_block(snapshot_fname,"POS ",parttype=1)/1e3 #Mpc/h
+########################################################################
+# do a loop over all particle types and compute the deltas
+for ptype in particle_type:
     
-    #move to redshift-space 
+    # read particle positions in #Mpc/h
+    pos = readsnap.read_block(snapshot_fname,"POS ",parttype=ptype)/1e3 
+
+    # move particle positions to redshift-space
     if do_RSD:
-        Vel=readsnap.read_block(snapshot_fname,"VEL ",parttype=1) #km/s
-        RSD(Pos[:,axis],Vel[:,axis],Hubble,redshift); del Vel
-
-    #computes P(k)
-    Pk=PSL.power_spectrum(Pos,dims,BoxSize,shoot_noise_correction=False)
-    
-    #write CDM P(k) file
-    f=open(f_out,'w')
-    for i in range(len(Pk[0])):
-        f.write(str(Pk[0][i])+' '+str(Pk[1][i])+' '+str(Pk[2][i])+'\n')
-    f.close()
-
-############################## NEUTRINOS ONLY ###############################
-
-elif obj=='NU':
-    #read NU positions
-    Pos=readsnap.read_block(snapshot_fname,"POS ",parttype=2)/1e3 #Mpc/h
-
-    #move to redshift-space 
-    if do_RSD:
-        Vel=readsnap.read_block(snapshot_fname,"VEL ",parttype=2) #km/s
-        RSD(Pos[:,axis],Vel[:,axis],Hubble,redshift); del Vel
-
-    #computes P(k)
-    Pk=PSL.power_spectrum(Pos,dims,BoxSize,shoot_noise_correction=False)
-
-    #write NU P(k) file
-    f=open(f_out,'w')
-    for i in range(len(Pk[0])):
-        f.write(str(Pk[0][i])+' '+str(Pk[1][i])+' '+str(Pk[2][i])+'\n')
-    f.close()
-
-################################## SO HALOS #################################
-
-elif obj=='halos':
-    #read SUBFIND CDM halo positions
-    Pos=HL.halo_positions(groups_fname,groups_number,
-                          mass_interval,min_mass,max_mass) #Mpc/h
-
-    #move to redshift-space 
-    if do_RSD:
-        print 'option not implemented for SO halos'
-
-    #computes P(k)
-    Pk=PSL.power_spectrum(Pos,dims,BoxSize,shoot_noise_correction=True)
-
-    #write halos P(k) file
-    f=open(f_out,'w')
-    for i in range(len(Pk[0])):
-        f.write(str(Pk[0][i])+' '+str(Pk[1][i])+' '+str(Pk[2][i])+'\n')
-    f.close()
-
-################################## SUBHALOS #################################
-
-elif obj=='subhalos':
-
-    #read CDM halo positions (and velocities for RSD)
-    if do_RSD:
-        [Pos,Vel]=HL.subhalo_positions(groups_fname,groups_number,
-                                       mass_interval,min_mass,max_mass,
-                                       velocities=True) #Mpc/h
-    else:
-        Pos=HL.subhalo_positions(groups_fname,groups_number,
-                                 mass_interval,min_mass,max_mass,
-                                 velocities=False) #Mpc/h
-    #move to redshift-space
-    if do_RSD:
-        RSD(Pos[:,axis],Vel[:,axis],Hubble,redshift); del Vel
-
-    #computes P(k)
-    Pk=PSL.power_spectrum(Pos,dims,BoxSize,shoot_noise_correction=True)
-
-    #write subhalos P(k) file
-    f=open(f_out,'w')
-    for i in range(len(Pk[0])):
-        f.write(str(Pk[0][i])+' '+str(Pk[1][i])+' '+str(Pk[2][i])+'\n')
-    f.close()
-
-################################ FoF HALOS #################################
-
-elif obj=='FoF_halos':
-    #read FoF CDM halo positions
-    Pos=HL.FoF_halo_positions(groups_fname,groups_number,mass_interval,
-                              min_mass,max_mass) #Mpc/h
-
-    #move to redshift-space 
-    if do_RSD:
-        print 'option not implemented for FoF halos'
-
-    #computes P(k)
-    Pk=PSL.power_spectrum(Pos,dims,BoxSize,shoot_noise_correction=True)
-
-    #write halos P(k) file
-    f=open(f_out,'w')
-    for i in range(len(Pk[0])):
-        f.write(str(Pk[0][i])+' '+str(Pk[1][i])+' '+str(Pk[2][i])+'\n')
-    f.close()
-
-############################### DM-SO_HALOS ################################
-
-elif obj=='DM-halos':
-    #read CDM and NU positions
-    Pos1=readsnap.read_block(snapshot_fname,"POS ",parttype=1)/1e3 #Mpc/h
-    Pos2=readsnap.read_block(snapshot_fname,"POS ",parttype=2)/1e3 #Mpc/h    
-
-    #move to redshift-space 
-    if do_RSD:
-        Vel=readsnap.read_block(snapshot_fname,"VEL ",parttype=1) #km/s
-        RSD(Pos1[:,axis],Vel[:,axis],Hubble,redshift); del Vel
-
-        Vel=readsnap.read_block(snapshot_fname,"VEL ",parttype=2) #km/s
-        RSD(Pos2[:,axis],Vel[:,axis],Hubble,redshift); del Vel
-
-        print 'option not implemented for SO halos'
-
-    #computes OmegaCDM and OmegaNU
-    OmegaCDM = Nall[1]*Masses[1]/(BoxSize**3*rho_crit)
-    OmegaNU  = Nall[2]*Masses[2]/(BoxSize**3*rho_crit)
-    print 'OmegaCDM=',OmegaCDM; print 'OmegaNU= ',OmegaNU
-    print 'OmegaDM= ',OmegaCDM+OmegaNU
-
-    #read CDM halo positions
-    Pos3=HL.halo_positions(groups_fname,groups_number,
-                           mass_interval,min_mass,max_mass) #Mpc/h
-
-    #computes the DM-halos cross-P(k)
-    Pk=PSL.cross_power_spectrum_DM(Pos1,Pos2,Pos3,OmegaCDM,OmegaNU,dims,BoxSize)
-    
-    #write cross-P(k) file
-    f=open(f_out,'w')
-    for i in range(len(Pk[0])):
-        f.write(str(Pk[0][i])+' '+str(Pk[1][i])+'\n')
-    f.close()
-
-############################### DM-SUBHALOS #################################
-
-elif obj=='DM-subhalos':
-    #read CDM and NU positions
-    Pos1=readsnap.read_block(snapshot_fname,"POS ",parttype=1)/1e3 #Mpc/h
-    Pos2=readsnap.read_block(snapshot_fname,"POS ",parttype=2)/1e3 #Mpc/h    
-
-    #read CDM halo positions (and velocities for RSD)
-    if do_RSD:
-        [Pos3,Vel3]=HL.subhalo_positions(groups_fname,groups_number,
-                                         mass_interval,min_mass,max_mass,
-                                         velocities=True) #Mpc/h
-    else:
-        Pos3=HL.subhalo_positions(groups_fname,groups_number,
-                                  mass_interval,min_mass,max_mass,
-                                  velocities=False) #Mpc/h
-
-    #move to redshift-space 
-    if do_RSD:
-        Vel=readsnap.read_block(snapshot_fname,"VEL ",parttype=1) #km/s
-        RSD(Pos1[:,axis],Vel[:,axis],Hubble,redshift); del Vel
-
-        Vel=readsnap.read_block(snapshot_fname,"VEL ",parttype=2) #km/s
-        RSD(Pos2[:,axis],Vel[:,axis],Hubble,redshift); del Vel
-
-        RSD(Pos3[:,axis],Vel3[:,axis],Hubble,redshift); del Vel3
-
-    #computes OmegaCDM and OmegaNU
-    OmegaCDM = Nall[1]*Masses[1]/(BoxSize**3*rho_crit)
-    OmegaNU  = Nall[2]*Masses[2]/(BoxSize**3*rho_crit)
-    print 'OmegaCDM=',OmegaCDM; print 'OmegaNU= ',OmegaNU
-    print 'OmegaDM= ',OmegaCDM+OmegaNU
-
-
-    #computes the DM-subhalos cross-P(k)
-    Pk=PSL.cross_power_spectrum_DM(Pos1,Pos2,Pos3,OmegaCDM,OmegaNU,dims,BoxSize)
-    
-    #write cross-P(k) file
-    f=open(f_out,'w')
-    for i in range(len(Pk[0])):
-        f.write(str(Pk[0][i])+' '+str(Pk[1][i])+'\n')
-    f.close()
-
-############################### DM-FoF_HALOS ################################
-
-elif obj=='DM-FoF_halos':
-    #read CDM and NU positions
-    Pos1=readsnap.read_block(snapshot_fname,"POS ",parttype=1)/1e3 #Mpc/h
-    Pos2=readsnap.read_block(snapshot_fname,"POS ",parttype=2)/1e3 #Mpc/h    
-
-    #move to redshift-space 
-    if do_RSD:
-        Vel=readsnap.read_block(snapshot_fname,"VEL ",parttype=1) #km/s
-        RSD(Pos1[:,axis],Vel[:,axis],Hubble,redshift); del Vel
-
-        Vel=readsnap.read_block(snapshot_fname,"VEL ",parttype=2) #km/s
-        RSD(Pos2[:,axis],Vel[:,axis],Hubble,redshift); del Vel
-
-        print 'option not implemented for FoF halos'
-
-    #computes OmegaCDM and OmegaNU
-    OmegaCDM = Nall[1]*Masses[1]/(BoxSize**3*rho_crit)
-    OmegaNU  = Nall[2]*Masses[2]/(BoxSize**3*rho_crit)
-    print 'OmegaCDM=',OmegaCDM; print 'OmegaNU= ',OmegaNU
-    print 'OmegaDM= ',OmegaCDM+OmegaNU
-
-    #read FoF CDM halo positions
-    Pos3=HL.FoF_halo_positions(groups_fname,groups_number,mass_interval,
-                               min_mass,max_mass) #Mpc/h
-
-    #computes the DM-halos cross-P(k)
-    Pk=PSL.cross_power_spectrum_DM(Pos1,Pos2,Pos3,OmegaCDM,OmegaNU,dims,BoxSize)
-    
-    #write cross-P(k) file
-    f=open(f_out,'w')
-    for i in range(len(Pk[0])):
-        f.write(str(Pk[0][i])+' '+str(Pk[1][i])+'\n')
-    f.close()
-
-############################# DM-NU = CDM+NU-NU ##############################
-
-elif obj=='DM-NU':
-
-    #read CDM and NU positions
-    Pos1=readsnap.read_block(snapshot_fname,"POS ",parttype=1)/1e3 #Mpc/h
-    Pos2=readsnap.read_block(snapshot_fname,"POS ",parttype=2)/1e3 #Mpc/h    
-
-    #move to redshift-space 
-    if do_RSD:
-        Vel=readsnap.read_block(snapshot_fname,"VEL ",parttype=1) #km/s
-        RSD(Pos1[:,axis],Vel[:,axis],Hubble,redshift); del Vel
-
-        Vel=readsnap.read_block(snapshot_fname,"VEL ",parttype=2) #km/s
-        RSD(Pos2[:,axis],Vel[:,axis],Hubble,redshift); del Vel
-
-    #computes OmegaCDM and OmegaNU
-    OmegaCDM = Nall[1]*Masses[1]/(BoxSize**3*rho_crit)
-    OmegaNU  = Nall[2]*Masses[2]/(BoxSize**3*rho_crit)
-    print 'OmegaCDM=',OmegaCDM; print 'OmegaNU= ',OmegaNU
-    print 'OmegaDM= ',OmegaCDM+OmegaNU
-    
-    #computes the DM-NU cross-P(k)
-    Pk=PSL.cross_power_spectrum_DM(Pos1,Pos2,Pos2,OmegaCDM,OmegaNU,dims,BoxSize)
-    
-    #write cross-P(k) file
-    f=open(f_out,'w')
-    for i in range(len(Pk[0])):
-        f.write(str(Pk[0][i])+' '+str(Pk[1][i])+'\n')
-    f.close()
-
-############################### CDM-SO_HALOS ################################
-
-elif obj=='CDM-halos':
-    #read CDM positions
-    Pos1=readsnap.read_block(snapshot_fname,"POS ",parttype=1)/1e3 #Mpc/h
-
-    #move to redshift-space 
-    if do_RSD:
-        Vel=readsnap.read_block(snapshot_fname,"VEL ",parttype=1) #km/s
-        RSD(Pos1[:,axis],Vel[:,axis],Hubble,redshift); del Vel
-        print 'option not implemented for SO halos'
-
-    #read CDM halo positions
-    Pos2=HL.halo_positions(groups_fname,groups_number,
-                           mass_interval,min_mass,max_mass) #Mpc/h
-    
-    #computes the DM-halos cross-P(k)
-    Pk=PSL.cross_power_spectrum(Pos1,Pos2,dims,BoxSize)
-    
-    #write cross-P(k) file
-    f=open(f_out,'w')
-    for i in range(len(Pk[0])):
-        f.write(str(Pk[0][i])+' '+str(Pk[1][i])+'\n')
-    f.close()
-
-############################### CDM-SUBHALOS ###############################
-
-elif obj=='CDM-subhalos':
-    #read CDM positions
-    Pos1=readsnap.read_block(snapshot_fname,"POS ",parttype=1)/1e3 #Mpc/h
-
-    #read CDM halo positions (and velocities for RSD)
-    if do_RSD:
-        [Pos2,Vel2]=HL.subhalo_positions(groups_fname,groups_number,
-                                         mass_interval,min_mass,max_mass,
-                                         velocities=True) #Mpc/h
-    else:
-        Pos2=HL.subhalo_positions(groups_fname,groups_number,
-                                  mass_interval,min_mass,max_mass,
-                                  velocities=False) #Mpc/h
-
-    #move to redshift-space 
-    if do_RSD:
-        Vel=readsnap.read_block(snapshot_fname,"VEL ",parttype=1) #km/s
-        RSD(Pos1[:,axis],Vel[:,axis],Hubble,redshift); del Vel
-
-        RSD(Pos2[:,axis],Vel2[:,axis],Hubble,redshift); del Vel2
-    
-    #computes the DM-halos cross-P(k)
-    Pk=PSL.cross_power_spectrum(Pos1,Pos2,dims,BoxSize)
-    
-    #write cross-P(k) file
-    f=open(f_out,'w')
-    for i in range(len(Pk[0])):
-        f.write(str(Pk[0][i])+' '+str(Pk[1][i])+'\n')
-    f.close()
-
-############################## CDM-FoF_HALOS ###############################
-
-elif obj=='CDM-FoF_halos':
-    #read CDM positions
-    Pos1=readsnap.read_block(snapshot_fname,"POS ",parttype=1)/1e3 #Mpc/h
-
-    #move to redshift-space 
-    if do_RSD:
-        Vel=readsnap.read_block(snapshot_fname,"VEL ",parttype=1) #km/s
-        RSD(Pos1[:,axis],Vel[:,axis],Hubble,redshift); del Vel
-        print 'option not implemented for FoF halos'
-
-    #read FoF CDM halo positions
-    Pos2=HL.FoF_halo_positions(groups_fname,groups_number,mass_interval,
-                            min_mass,max_mass) #Mpc/h
-    
-    #computes the DM-halos cross-P(k)
-    Pk=PSL.cross_power_spectrum(Pos1,Pos2,dims,BoxSize)
-    
-    #write cross-P(k) file
-    f=open(f_out,'w')
-    for i in range(len(Pk[0])):
-        f.write(str(Pk[0][i])+' '+str(Pk[1][i])+'\n')
-    f.close()
-
-############################ QUADRUPOLE CDM ONLY #############################
-
-elif obj=='quadrupole-CDM':
-    #read CDM positions
-    Pos=readsnap.read_block(snapshot_fname,"POS ",parttype=1)/1e3 #Mpc/h
-    
-    #move to redshift-space 
-    if do_RSD:
-        Vel=readsnap.read_block(snapshot_fname,"VEL ",parttype=1) #km/s
-        RSD(Pos[:,axis],Vel[:,axis],Hubble,redshift); del Vel
-
-    #computes P_2(k)
-    ell=2
-    Pk=PSL.multipole(Pos,dims,BoxSize,ell,axis,shoot_noise_correction=False)
-    
-    #write CDM P_2(k) file
-    f=open(f_out,'w')
-    for i in range(len(Pk[0])):
-        f.write(str(Pk[0][i])+' '+str(Pk[1][i])+'\n')
-    f.close()
-
-#############################################################################
-
-else:
-    print 'Wrong option. Choose among:'
-    print 'DM, CDM, NU or halos'
-    sys.exit()
+        vel = readsnap.read_block(snapshot_fname,"VEL ",parttype=ptype) #km/s
+        RSL.pos_redshift_space(pos,vel,BoxSize,Hubble,redshift,axis);  del vel
+
+    #find the index of the particle type in the delta array
+    index = index_dict[ptype]
+
+    #compute the deltas
+    delta[index] = np.zeros(dims3,dtype=np.float32)
+    CIC.CIC_serial(pos,dims,BoxSize,delta[index])
+    print '%.6e should be equal to \n%.6e\n'\
+        %(len(pos),np.sum(delta[index],dtype=np.float64))
+
+    #compute the density constrast within each grid cell
+    delta[index] = delta[index]*dims3*1.0/len(pos)-1.0;  del pos
+    print '%.3e < delta < %.3e\n'%(np.min(delta[index]),np.max(delta[index]))
+########################################################################
+
+########################################################################
+#compute the auto-power spectrum when there is only one component
+if len(particle_type) == 1:
+
+    ptype = particle_type[0];  index = index_dict[ptype]
+    fout = 'Pk_'+root_fout[str(ptype)]+'_z='+z+'.dat'
+    print '\nComputing the power spectrum of the particle type: ',ptype
+    data = PSL.power_spectrum_given_delta(delta[index],dims,BoxSize)
+    k = data[0];  Pk[index][index] = data[1];  del data
+    np.savetxt(fout,np.transpose([k,Pk[index][index]])); print '\n'; sys.exit()
+########################################################################
+
+########################################################################
+#if there are two or more particles compute auto- and cross-power spectra
+for i,ptype1 in enumerate(particle_type):
+    for ptype2 in particle_type[i+1:]:
+
+        #find the indexes of the particle types
+        index1 = index_dict[ptype1];  index2 = index_dict[ptype2]
+
+        #choose the name of the output files
+        if do_RSD:  root_fname = 'Pk_RS_'+str(axis)+'_'
+        else:       root_fname = 'Pk_'
+        fout1  = root_fname+root_fout[str(ptype1)]+'_z='+z+'.dat'
+        fout2  = root_fname+root_fout[str(ptype2)]+'_z='+z+'.dat'
+        fout12 = root_fname+root_fout[str(ptype1)+str(ptype2)]+'_z='+z+'.dat'
+
+        #some verbose
+        print '\nComputing the auto- and cross-power spectra of types: '\
+            ,ptype1,'-',ptype2
+        print 'saving results in:';  print fout1,'\n',fout2,'\n',fout12
+
+        #This routine computes the auto- and cross-power spectra
+        data = PSL.cross_power_spectrum_given_delta(delta[index1],delta[index2],
+                                                    dims,BoxSize)
+
+        k                  = data[0]
+        Pk[index1][index2] = data[1];   Pk[index2][index1] = data[1]; 
+        Pk[index1][index1] = data[2]
+        Pk[index2][index2] = data[3]
+
+        #save power spectra results in the output files
+        np.savetxt(fout1,  np.transpose([k,Pk[index1][index1]]))
+        np.savetxt(fout2,  np.transpose([k,Pk[index2][index2]]))
+        np.savetxt(fout12, np.transpose([k,Pk[index1][index2]]))
+########################################################################
+
+########################################################################
+# compute total matter auto-power spectrum   
+print '\ncomputing total matter P(k)'
+Pk_m = np.zeros(len(k),dtype=np.float64)
+if do_RSD:  f_out_m = 'Pk_RS_'+str(axis)+'_matter_z='+z+'.dat'
+else:       f_out_m = 'Pk_matter_z='+z+'.dat'
+
+# dictionary giving the value of Omega for each component
+Omega_dict = {0:Omega_g, 1:Omega_c, 2:Omega_n, 4:Omega_s}
+
+for ptype1 in particle_type:
+    for ptype2 in particle_type:
+        
+        # find the indexes of the particle types
+        index1 = index_dict[ptype1];  index2 = index_dict[ptype2]
+
+        Pk_m += Omega_dict[ptype1]*Omega_dict[ptype2] * Pk[index1][index2]
+
+Pk_m /= Omega_m**2
+np.savetxt(f_out_m,np.transpose([k,Pk_m])) #write results to output file
+########################################################################
+
+
 
