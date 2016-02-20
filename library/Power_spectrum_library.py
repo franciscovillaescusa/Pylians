@@ -45,6 +45,7 @@ import sys
 import time
 
 
+rho_crit = 2.77536627e11 #h^2 Msun/Mpc^3
 ###############################################################################
 #This routine computes the P(k) if the values of delta(r) are given.
 #It is useful when the values of delta(r) have to be computed for a particular
