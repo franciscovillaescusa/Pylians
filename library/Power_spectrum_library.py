@@ -542,9 +542,10 @@ def Power_spectrum_snapshot(snapshot_fname,dims,particle_type,do_RSD,axis,
         print '%.6e should be equal to \n%.6e\n'\
             %(len(pos),np.sum(delta[index],dtype=np.float64))
 
-    # compute the density constrast within each grid cell
-    delta[index] = delta[index]*dims3*1.0/len(pos)-1.0;  del pos
-    print '%.3e < delta < %.3e\n'%(np.min(delta[index]),np.max(delta[index]))
+        # compute the density constrast within each grid cell
+        delta[index] = delta[index]*dims3*1.0/len(pos)-1.0;  del pos
+        print '%.3e < delta < %.3e\n'\
+            %(np.min(delta[index]),np.max(delta[index]))
     #####################################################################
 
     #####################################################################
@@ -556,8 +557,7 @@ def Power_spectrum_snapshot(snapshot_fname,dims,particle_type,do_RSD,axis,
         print '\nComputing the power spectrum of the particle type: ',ptype
         data = power_spectrum_given_delta(delta[index],dims,BoxSize)
         k = data[0];  Pk[index][index] = data[1];  del data
-        np.savetxt(fout,np.transpose([k,Pk[index][index]])); print '\n'
-        sys.exit()
+        np.savetxt(fout,np.transpose([k,Pk[index][index]]));  sys.exit()
     #####################################################################
 
     #####################################################################
