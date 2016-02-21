@@ -604,13 +604,15 @@ def Power_spectrum_snapshot(snapshot_fname,dims,particle_type,do_RSD,axis,
     # dictionary giving the value of Omega for each component
     Omega_dict = {0:Omega_g, 1:Omega_c, 2:Omega_n, 4:Omega_s}
 
-    Pk_m = np.zeros(len(k),dtype=np.float64);  name = '_';  Omega_tot = 0.0
-    for ptype in particle_type:  
-        name += root_fout[str(ptype)]+'_'
+    Pk_m = np.zeros(len(k),dtype=np.float64);  
+    name = '_'+root_fout[str(particle_type[0])]
+    Omega_tot = Omega_dict[particle_type[0]]
+    for ptype in particle_type[1:]:  
+        name += '+'+root_fout[str(ptype)]
         Omega_tot += Omega_dict[ptype]
     
-    if do_RSD:  f_out_m = 'Pk'+name+'RS_'+str(axis)+'_z='+z+'.dat'
-    else:       f_out_m = 'Pk'+name+'z='+z+'.dat'
+    if do_RSD:  f_out_m = 'Pk'+name+'_RS_'+str(axis)+'_z='+z+'.dat'
+    else:       f_out_m = 'Pk'+name+'_z='+z+'.dat'
 
     for ptype1 in particle_type:
         for ptype2 in particle_type:
