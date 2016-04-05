@@ -125,6 +125,45 @@ def Tinker_mass_function(k,Pk,OmegaM,z,M1,M2,bins,delta=200.0,Masses=None):
 
 ##############################################################################
 
+def Tinker_2010_mass_function(k,Pk,OmegaM,z,M1,M2,bins,delta=200.0,Masses=None):
+
+    if delta!=200.0:
+        print 'only implemented delta=200, please update library';  sys.exit()
+
+    alpha  = 0.368
+    beta0  = 0.589;       beta  = beta0*(1.0+z)**0.20
+    gamma0 = 0.864;       gamma = gamma0*(1.0+z)**(-0.01)
+    phi0   = -0.729;      phi   = phi0*(1.0+z)**(-0.08)
+    eta0   = -0.243;      eta   = eta0*(1.0+z)**0.27
+    
+    rhoM = rho_crit*OmegaM
+
+    if Masses==None:
+        dndM   = np.empty(bins,dtype=np.float64)
+        Masses = np.logspace(np.log10(M1),np.log10(M2),bins)
+    else:
+        dndM   = np.empty(len(Masses),dtype=np.float64)
+        
+    for i,M in enumerate(Masses):
+        R = (3.0*M/(4.0*pi*rhoM))**(1.0/3.0)
+        nu = 1.686/sigma(k,Pk,R)
+        fnu = alpha*(1.0+(beta*nu)**(-2.0*phi))*nu**(2.0*eta)*\
+            np.exp(-gamma*nu**2/2.0)
+
+        Mp  = M*1.01;  Rp = (3.0*Mp/(4.0*pi*rhoM))**(1.0/3.0)
+        nup = 1.686/sigma(k,Pk,Rp)
+        dlnnu_dlnM = np.log(nup-nu)/np.log(Mp-M)
+
+        dndM[i] = -(rhoM/M**2)*(nu*fnu)*dlnnu_dlnM
+
+    return [Masses,dndM]
+    
+    
+
+
+
+##############################################################################
+
 #This function computes the Crocce mass function. Returns dn/dM
 #If the mass function wants to be computed in a given mass bins, use Masses
 def Crocce_mass_function(k,Pk,OmegaM,z,M1,M2,bins,Masses=None):
