@@ -28,18 +28,18 @@ def comoving_distance(z,Omega_m,Omega_L):
 ##############################################################################
 
 ##############################################################################
-def func_lgf(y,x,Omega_m,Omega_L,h):
+def func_lgf(y,x,Omega_m,Omega_L):
     #print x, 1.0/(x**3 * (np.sqrt(Omega_m/x**3 + Omega_L))**3)
     return 1.0/(x*np.sqrt(Omega_m/x**3 + Omega_L))**3
 
 #This function computes the linear growth factor. See Eq. 1 of 0006089
 #Notice that in that formula H(a) = (Omega_m/a^3+Omega_L)^1/2 and that the 
 #growth is D(a), not g(a). We normalize it such as D(a=1)=1
-def linear_growth_factor(z,Omega_m,Omega_L,h):
+def linear_growth_factor(z,Omega_m,Omega_L):
     
     # compute linear growth factor at z and z=0
     yinit = [0.0];  a_limits = [1e-30, 1.0/(1.0+z), 1.0/(1.0+0.0)]
-    I = si.odeint(func_lgf,yinit,a_limits,args=(Omega_m,Omega_L,h),
+    I = si.odeint(func_lgf,yinit,a_limits,args=(Omega_m,Omega_L),
                   rtol=1e-10,atol=1e-10,mxstep=100000,h0=1e-20)[1:]
     redshifts = np.array([ [z], [0.0] ])
     Ha = np.sqrt(Omega_m*(1.0+redshifts)**3 + Omega_L)
