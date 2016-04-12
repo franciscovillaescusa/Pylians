@@ -1121,7 +1121,7 @@ def modes_multipole(dims,delta_k2,ell,axis):
 def EH_Pk(Omega_m,Omega_b,h,ns,sigma8):
 
     #define the k-binning
-    k = np.logspace(-3,3,10000)
+    k = np.logspace(-4,3,10000)
 
     ommh2 = Omega_m*h**2;  ombh2 = Omega_b*h**2
     
