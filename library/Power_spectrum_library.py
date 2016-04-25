@@ -1524,9 +1524,7 @@ if len(sys.argv)==2:
         delta = np.random.random(dims**2)
         
         l,Cl = angular_power_spectrum(delta,dims,BoxSize)
-        print '############## ANGULAR POWER SPECTRUM #################'
         print l,Cl
-        sys.exit()
 
         ################################################################
         ### EH_Pk ### 
