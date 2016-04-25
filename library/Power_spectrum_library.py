@@ -1150,6 +1150,9 @@ def angular_power_spectrum(delta,dims,BoxSize):
     bin_l  = bin_l*factor
     Pl     = Pl/factor**2
 
+    # avoid fundamental frequency
+    bin_l = bin_l[1:];  Pl = Pl[1:]
+
     return [bin_l,Pl]
 
 
