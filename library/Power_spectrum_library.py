@@ -17,6 +17,8 @@
 #cross_power_spectrum_2D
 #multipole
       #modes_multipole
+#angular_power_spectrum
+      #Cl_modulus
 #EH_Pk
 #CAMB_Pk
 #CF_Taruya
@@ -1111,6 +1113,72 @@ def modes_multipole(dims,delta_k2,ell,axis):
     return Pk,number_of_modes
 ##############################################################################
 
+# delta --------------> 2D field. Should be input as a 1D numpy array
+# dims ---------------> The field contains dims**2 pixels
+# BoxSize ------------> BoxSize of the field in degrees
+def angular_power_spectrum(delta,dims,BoxSize):
+
+    # maximum value of k probed
+    middle = dims/2
+    bins_r = int(np.sqrt(2*middle**2))+1  
+
+    # reshape field
+    delta = np.reshape(delta,(dims,dims))
+
+    # compute delta^2(k) of the field
+    delta_k = scipy.fftpack.ifftn(delta,overwrite_x=True);  del delta
+    delta_k = np.ravel(delta_k);  delta2_k = np.absolute(delta_k)**2
+    del delta_k
+
+    # for each cell compute value of |k|
+    l_value = Cl_modulus(dims)
+
+    # define bins in multipoles
+    bins_l = np.linspace(0.0,bins_r*1.0,bins_r+1)
+
+    # compute power spectrum
+    Pl    = np.histogram(l_value,bins=bins_l,weights=delta2_k)[0]
+    modes = np.histogram(l_value,bins=bins_l)[0]
+    Pl    = Pl/modes;  del delta2_k
+
+    # compute average value of l in each bin
+    bin_l = np.histogram(l_value,bins=bins_l,weights=l_value)[0]
+    bin_l = bin_l/modes
+    
+    # given proper units to multipoles and angular power spectrum
+    factor = 2.0*np.pi/(BoxSize*np.pi/180.0)
+    bin_l  = bin_l*factor
+    Pl     = Pl/factor**2
+
+    return [bin_l,Pl]
+
+
+# This function computes the value of |k| for each grid cell of a 2D grid
+def Cl_modulus(dims):
+    mod_k = np.empty(dims**2,dtype=np.float32)
+
+    support = "#include <math.h>"
+    code = """
+       int middle=dims/2;
+       int i,j;
+
+       for (long l=0;l<dims*dims;l++){
+           i=l/dims;
+           j=l%dims;
+
+           i = (i>middle) ? i-dims : i;
+           j = (j>middle) ? j-dims : j;
+
+           mod_k(l)=sqrt(i*i+j*j);
+       } 
+    """
+    wv.inline(code,['dims','mod_k'],
+              type_converters = wv.converters.blitz,
+              support_code = support,libraries = ['m'],
+              extra_compile_args =['-O3'])
+    return mod_k
+##############################################################################
+
 #This routine computes the Eisenstein & Hu matter power spectrum, with no wiggles.
 #It returns [k,Pk_EH]
 #Omega_m -----------> value of Omega_matter, at z=0
@@ -1449,6 +1517,16 @@ if len(sys.argv)==2:
         ell=4
         [k,Pk]=multipole(delta,dims,BoxSize,ell,axis,aliasing_method='CIC')
         print Pk
+
+        ################################################################
+        ### Angular power spectrum ###
+        dims  = 128;  BoxSize = 5.0 #degrees
+        delta = np.random.random(dims**2)
+        
+        l,Cl = angular_power_spectrum(delta,dims,BoxSize)
+        print '############## ANGULAR POWER SPECTRUM #################'
+        print l,Cl
+        sys.exit()
 
         ################################################################
         ### EH_Pk ### 
