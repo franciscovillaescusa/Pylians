@@ -1138,7 +1138,7 @@ def angular_power_spectrum(delta,dims,BoxSize):
     # compute power spectrum
     Pl    = np.histogram(l_value,bins=bins_l,weights=delta2_k)[0]
     modes = np.histogram(l_value,bins=bins_l)[0]
-    Pl    = Pl*1.0/modes;  #del delta2_k
+    Pl    = Pl*1.0/modes;  del delta2_k
 
     # compute average value of l in each bin
     bin_l = np.histogram(l_value,bins=bins_l,weights=l_value)[0]
