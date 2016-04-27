@@ -1359,7 +1359,6 @@ def Gaussian_smoothing(dims,R,BoxSize):
 if len(sys.argv)==2:
     if sys.argv[0]=='Power_spectrum_library.py' and sys.argv[1]=='compile':
 
-        """
         ################################################################
         ### power spectrum given delta (CIC and TSC) ###
         n=100**3; dims=128; BoxSize=500.0 #Mpc/h
@@ -1520,15 +1519,14 @@ if len(sys.argv)==2:
         ell=4
         [k,Pk]=multipole(delta,dims,BoxSize,ell,axis,aliasing_method='CIC')
         print Pk
-        """
+
         ################################################################
         ### Angular power spectrum ###
-        dims  = 5700;  BoxSize = 5.0 #degrees
+        dims  = 128;  BoxSize = 5.0 #degrees
         delta = np.random.random(dims**2)
         
         l,Cl = angular_power_spectrum(delta,dims,BoxSize)
-        print l[-10:]#,Cl
-        sys.exit()
+        print l,Cl
 
         ################################################################
         ### EH_Pk ### 
