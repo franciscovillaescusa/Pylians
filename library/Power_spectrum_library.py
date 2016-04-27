@@ -1128,10 +1128,9 @@ def angular_power_spectrum(delta,dims,BoxSize):
     # compute delta^2(k) of the field
     delta_k = scipy.fftpack.ifftn(delta,overwrite_x=True);  del delta
     delta_k = np.ravel(delta_k);  delta2_k = np.absolute(delta_k)**2
-    del delta_k
 
     # for each cell compute value of |k|
-    l_value = Cl_modulus(dims)
+    l_value  = Cl_modulus(dims)
 
     # define bins in multipoles
     bins_l = np.linspace(0.0,bins_r*1.0,bins_r+1)
@@ -1139,12 +1138,12 @@ def angular_power_spectrum(delta,dims,BoxSize):
     # compute power spectrum
     Pl    = np.histogram(l_value,bins=bins_l,weights=delta2_k)[0]
     modes = np.histogram(l_value,bins=bins_l)[0]
-    Pl    = Pl/modes;  del delta2_k
+    Pl    = Pl*1.0/modes;  #del delta2_k
 
     # compute average value of l in each bin
     bin_l = np.histogram(l_value,bins=bins_l,weights=l_value)[0]
-    bin_l = bin_l/modes
-    
+    bin_l = bin_l*1.0/modes
+
     # given proper units to multipoles and angular power spectrum
     factor = 2.0*np.pi/(BoxSize*np.pi/180.0)
     bin_l  = bin_l*factor
@@ -1158,7 +1157,7 @@ def angular_power_spectrum(delta,dims,BoxSize):
 
 # This function computes the value of |k| for each grid cell of a 2D grid
 def Cl_modulus(dims):
-    mod_k = np.empty(dims**2,dtype=np.float32)
+    mod_k = np.empty(dims**2,dtype=np.float64)
 
     support = "#include <math.h>"
     code = """
@@ -1360,6 +1359,7 @@ def Gaussian_smoothing(dims,R,BoxSize):
 if len(sys.argv)==2:
     if sys.argv[0]=='Power_spectrum_library.py' and sys.argv[1]=='compile':
 
+        """
         ################################################################
         ### power spectrum given delta (CIC and TSC) ###
         n=100**3; dims=128; BoxSize=500.0 #Mpc/h
@@ -1520,14 +1520,15 @@ if len(sys.argv)==2:
         ell=4
         [k,Pk]=multipole(delta,dims,BoxSize,ell,axis,aliasing_method='CIC')
         print Pk
-
+        """
         ################################################################
         ### Angular power spectrum ###
-        dims  = 128;  BoxSize = 5.0 #degrees
+        dims  = 5700;  BoxSize = 5.0 #degrees
         delta = np.random.random(dims**2)
         
         l,Cl = angular_power_spectrum(delta,dims,BoxSize)
-        print l,Cl
+        print l[-10:]#,Cl
+        sys.exit()
 
         ################################################################
         ### EH_Pk ### 
