@@ -559,7 +559,7 @@ def Power_spectrum_snapshot(snapshot_fname,dims,particle_type,do_RSD,axis,
         print '\nComputing the power spectrum of the particle type: ',ptype
         data = power_spectrum_given_delta(delta[index],dims,BoxSize)
         k = data[0];  Pk[index][index] = data[1];  del data
-        np.savetxt(fout,np.transpose([k,Pk[index][index]]));  sys.exit()
+        np.savetxt(fout,np.transpose([k,Pk[index][index]]));  return None
     #####################################################################
 
     #####################################################################
