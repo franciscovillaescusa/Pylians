@@ -43,6 +43,7 @@ import numpy as np
 import scipy.fftpack
 import scipy.weave as wv
 import mass_function_library as MFL
+import redshift_space_library as RSL
 import sys
 import time
 
