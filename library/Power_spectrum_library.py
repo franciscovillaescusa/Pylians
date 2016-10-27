@@ -1030,6 +1030,92 @@ def multipole(delta,dims,BoxSize,ell,axis,aliasing_method='CIC'):
     return [k,Pk]
 
 ###################################################################
+#This routine computes P_l(k) where l=0,2 or l=4 for a cross-power spectrum
+#delta1 ----------------> array containing the values of delta1(r)
+#delta2 ----------------> array containing the values of delta2(r)
+#dims -----------------> number of cell per dimension used to compute the P(k)
+#BoxSize --------------> size of the simulation box
+#ell ------------------> multipole: l=0 (monopole); l=2 (quadrupole)l l=4 ...
+#axis -----------------> axis along which compute P(|k|,mu) or P(k_perp,k_par)
+#aliasing_method ------> method used to compute the deltas(r): CIC, TSC, other
+def multipole_cross(delta1,delta2,dims,BoxSize,ell,axis,
+                    aliasing_method1='CIC',aliasing_method2='CIC'):
+                    
+
+    dims3=dims**3; start_time=time.clock()
+    bins_r=int(np.sqrt(3*int(0.5*(dims+1))**2))+1
+
+    #FFT of the delta field (scipy.fftpack seems superior to numpy.fft)
+    delta1 = np.reshape(delta1,(dims,dims,dims))
+    delta2 = np.reshape(delta2,(dims,dims,dims))
+    print 'Computing the FFT of the field1...'; start_fft=time.clock()
+    delta1_k = scipy.fftpack.ifftn(delta1,overwrite_x=True); del delta1
+    print 'done: time taken for computing the FFT=',time.clock()-start_fft
+    print 'Computing the FFT of the field2...'; start_fft=time.clock()
+    delta2_k = scipy.fftpack.ifftn(delta2,overwrite_x=True); del delta2
+    print 'done: time taken for computing the FFT=',time.clock()-start_fft
+    delta1_k=np.ravel(delta1_k); delta2_k=np.ravel(delta2_k)
+
+    #correct modes amplitude to account for aliasing when computing delta1(r)
+    #at the same time computes the modulus of k at each mesh point
+    print 'Applying the CIC correction to the modes...';start_cic=time.clock()
+    #since we are using complex numbers: 1) compute the correction over a
+    #np.ones(dims3) array  2) multiply the results
+    if aliasing_method1 in ['CIC','TSC']:
+        if aliasing_method1=='CIC':
+            [array,k]=CIC_correction(dims)
+        else:
+            [array,k]=TSC_correction(dims)
+        delta1_k*=array; 
+        if aliasing_method1==aliasing_method2:
+            delta2_k*=array
+        del array
+    else:
+        [array,k]=CIC_correction(dims); del array
+        print 'aliasing correction not performed on modes1'
+
+    if aliasing_method1 != aliasing_method2:
+        if aliasing_method1 in ['CIC','TSC']:
+            if aliasing_method2=='CIC':
+                [array,k]=CIC_correction(dims)
+            else:
+                [array,k]=TSC_correction(dims)
+            delta2_k*=array
+        else:
+            print 'aliasing correction not performed on modes2'
+    print 'done: time taken for the correction =  ',time.clock()-start_cic
+
+    #compute delta_12(k)^2
+    print 'computing delta_12(k)^2'
+    delta1_k_conj=np.conj(delta1_k);  del delta1_k
+    delta_k2=np.real(delta1_k_conj*delta2_k); del delta1_k_conj,delta2_k
+ 
+    #count modes
+    count=lin_histogram(bins_r,0.0,bins_r*1.0,k)
+
+    #compute the P_l(k)=(2*l+1)<delta_k^2(k,mu)*L_l(mu)>
+    Pk,number_of_modes=modes_multipole(dims,delta_k2,ell,axis)
+
+    #given the physical units to P(k) (Mpc/h)^3, (kpc/h)^3 ...
+    Pk = Pk*BoxSize**3 
+
+    #compute the bins in k-space and give them physical units (h/Mpc), (h/kpc)
+    #we should add 1 since we want to equal the number of intervals
+    bins_k = np.arange(int(np.sqrt(3*int(0.5*(dims+1))**2))+1+1)
+    k = k.astype(np.float64) #to avoid problems with np.histogram
+    k = 2.0*np.pi/BoxSize*np.histogram(k,bins_k,weights=k)[0]/count
+
+    #ignore the first bin
+    k = k[1:]; Pk = Pk[1:]
+
+    #keep only with modes below 1.1*k_Nyquist
+    k_N = np.pi*dims/BoxSize; indexes = np.where(k<1.1*k_N)
+    k = k[indexes]; Pk = Pk[indexes]; del indexes
+    print 'time used to perform calculation=',time.clock()-start_time,' s'
+
+    return [k,Pk]
+
+###################################################################
 #this function computes:
 #1) The sum of |delta(k)^2*P_l(\mu)| for each bin in k
 #2) The number of modes on each k-bin 
@@ -1519,6 +1605,42 @@ if len(sys.argv)==2:
         #hexadrupole (l=4)
         ell=4
         [k,Pk]=multipole(delta,dims,BoxSize,ell,axis,aliasing_method='CIC')
+        print Pk
+
+        
+        ### multipole cross ### l=0, l=2, l=4
+        n = 100**3;  dims = 128;  BoxSize = 500.0 #Mpc/h
+        np.random.seed(seed=1)
+
+        pos1=(np.random.random((n,3))*BoxSize).astype(np.float32)
+        pos2=(np.random.random((n,3))*BoxSize).astype(np.float32)
+
+        #compute delta1 using CIC
+        delta1 = np.zeros(dims**3,dtype=np.float32) 
+        CIC.CIC_serial(pos1,dims,BoxSize,delta) #compute densities
+        delta1=delta1/(n*1.0/dims**3)-1.0
+
+        #compute delta2 using CIC
+        delta2 = np.zeros(dims**3,dtype=np.float32) 
+        CIC.CIC_serial(pos2,dims,BoxSize,delta) #compute densities
+        delta2=delta2/(n*1.0/dims**3)-1.0
+
+        #monopole (l=0)
+        ell=0
+        [k,Pk]=multipole_cross(delta1,delta2,dims,BoxSize,ell,axis,
+                               aliasing_method1='CIC',aliasing_method2='CIC')
+        print Pk
+
+        #quadrupole (l=2)
+        ell=2
+        [k,Pk]=multipole_cross(delta1,delta2,dims,BoxSize,ell,axis,
+                               aliasing_method1='CIC',aliasing_method2='CIC')
+        print Pk
+
+        #hexadecapole (l=4)
+        ell=4
+        [k,Pk]=multipole_cross(delta1,delta2,dims,BoxSize,ell,axis,
+                               aliasing_method1='CIC',aliasing_method2='CIC')
         print Pk
 
         ################################################################
