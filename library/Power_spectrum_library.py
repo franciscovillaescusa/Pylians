@@ -16,6 +16,7 @@
       #modes
 #cross_power_spectrum_2D
 #multipole
+#multipole_cross
       #modes_multipole
 #angular_power_spectrum
       #Cl_modulus
