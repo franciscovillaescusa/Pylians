@@ -28,4 +28,10 @@ def pos_redshift_space(pos,vel,BoxSize,Hubble,redshift,axis):
     beyond=np.where(pos[:,axis]>BoxSize)[0]; pos[beyond,axis]-=BoxSize
     beyond=np.where(pos[:,axis]<0.0)[0];     pos[beyond,axis]+=BoxSize
     del beyond
+
+    # for neutrinos it could happen that in redshift-space their position
+    # is further than 2 times size of the box, thus instead of doing
+    # pos = pos+BoxSize or pos = pos - BoxSize we can just do pos = pos%BoxSize
+    beyond = np.where((pos[:,axis]>BoxSize) | (pos[:,axis]<0.0))[0]
+    pos[beyond,axis] = np.mod(pos[beyond,axis],BoxSize);  del beyond
 ###############################################################################
