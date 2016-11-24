@@ -2,5 +2,6 @@ from distutils.core import setup
 from Cython.Build import cythonize
 
 setup(
-    ext_modules = cythonize("density_field_library.pyx")
+    ext_modules = cythonize("*.pyx"),
+    include_dirs=[numpy.get_include()]
 )
