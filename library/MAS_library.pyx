@@ -6,24 +6,28 @@ from libc.math cimport sqrt,pow,sin,floor
 
 
 # This function computes the density field of a cubic distribution of particles
-def CIC(np.ndarray[np.float32_t,ndim=2] pos,
-        np.ndarray[np.float32_t,ndim=3] number, float BoxSize):
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+cpdef np.ndarray[np.float32_t,ndim=2] CIC(np.ndarray[np.float32_t,ndim=2] pos,
+                                         np.ndarray[np.float32_t,ndim=3] number,
+                                         float BoxSize):
         
     cdef int axis,dims
     cdef long i,particles
     cdef float inv_cell_size
     cdef np.ndarray[np.float32_t,ndim=1] dist,u,d
     cdef np.ndarray[np.int32_t,ndim=1] index_d,index_u
-
-    # find number of particles, the inverse of the cell size and dims
-    particles = len(pos);  dims = len(number);  inv_cell_size = dims*1.0/BoxSize
     
+    # find number of particles, the inverse of the cell size and dims
+    particles = len(pos);  dims = len(number);  inv_cell_size = dims/BoxSize
+
     # define arrays
     dist    = np.zeros(3,dtype=np.float32)
-    index_u = np.zeros(3,dtype=np.int32)
-    index_d = np.zeros(3,dtype=np.int32)
     u       = np.zeros(3,dtype=np.float32) #for up
     d       = np.zeros(3,dtype=np.float32) #for down
+    index_u = np.zeros(3,dtype=np.int32)
+    index_d = np.zeros(3,dtype=np.int32)
     
     # do a loop over all particles
     for i in xrange(particles):
