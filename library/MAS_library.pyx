@@ -10,20 +10,19 @@ from libc.math cimport sqrt,pow,sin,floor
 @cython.wraparound(False)
 @cython.cdivision(True)
 cpdef np.ndarray[np.float32_t,ndim=2] CIC(np.ndarray[np.float32_t,ndim=2] pos,
-                                         np.ndarray[np.float32_t,ndim=3] number,
-                                         float BoxSize):
+                                          np.ndarray[np.float32_t,ndim=3] number,
+                                          float BoxSize):
         
     cdef int axis,dims
     cdef long i,particles
-    cdef float inv_cell_size
-    cdef np.ndarray[np.float32_t,ndim=1] dist,u,d
-    cdef np.ndarray[np.int32_t,ndim=1] index_d,index_u
+    cdef float inv_cell_size,dist
+    cdef np.ndarray[np.float32_t,ndim=1] u,d
+    cdef np.ndarray[np.int32_t,  ndim=1] index_d,index_u
     
     # find number of particles, the inverse of the cell size and dims
     particles = len(pos);  dims = len(number);  inv_cell_size = dims/BoxSize
 
     # define arrays
-    dist    = np.zeros(3,dtype=np.float32)
     u       = np.zeros(3,dtype=np.float32) #for up
     d       = np.zeros(3,dtype=np.float32) #for down
     index_u = np.zeros(3,dtype=np.int32)
@@ -40,10 +39,10 @@ cpdef np.ndarray[np.float32_t,ndim=2] CIC(np.ndarray[np.float32_t,ndim=2] pos,
         #          --> u
         #            -------> d
         for axis in xrange(3):
-            dist[axis]    = pos[i,axis]*inv_cell_size
-            u[axis]       = dist[axis]-floor(dist[axis])
+            dist          = pos[i,axis]*inv_cell_size
+            u[axis]       = dist - <int>dist
             d[axis]       = 1.0-u[axis]
-            index_d[axis] = (<int>dist[axis])%dims
+            index_d[axis] = (<int>dist)%dims
             index_u[axis] = index_d[axis]+1
             index_u[axis] = index_u[axis]%dims #seems this is faster
 
