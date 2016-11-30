@@ -12,7 +12,7 @@ if len(sys.argv)<3:
     print 'is wanted do: residuals file1 file2 f_out log'
     sys.exit()
 
-#read the parameters
+# read the parameters
 f1=sys.argv[1]; f2=sys.argv[2]; f_out=sys.argv[3]
 if len(sys.argv)==4:
     method='linear'
@@ -21,51 +21,36 @@ elif (len(sys.argv)==5 and sys.argv[4]=='log'):
 else:
     print 'Error: Type residuals for help'
 
-#read the first file. If there is a third column it reads it.
-f=open(f1,'r'); X1,Y1,dY1=[],[],[]
-for line in f.readlines():
-    a=line.split()
-    X1.append(float(a[0])); Y1.append(float(a[1]))
-    if len(a)>2:
-        dY1.append(float(a[2]))
-f.close(); X1=np.array(X1); Y1=np.array(Y1); dY1=np.array(dY1)
+# read the first file. If there is a third column it reads it.
+data = np.loadtxt(f1)
+X1 = data[:,0];  Y1 = data[:,1]
+if len(data)>2:  dY1 = data[:,2]
 
-#read the second file. If there is a third column it reads it.
-f=open(f2,'r'); X2,Y2,dY2=[],[],[]
-for line in f.readlines():
-    a=line.split()
-    X2.append(float(a[0])); Y2.append(float(a[1]))
-    if len(a)>2:
-        dY2.append(float(a[2]))
-f.close(); X2=np.array(X2); Y2=np.array(Y2); dY2=np.array(dY2)
+# read the second file. If there is a third column it reads it.
+data = np.loadtxt(f2)
+X2 = data[:,0];  Y2 = data[:,1]
+if len(data)>2:  dY2 = data[:,2]
 
-#check if arrays are the same
+# check if arrays are the same
 if np.any(X1!=X2):
     print 'first columns are different.'
     if method=='linear':
         print 'Interpolating linearly...'
         print 'if log-log interpolation is desired use:'
         print 'python '+sys.argv[1]+' '+sys.argv[2]+' '+sys.argv[3]+' log'
-        dumb=np.interp(X1,X2,Y2); Y2=dumb
+        Y2 = np.interp(X1,X2,Y2)
     else:
         print 'Interpolating in log-log...'
-        dumb=np.interp(np.log10(X1),np.log10(X2),np.log10(Y2))
-        Y2=10**dumb
+        Y2 = 10**(np.interp(np.log10(X1),np.log10(X2),np.log10(Y2)))
     
-#compute the ratio
-ratio=Y1/Y2
+# compute the ratio
+ratio = Y1/Y2
 
-#if there are errors in the file1 compute the error on the ratio
+# if there are errors in the file1 compute the error on the ratio
 flag=False
 if len(dY1)==len(Y1):
-    dratio=dY1/Y2
-    flag=True
+    dratio=dY1/Y2;  flag=True
 
-#write result to file
-f=open(f_out,'w')
-for i in range(len(X1)):
-    if flag:
-        f.write(str(X1[i])+' '+str(ratio[i])+' '+str(dratio[i])+'\n')
-    else:
-        f.write(str(X1[i])+' '+str(ratio[i])+'\n')
-f.close()
+# write result to file
+if flag:  np.savetxt(f_out,np.transpose([X1,ratio,dratio]))
+else:     np.savetxt(f_out,np.transpose([X1,ratio]))
