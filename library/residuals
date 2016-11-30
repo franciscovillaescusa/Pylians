@@ -22,14 +22,10 @@ else:
     print 'Error: Type residuals for help'
 
 # read the first file. If there is a third column it reads it.
-data = np.loadtxt(f1)
-X1 = data[:,0];  Y1 = data[:,1]
-if len(data)>2:  dY1 = data[:,2]
+data = np.loadtxt(f1);  X1 = data[:,0];  Y1 = data[:,1]
 
 # read the second file. If there is a third column it reads it.
-data = np.loadtxt(f2)
-X2 = data[:,0];  Y2 = data[:,1]
-if len(data)>2:  dY2 = data[:,2]
+data = np.loadtxt(f2);  X2 = data[:,0];  Y2 = data[:,1]
 
 # check if arrays are the same
 if np.any(X1!=X2):
@@ -43,14 +39,6 @@ if np.any(X1!=X2):
         print 'Interpolating in log-log...'
         Y2 = 10**(np.interp(np.log10(X1),np.log10(X2),np.log10(Y2)))
     
-# compute the ratio
+# compute the ratio and save results to file
 ratio = Y1/Y2
-
-# if there are errors in the file1 compute the error on the ratio
-flag=False
-if len(dY1)==len(Y1):
-    dratio=dY1/Y2;  flag=True
-
-# write result to file
-if flag:  np.savetxt(f_out,np.transpose([X1,ratio,dratio]))
-else:     np.savetxt(f_out,np.transpose([X1,ratio]))
+np.savetxt(f_out,np.transpose([X1,ratio]))
