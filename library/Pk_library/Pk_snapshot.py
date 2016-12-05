@@ -182,11 +182,11 @@ def Pk_Gadget(snapshot_fname,dims,particle_type,do_RSD,axis,hydro,cpus):
         index = index_dict[ptype]
 
         # compute mean number of particles per grid cell
-        mean_number = len(pos)*1.0/dims3;  del pos
+        mean_number = len(pos)*1.0/dims3
 
         # compute the deltas
         delta[index] = np.zeros((dims,dims,dims),dtype=np.float32)
-        MASL.CIC(pos,delta[index],BoxSize)
+        MASL.CIC(pos,delta[index],BoxSize);  del pos
         delta[index] /= mean_number;  delta[index] -= 1.0
     #####################################################################
 
