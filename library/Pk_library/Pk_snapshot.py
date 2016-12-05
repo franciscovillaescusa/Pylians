@@ -150,12 +150,8 @@ def Pk_Gadget(snapshot_fname,dims,particle_type,do_RSD,axis,hydro,cpus):
     Omega_dict = {0:Omega_g, 1:Omega_c, 2:Omega_n, 4:Omega_s}
     #####################################################################
 
-    # define the arrays containing the positions and deltas and power spectra
-    delta = [[],[],[],[]]   #array  containing the gas, CDM, NU and stars deltas
-    Pk    = [[[],[],[],[]], #matrix containing the auto- and cross-power spectra
-             [[],[],[],[]],
-             [[],[],[],[]],
-             [[],[],[],[]]]
+    # define the array containing the deltas
+    delta = [[],[],[],[]]  #array containing the gas, CDM, NU and stars deltas
 
     # dictionary among particle type and the index in the delta and Pk arrays
     # delta of stars (ptype=4) is delta[3] not delta[4]
@@ -212,9 +208,7 @@ def Pk_Gadget(snapshot_fname,dims,particle_type,do_RSD,axis,hydro,cpus):
             data = PKL.XPk(delta[index1],delta[index2],BoxSize,axis=axis,
                            MAS1='CIC',MAS2='CIC',threads=cpus)
                                                         
-            k                  = data[0];   Nmodes             = data[10]
-            Pk[index1][index2] = data[1];   Pk[index2][index1] = data[1]
-            Pk[index1][index1] = data[4];   Pk[index2][index2] = data[7]
+            k = data[0];   Nmodes = data[10]
 
             # save power spectra results in the output files
             np.savetxt(fout12,np.transpose([k,data[1],data[2],data[3],Nmodes]))
@@ -227,7 +221,7 @@ def Pk_Gadget(snapshot_fname,dims,particle_type,do_RSD,axis,hydro,cpus):
     print '\ncomputing P(k) of all components'
 
     # define delta of all components
-    delta_tot = np.zeros((dims,dims,dims),dtype=np.float64)
+    delta_tot = np.zeros((dims,dims,dims),dtype=np.float32)
 
     Omega_tot = 0.0;  fout = 'Pk_'
     for ptype in particle_type:
