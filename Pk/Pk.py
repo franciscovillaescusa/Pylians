@@ -6,23 +6,26 @@ snapshot_fname = ['../ics',
                   '../snapdir_000/snap_000',
                   '../snapdir_001/snap_001',
                   '../snapdir_002/snap_002',
-                  '../snapdir_003/snap_003',
-                  '../snapdir_004/snap_004',
-                  '../snapdir_005/snap_005',
-                  '../snapdir_006/snap_006',
-                  '../snapdir_007/snap_007']
+                  '../snapdir_003/snap_003']
                   
 dims           = 1024
-particle_type  = [1,2]
-do_RSD         = False
-axis           = 0
+particle_type  = [1,2] #list with particle types. [-1] for total matter
 hydro          = False
 cpus           = 14
 ###############################################################################
 
-# compute the P(k) of each snapshot
+# do a loop over the different snapshots
 for snapshot in snapshot_fname:
+
+    ######## REAL-SPACE ########
+    do_RSD = False;  axis = 0 
     PKL.Pk_Gadget(snapshot,dims,particle_type,do_RSD,axis,hydro,cpus)
+                  
+
+    ###### REDSHIFT-SPACE ######
+    do_RSD = True
+    for axis in [0,1,2]:
+        PKL.Pk_Gadget(snapshot,dims,particle_type,do_RSD,axis,hydro,cpus)
                   
 
 

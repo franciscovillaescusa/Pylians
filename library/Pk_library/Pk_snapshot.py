@@ -105,7 +105,7 @@ def Pk_Gadget(snapshot_fname,dims,particle_type,do_RSD,axis,hydro,cpus):
 
     # for either one single species or all species use this routine
     if len(particle_type)==1:
-        Pk_comp(snapshot_fname,ptype[0],dims,do_RSD,axis,hydro,cpus)
+        Pk_comp(snapshot_fname,particle_type[0],dims,do_RSD,axis,hydro,cpus)
         return None
 
     # read snapshot head and obtain BoxSize, Omega_m and Omega_L
