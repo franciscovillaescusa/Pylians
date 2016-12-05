@@ -38,6 +38,8 @@ def Pk_comp(snapshot_fname,ptype,dims,do_RSD,axis,hydro,cpus):
     head     = readsnap.snapshot_header(snapshot_fname)
     BoxSize  = head.boxsize/1e3 #Mpc/h
     Nall     = head.nall;  Ntotal = np.sum(Nall,dtype=np.int64)
+    Omega_m  = head.omega_m
+    Omega_l  = head.omega_l
     redshift = head.redshift
     Hubble   = 100.0*np.sqrt(Omega_m*(1.0+redshift)**3+Omega_l)  #km/s/(Mpc/h)
     z        = '%.3f'%redshift
