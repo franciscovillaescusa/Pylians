@@ -71,11 +71,11 @@ def Pk_comp(snapshot_fname,ptype,dims,do_RSD,axis,hydro,cpus):
         else:
             M = readsnap.read_block(snapshot_fname,"MASS",parttype=-1)*1e10
         
-        mean = np.sum(M,dtype=np.float64)/dims3
+        mean = np.sum(M,dtype=np.float64)/dims**3
         MASL.CICW(pos,delta,BoxSize,M); del pos,M
 
     else:  
-        mean = len(pos)*1.0/dims3
+        mean = len(pos)*1.0/dims**3
         MASL.CIC(pos,delta,BoxSize); del pos
 
     # compute the P(k)
