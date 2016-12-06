@@ -166,7 +166,7 @@ def Pk(delta,BoxSize,axis=2,MAS='CIC',threads=1):
     # we need to multiply the multipoles by (2*ell + 1)
     check_number_modes(Nmodes,dims)
     k  = k[1:];    Nmodes = Nmodes[1:];   k = (k/Nmodes)*kF; 
-    Pk = Pk[1:,:]*(BoxSize**3/dims**6)
+    Pk = Pk[1:,:]*(BoxSize/dims**2)**3
     Pk[:,0] *= (1.0/Nmodes);  Pk[:,1] *= (5.0/Nmodes);  Pk[:,2] *= (9.0/Nmodes) 
     print 'Time taken = %.2f seconds'%(time.time()-start)
 
@@ -297,13 +297,13 @@ def XPk(delta1,delta2,BoxSize,axis=2,MAS1='CIC',MAS2='CIC',threads=1):
     check_number_modes(Nmodes,dims)
     k  = k[1:];    Nmodes = Nmodes[1:];   k = (k/Nmodes)*kF; 
 
-    Pk1 = Pk1[1:,:]*(BoxSize**3/dims**6);  Pk1[:,0] *= (1.0/Nmodes)
+    Pk1 = Pk1[1:,:]*(BoxSize/dims**2)**3;  Pk1[:,0] *= (1.0/Nmodes)
     Pk1[:,1] *= (5.0/Nmodes);  Pk1[:,2] *= (9.0/Nmodes) 
 
-    Pk2 = Pk2[1:,:]*(BoxSize**3/dims**6);  Pk2[:,0] *= (1.0/Nmodes)
+    Pk2 = Pk2[1:,:]*(BoxSize/dims**2)**3;  Pk2[:,0] *= (1.0/Nmodes)
     Pk2[:,1] *= (5.0/Nmodes);  Pk2[:,2] *= (9.0/Nmodes) 
 
-    PkX = PkX[1:,:]*(BoxSize**3/dims**6);  PkX[:,0] *= (1.0/Nmodes)
+    PkX = PkX[1:,:]*(BoxSize/dims**2)**3;  PkX[:,0] *= (1.0/Nmodes)
     PkX[:,1] *= (5.0/Nmodes);  PkX[:,2] *= (9.0/Nmodes) 
     print 'Time taken = %.2f seconds'%(time.time()-start)
 
