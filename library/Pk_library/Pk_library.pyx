@@ -18,6 +18,7 @@ def MAS_function(MAS):
     if MAS=='NGP':  MAS_index = 1
     if MAS=='CIC':  MAS_index = 2
     if MAS=='TSC':  MAS_index = 3
+    if MAS=='PCS':  MAS_index = 4
     return MAS_index,MAS_corr
 
 # This function implement the MAS correction to modes amplitude

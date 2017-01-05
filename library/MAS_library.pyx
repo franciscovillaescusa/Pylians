@@ -2,14 +2,18 @@ import numpy as np
 import time,sys,os
 cimport numpy as np
 cimport cython
-from libc.math cimport sqrt,pow,sin,floor
+from libc.math cimport sqrt,pow,sin,floor,fabs
 
 ################################################################################
 ################################# ROUTINES #####################################
 # NGP(pos,number,BoxSize)
 # CIC(pos,number,BoxSize)
+# TSC(pos,number,BoxSize)
+# PCS(pos,number,BoxSize)
 # NGPW(pos,number,BoxSize,W)
 # CICW(pos,number,BoxSize,W)
+# TSCW(pos,number,BoxSize,W)
+# PCSW(pos,number,BoxSize,W)
 ################################################################################
 ################################################################################
 
@@ -181,5 +185,191 @@ cpdef np.ndarray[np.float32_t,ndim=2] NGPW(np.ndarray[np.float32_t,ndim=2] pos,
             index[axis] = index[axis]%dims
         number[index[0],index[1],index[2]] += W[i]
 
+    return number
+################################################################################
+
+################################################################################
+# This function computes the density field of a cubic distribution of particles
+# pos ------> positions of the particles. Numpy array
+# number ---> array with the density field. Numpy array (dims,dims,dims)
+# BoxSize --> Size of the box
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+cpdef np.ndarray[np.float32_t,ndim=2] TSC(np.ndarray[np.float32_t,ndim=2] pos,
+                                          np.ndarray[np.float32_t,ndim=3] number,
+                                          float BoxSize):
+    cdef int axis,dims,minimum,j,l,m,n
+    cdef long i,particles
+    cdef float inv_cell_size,dist,diff
+    cdef np.ndarray[np.float32_t,ndim=2] C
+    cdef np.ndarray[np.int32_t,  ndim=2] index
+    
+    # find number of particles, the inverse of the cell size and dims
+    particles = len(pos);  dims = len(number);  inv_cell_size = dims/BoxSize
+    
+    # define arrays
+    C     = np.zeros((3,4),dtype=np.float32) #contribution of particle to grid point
+    index = np.zeros((3,4),dtype=np.int32)   #index of the grid point
+
+    # do a loop over all particles
+    for i in xrange(particles):
+
+        # do a loop over the three axes of the particle
+        for axis in xrange(3):
+            dist    = pos[i,axis]*inv_cell_size
+            minimum = <int>floor(dist-1.5)
+            for j in xrange(4): #only 4 cells/dimension can contribute
+                index[axis,j] = (minimum+j+dims)%dims
+                diff = fabs(minimum+j - dist)
+                if diff<0.5:    C[axis,j] = 0.75-diff*diff
+                elif diff<1.5:  C[axis,j] = 0.5*(1.5-diff)*(1.5-diff)
+                else:           C[axis,j] = 0.0
+
+        for l in xrange(4):  
+            for m in xrange(4):  
+                for n in xrange(4): 
+                    number[index[0,l],index[1,m],index[2,n]] += C[0,l]*C[1,m]*C[2,n]
+            
+    return number
+################################################################################
+
+################################################################################
+# This function computes the density field of a cubic distribution of particles
+# pos ------> positions of the particles. Numpy array
+# number ---> array with the density field. Numpy array (dims,dims,dims)
+# BoxSize --> Size of the box
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+cpdef np.ndarray[np.float32_t,ndim=2] TSCW(np.ndarray[np.float32_t,ndim=2] pos,
+                                           np.ndarray[np.float32_t,ndim=3] number,
+                                           float BoxSize,
+                                           np.ndarray[np.float32_t,ndim=1] W):
+    cdef int axis,dims,minimum,j,l,m,n
+    cdef long i,particles
+    cdef float inv_cell_size,dist,diff
+    cdef np.ndarray[np.float32_t,ndim=2] C
+    cdef np.ndarray[np.int32_t,  ndim=2] index
+    
+    # find number of particles, the inverse of the cell size and dims
+    particles = len(pos);  dims = len(number);  inv_cell_size = dims/BoxSize
+    
+    # define arrays
+    C     = np.zeros((3,4),dtype=np.float32) #contribution of particle to grid point
+    index = np.zeros((3,4),dtype=np.int32)   #index of the grid point
+
+    # do a loop over all particles
+    for i in xrange(particles):
+
+        # do a loop over the three axes of the particle
+        for axis in xrange(3):
+            dist    = pos[i,axis]*inv_cell_size
+            minimum = <int>floor(dist-1.5)
+            for j in xrange(4): #only 4 cells/dimension can contribute
+                index[axis,j] = (minimum+j+dims)%dims
+                diff = fabs(minimum+j - dist)
+                if diff<0.5:    C[axis,j] = 0.75-diff*diff
+                elif diff<1.5:  C[axis,j] = 0.5*(1.5-diff)*(1.5-diff)
+                else:           C[axis,j] = 0.0
+
+        for l in xrange(4):  
+            for m in xrange(4):  
+                for n in xrange(4): 
+                    number[index[0,l],index[1,m],index[2,n]] += C[0,l]*C[1,m]*C[2,n]*W[i]
+            
+    return number
+################################################################################
+
+################################################################################
+# This function computes the density field of a cubic distribution of particles
+# pos ------> positions of the particles. Numpy array
+# number ---> array with the density field. Numpy array (dims,dims,dims)
+# BoxSize --> Size of the box
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+cpdef np.ndarray[np.float32_t,ndim=2] PCS(np.ndarray[np.float32_t,ndim=2] pos,
+                                          np.ndarray[np.float32_t,ndim=3] number,
+                                          float BoxSize):
+    cdef int axis,dims,minimum,j,l,m,n
+    cdef long i,particles
+    cdef float inv_cell_size,dist,diff
+    cdef np.ndarray[np.float32_t,ndim=2] C
+    cdef np.ndarray[np.int32_t,  ndim=2] index
+    
+    # find number of particles, the inverse of the cell size and dims
+    particles = len(pos);  dims = len(number);  inv_cell_size = dims/BoxSize
+    
+    # define arrays
+    C     = np.zeros((3,5),dtype=np.float32) #contribution of particle to grid point
+    index = np.zeros((3,5),dtype=np.int32)   #index of the grid point
+
+    # do a loop over all particles
+    for i in xrange(particles):
+
+        # do a loop over the three axes of the particle
+        for axis in xrange(3):
+            dist    = pos[i,axis]*inv_cell_size
+            minimum = <int>floor(dist-2.0)
+            for j in xrange(5): #only 5 cells/dimension can contribute
+                index[axis,j] = (minimum+j+dims)%dims
+                diff = fabs(minimum+j - dist)
+                if diff<1.0:    C[axis,j] = (4.0 - 6.0*diff*diff + 3.0*diff*diff*diff)/6.0
+                elif diff<2.0:  C[axis,j] = (2.0 - diff)*(2.0 - diff)*(2.0 - diff)/6.0
+                else:           C[axis,j] = 0.0
+
+        for l in xrange(5):  
+            for m in xrange(5):  
+                for n in xrange(5): 
+                    number[index[0,l],index[1,m],index[2,n]] += C[0,l]*C[1,m]*C[2,n]
+            
+    return number
+################################################################################
+
+################################################################################
+# This function computes the density field of a cubic distribution of particles
+# pos ------> positions of the particles. Numpy array
+# number ---> array with the density field. Numpy array (dims,dims,dims)
+# BoxSize --> Size of the box
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+cpdef np.ndarray[np.float32_t,ndim=2] PCSW(np.ndarray[np.float32_t,ndim=2] pos,
+                                           np.ndarray[np.float32_t,ndim=3] number,
+                                           float BoxSize,
+                                           np.ndarray[np.float32_t,ndim=1] W):
+    cdef int axis,dims,minimum,j,l,m,n
+    cdef long i,particles
+    cdef float inv_cell_size,dist,diff
+    cdef np.ndarray[np.float32_t,ndim=2] C
+    cdef np.ndarray[np.int32_t,  ndim=2] index
+    
+    # find number of particles, the inverse of the cell size and dims
+    particles = len(pos);  dims = len(number);  inv_cell_size = dims/BoxSize
+    
+    # define arrays
+    C     = np.zeros((3,5),dtype=np.float32) #contribution of particle to grid point
+    index = np.zeros((3,5),dtype=np.int32)   #index of the grid point
+
+    # do a loop over all particles
+    for i in xrange(particles):
+
+        # do a loop over the three axes of the particle
+        for axis in xrange(3):
+            dist    = pos[i,axis]*inv_cell_size
+            minimum = <int>floor(dist-2.0)
+            for j in xrange(5): #only 5 cells/dimension can contribute
+                index[axis,j] = (minimum+j+dims)%dims
+                diff = fabs(minimum+j - dist)
+                if diff<1.0:    C[axis,j] = (4.0 - 6.0*diff*diff + 3.0*diff*diff*diff)/6.0
+                elif diff<2.0:  C[axis,j] = (2.0 - diff)*(2.0 - diff)*(2.0 - diff)/6.0
+                else:           C[axis,j] = 0.0
+
+        for l in xrange(5):  
+            for m in xrange(5):  
+                for n in xrange(5): 
+                    number[index[0,l],index[1,m],index[2,n]] += C[0,l]*C[1,m]*C[2,n]*W[i]
+            
     return number
 ################################################################################
