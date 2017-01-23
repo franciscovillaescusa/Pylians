@@ -35,8 +35,8 @@ f_outs      = ['expected_Pk_z=0.txt',
                'expected_Pk_z=99.txt']
 #############################################
 
-BoxSize = 2000.0 #Mpc/h
-dims    = 768
+BoxSize = 1000.0 #Mpc/h
+dims    = 1024
 #############################################################################
 
 # compute the value of |k| in each cell of the grid
@@ -51,14 +51,11 @@ if obj_type=='Pk':
     # count modes
     count = PSL.lin_histogram(bins_r, 0.0, bins_r*1.0, k)
 
-    # define k-binning and value of k in it
+    # define k-binning and value of k in it and give physical units
     bins_k = np.linspace(0.0, bins_r, bins_r+1)
     k = k.astype(np.float64) #to avoid problems with np.histogram
     k_bin = np.histogram(k,bins_k,weights=k)[0]/count  #value of k in the k-bin
-
-    # keep only with modes below 1.1*k_Nyquist
-    indexes = np.where(k_bin*2.0*np.pi/BoxSize<1.1*k_N)
-    k_bin = k_bin[indexes]*2.0*np.pi/BoxSize
+    k_bin = k_bin*2.0*np.pi/BoxSize
 
     # do a loop over the different input files
     for input_file,f_out in zip(input_files,f_outs):
@@ -71,7 +68,7 @@ if obj_type=='Pk':
 
         # compute the P(k)=<delta_k^2>
         Pk = PSL.lin_histogram(bins_r, 0.0, bins_r*1.0, k, weights=delta_k2)
-        Pk = Pk/count;  Pk = Pk[indexes]
+        Pk = Pk/count
         
         # save results to file ignoring DC mode
         np.savetxt(f_out,np.transpose([k_bin[1:],Pk[1:]]))
@@ -83,7 +80,6 @@ elif obj_type=='CF':
     # compute the value of r in each point of the grid 
     d_grid = k*BoxSize/dims;  del k;  
     print np.min(d_grid),'< d <',np.max(d_grid)
-
 
     # define the bins in r and the value of r in them
     distances     = np.linspace(0.0, BoxSize/2.0, bins_CF)
