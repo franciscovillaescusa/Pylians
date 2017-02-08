@@ -4,16 +4,36 @@ import pyfftw
 import scipy.integrate as si
 cimport numpy as np
 cimport cython
-from libc.math cimport sqrt,pow,sin,log10 #,abs
-
+from libc.math cimport sqrt,pow,sin,log10
 
 ################################ ROUTINES ####################################
 # Pk(delta,BoxSize,axis=2,MAS='CIC',threads=1)
+#   [k,Pk0,Pk2,Pk4,Nmodes]
+
 # XPk(delta1,delta2,BoxSize,axis=2,MAS1='CIC',MAS2='CIC',threads=1)
+#   [k,
+#    PkX_0,PkX_2,PkX_4,
+#    Pk1_0,Pk1_2,Pk1_4,
+#    Pk2_0,Pk2_2,Pk2_4,
+#    Nmodes]
+
 # Pk_theta(Vx,Vy,Vz,BoxSize,axis=2,MAS='CIC',threads=1)
+#   [k,Pk_theta,Nmodes]
+
 # XPk_dv(delta,Vx,Vy,Vz,BoxSize,axis=2,MAS='CIC',threads=1)
+#   [k,Pk1,Pk2,PkX,Nmodes]
+
 # Pk_1D(delta,BoxSize,axis=2,MAS='CIC',threads=1)
+#   [k,Pk,Nmodes]
+
+# Pk_2D(delta,BoxSize,axis=2,MAS='CIC',threads=1)
+#   [kpar,kper,Pk,Nmodes]
+ 
 # Pk_1D_from_3D(delta,BoxSize,axis=2,MAS='CIC',threads=1)
+#   [k,Pk_1D,Pk_3D]
+
+# Pk_1D_from_2D(delta,BoxSize,axis=2,MAS='CIC',threads=1)
+#   [k_1D,Pk_1D,kpar_2D,kper_2D,Pk2D,Nmodes_2D]
 ##############################################################################
 
 # This function determines the fundamental (kF) and Nyquist (kN) frequencies
@@ -442,115 +462,6 @@ def Pk_theta(Vx,Vy,Vz,BoxSize,axis=2,MAS='CIC',threads=1):
 # Vz ----------> 3D velocity field of the z-component: (dims,dims,dims) np array
 # BoxSize -----> size of the cubic density field
 # axis --------> axis along which place the line of sight for the multipoles
-# MAS ---------> mass assignment scheme used to compute density field
-#                needed to correct modes amplitude
-# threads -----> number of threads (OMP) used to make the FFTW
-#@cython.boundscheck(False)
-#@cython.cdivision(False)
-def XPk_dv(delta,Vx,Vy,Vz,BoxSize,axis=2,MAS='CIC',threads=1):
-
-    start = time.time()
-    cdef int kxx,kyy,kzz,kx,ky,kz,dims,middle,k_index,kmax,MAS_index
-    cdef double kmod,prefact,real,imag,theta2
-    ####### change this for double precision ######
-    cdef float MAS_factor
-    cdef np.ndarray[np.complex64_t,ndim=3] delta_k,Vx_k,Vy_k,Vz_k
-    ###############################################
-    cdef np.ndarray[np.float64_t,ndim=1] k,Nmodes,MAS_corr
-    cdef np.ndarray[np.float64_t,ndim=1] Pk,Pk_dv
-
-    # find dimensions of delta: we assuming is a (dims,dims,dims) array
-    # determine the different frequencies, the MAS_index and the MAS_corr
-    print 'Computing power spectrum of theta...'
-    dims = len(delta);  middle = dims/2
-    kF,kN,kmax = frequencies(BoxSize,dims)
-    MAS_index, MAS_corr = MAS_function(MAS)
-                    
-    # we need to FT (1+delta)*V
-    Vx *= (1.0 + delta)
-    Vy *= (1.0 + delta)
-    Vz *= (1.0 + delta)
-                    
-    ## compute FFT of the field (change this for double precision) ##
-    Vx_k = FFT3Dr_f(Vx,threads)
-    Vy_k = FFT3Dr_f(Vy,threads)
-    Vz_k = FFT3Dr_f(Vz,threads)
-    #################################
-
-    # define arrays containing k, Pk0,Pk2,Pk4 and Nmodes. We need kmax+1
-    # bins since the mode (middle,middle, middle) has an index = kmax
-    k      = np.zeros(kmax+1,dtype=np.float64)
-    Pk     = np.zeros(kmax+1,dtype=np.float64)
-    Nmodes = np.zeros(kmax+1,dtype=np.float64)
-
-    # do a loop over all modes, computing their k,Pk. k's are in k_F units
-    start2 = time.time();  prefact = np.pi/dims
-    for kxx in xrange(dims):
-        kx = (kxx-dims if (kxx>middle) else kxx)
-        MAS_corr[0] = MAS_correction(prefact*kx,MAS_index)
-        
-        for kyy in xrange(dims):
-            ky = (kyy-dims if (kyy>middle) else kyy)
-            MAS_corr[1] = MAS_correction(prefact*ky,MAS_index)
-
-            for kzz in xrange(middle+1): #kzz=[0,1,..,middle] --> kz>0
-                kz = (kzz-dims if (kzz>middle) else kzz)
-                MAS_corr[2] = MAS_correction(prefact*kz,MAS_index)  
-
-                # kz=0 and kz=middle planes are special
-                if kz==0 or (kz==middle and dims%2==0):
-                    if kx<0: continue
-                    elif kx==0 or (kx==middle and dims%2==0):
-                        if ky<0.0: continue
-
-                # compute |k| of the mode and its integer part
-                kmod    = sqrt(kx*kx + ky*ky + kz*kz)
-                k_index = <int>kmod
-
-                # correct modes amplitude for MAS
-                MAS_factor = MAS_corr[0]*MAS_corr[1]*MAS_corr[2]
-                Vx_k[kxx,kyy,kzz]    = Vx_k[kxx,kyy,kzz]*MAS_factor
-                Vy_k[kxx,kyy,kzz]    = Vy_k[kxx,kyy,kzz]*MAS_factor
-                Vz_k[kxx,kyy,kzz]    = Vz_k[kxx,kyy,kzz]*MAS_factor
-
-                # compute theta for each mode: theta(k) = -ik*V(k)
-                real = +(kx*Vx_k[kxx,kyy,kzz].imag + \
-                         ky*Vy_k[kxx,kyy,kzz].imag + \
-                         kz*Vz_k[kxx,kyy,kzz].imag)
-            
-                imag = -(kx*Vx_k[kxx,kyy,kzz].real + \
-                         ky*Vy_k[kxx,kyy,kzz].real + \
-                         kz*Vz_k[kxx,kyy,kzz].real)
-                
-                theta2 = real*real + imag*imag
-
-                # add mode to the k,Pk and Nmodes arrays
-                k[k_index]      += kmod
-                Pk[k_index]     += theta2
-                Nmodes[k_index] += 1.0
-    print 'Time compute modulus = %.2f'%(time.time()-start2)
-
-    # check modes, discard fundamental frequency bin and give units
-    # we need to multiply the multipoles by (2*ell + 1)
-    check_number_modes(Nmodes,dims)
-    k  = k[1:];    Nmodes = Nmodes[1:];   k = (k/Nmodes)*kF; 
-    Pk = Pk[1:]*(BoxSize/dims**2)**3*kF**2;  Pk *= (1.0/Nmodes);
-    print 'Time taken = %.2f seconds'%(time.time()-start)
-
-    return [k,Pk,Nmodes]
-################################################################################
-################################################################################
-
-################################################################################
-################################################################################
-# This function computes the auto- and cross-power spectra of the density
-# field and the field div[(1+delta)*V]
-# delta -------> 3D density field: (dims,dims,dims) np array
-# Vx ----------> 3D velocity field of the x-component: (dims,dims,dims) np array
-# Vy ----------> 3D velocity field of the y-component: (dims,dims,dims) np array
-# Vz ----------> 3D velocity field of the z-component: (dims,dims,dims) np array
-# BoxSize -----> size of the cubic density field
-# axis --------> axis along which place the line of sight for the multipoles
 # MAS ---------> mass assignment scheme used to compute the fields
 #                needed to correct modes amplitude
 # threads -----> number of threads (OMP) used to make the FFTW
@@ -663,17 +574,17 @@ def XPk_dv(delta,Vx,Vy,Vz,BoxSize,axis=2,MAS='CIC',threads=1):
 # This routine computes the 1D power spectrum from a 3D density field
 # The routine takes a 3D field, delta, and Fourier transform it to get delta(k)
 # it then computes the 1D P(k) as:
-# P_1D(k_par) = \int d^2k_perp/(2pi)^2 P_3D(k_par,k_perp)
+# P_1D(k_par) = \int d^2k_per/(2pi)^2 P_3D(k_par,k_per)
 # we approximate the 2D integral by the average of the modes sampled by the 
-# field and we carry it out using k_perp modes with amplitudes between 0 and kN
-# The perpendicular modes sample the circle in an almost uniform way, thus,
-# we approximate the integral by a sum of the amplitude of each mode times the
-# area it covers, which is pi*kmax_perp^2/Nmodes
+# field and we carry it out using k_per modes such as |k|<kN. The perpendicular
+# modes sample the circle in an almost uniform way, thus, we approximate the 
+# integral by a sum of the amplitude of each mode times the area it covers, 
+# which is pi*kmax_per^2/Nmodes, where kmax_per=sqrt(kN^2-kpar^2)
 def Pk_1D(delta,BoxSize,axis=2,MAS='CIC',threads=1):
 
     start = time.time()
     cdef int kxx,kyy,kzz,kx,ky,kz,dims,middle,kmax,MAS_index,k_par
-    cdef double kmod,delta2,prefact,real,imag,k_perp,kmax_perp
+    cdef double kmod,delta2,prefact,real,imag,k_per#,kmax_per
     ####### change this for double precision ######
     cdef float MAS_factor
     cdef np.ndarray[np.complex64_t,ndim=3] delta_k
@@ -688,7 +599,7 @@ def Pk_1D(delta,BoxSize,axis=2,MAS='CIC',threads=1):
     MAS_index, MAS_corr = MAS_function(MAS)  
 
     # do not consider modes with |k_perp| > kN. kmax_perp is in units of kF
-    kmax_perp = middle
+    #kmax_per = middle
                                         
     ## compute FFT of the field (change this for double precision) ##
     delta_k = FFT3Dr_f(delta,threads)
@@ -722,14 +633,15 @@ def Pk_1D(delta,BoxSize,axis=2,MAS='CIC',threads=1):
 
                 # compute the value of k_par and k_perp
                 if axis==0:   
-                    k_par, k_perp = abs(kx), sqrt(ky*ky + kz*kz)
+                    k_par, k_per = abs(kx), sqrt(ky*ky + kz*kz)
                 elif axis==1: 
-                    k_par, k_perp = abs(ky), sqrt(kx*kx + kz*kz)
+                    k_par, k_per = abs(ky), sqrt(kx*kx + kz*kz)
                 else:         
-                    k_par, k_perp = abs(kz), sqrt(kx*kx + ky*ky)
+                    k_par, k_per = abs(kz), sqrt(kx*kx + ky*ky)
+                kmod = sqrt(k_par*k_par + k_per*k_per)
 
-                # only consider perpendicular modes up to kN
-                if k_perp>kmax_perp:  continue
+                # only consider modes with |k|<kN
+                if kmod>middle:  continue
 
                 # correct modes amplitude for MAS
                 MAS_factor = MAS_corr[0]*MAS_corr[1]*MAS_corr[2]
@@ -752,11 +664,108 @@ def Pk_1D(delta,BoxSize,axis=2,MAS='CIC',threads=1):
     
     # the perpendicular modes sample an area equal to pi*kmax_perp^2
     # we are assuming that each mode has an area equal to pi*kmax_perp^2/Nmodes
-    kmax_perp = kmax_perp*kF
-    Pk = Pk*(np.pi*kmax_perp**2/Nmodes)/(2.0*np.pi)**2
+    kmax_per = np.sqrt(kN**2-k**2)
+    #kmax_perp = kmax_perp*kF
+    Pk = Pk*(np.pi*kmax_per**2/Nmodes)/(2.0*np.pi)**2
     print 'Time taken = %.2f seconds'%(time.time()-start)
 
     return [k,Pk,Nmodes]
+################################################################################
+################################################################################
+
+################################################################################
+################################################################################
+# This routine computes the 2D power spectrum from a 3D density field
+# The routine returns 1D arrays with kpar, kper, Pk and Nmodes
+def Pk_2D(delta,BoxSize,axis=2,MAS='CIC',threads=1):
+
+    start = time.time()
+    cdef int kxx,kyy,kzz,kx,ky,kz,dims,middle,kmax,MAS_index,k_par,k_per
+    cdef int ipar,iper,imax_par,imax_per,index
+    cdef double kmod,delta2,prefact,real,imag
+    ####### change this for double precision ######
+    cdef float MAS_factor
+    cdef np.ndarray[np.complex64_t,ndim=3] delta_k
+    ###############################################
+    cdef np.ndarray[np.float64_t,ndim=1] MAS_corr,kpar,kper,Pk,Nmodes
+
+    # find dimensions of delta: we assuming is a (dims,dims,dims) array
+    # determine the different frequencies, the MAS_index and the MAS_corr
+    print 'Computing 2D power spectrum of the field...'
+    dims = len(delta);  middle = dims/2
+    kF,kN,kmax = frequencies(BoxSize,dims)
+    MAS_index, MAS_corr = MAS_function(MAS)  
+
+    # find maximum wavenumbers, in kF units, along the par and perp directions
+    imax_par  = middle 
+    imax_per  = int(np.sqrt(middle**2 + middle**2))
+                                        
+    ## compute FFT of the field (change this for double precision) ##
+    delta_k = FFT3Dr_f(delta,threads)
+    #################################
+
+    # define arrays containing k, Pk_2D and Nmodes
+    kpar   = np.zeros((imax_par+1)*(imax_per+1), dtype=np.float64)
+    kper   = np.zeros((imax_par+1)*(imax_per+1), dtype=np.float64)
+    Pk     = np.zeros((imax_par+1)*(imax_per+1), dtype=np.float64)
+    Nmodes = np.zeros((imax_par+1)*(imax_per+1), dtype=np.float64)
+
+    # do a loop over all modes, computing their k,Pk. k's are in k_F units
+    start2 = time.time();  prefact = np.pi/dims
+    for kxx in xrange(dims):
+        kx = (kxx-dims if (kxx>middle) else kxx)
+        MAS_corr[0] = MAS_correction(prefact*kx,MAS_index)
+        
+        for kyy in xrange(dims):
+            ky = (kyy-dims if (kyy>middle) else kyy)
+            MAS_corr[1] = MAS_correction(prefact*ky,MAS_index)
+
+            for kzz in xrange(middle+1): #kzz=[0,1,..,middle] --> kz>0
+                kz = (kzz-dims if (kzz>middle) else kzz)
+                MAS_corr[2] = MAS_correction(prefact*kz,MAS_index)  
+
+                # kz=0 and kz=middle planes are special
+                if kz==0 or (kz==middle and dims%2==0):
+                    if kx<0: continue
+                    elif kx==0 or (kx==middle and dims%2==0):
+                        if ky<0.0: continue
+
+                # compute the value of k_par and k_perp
+                if axis==0:   
+                    k_par, k_per = abs(kx), <int>sqrt(ky*ky + kz*kz)
+                elif axis==1: 
+                    k_par, k_per = abs(ky), <int>sqrt(kx*kx + kz*kz)
+                else:         
+                    k_par, k_per = abs(kz), <int>sqrt(kx*kx + ky*ky)
+                    
+                # correct modes amplitude for MAS
+                MAS_factor = MAS_corr[0]*MAS_corr[1]*MAS_corr[2]
+                delta_k[kxx,kyy,kzz] = delta_k[kxx,kyy,kzz]*MAS_factor
+
+                # compute |delta_k|^2 of the mode
+                real = delta_k[kxx,kyy,kzz].real
+                imag = delta_k[kxx,kyy,kzz].imag
+                delta2 = real*real + imag*imag
+                                                
+                # we have one big 1D array to store the Pk(kper,kpar)
+                # add mode to the Pk and Nmodes arrays
+                index = (imax_par+1)*k_per + k_par
+                Pk[index]     += delta2
+                Nmodes[index] += 1.0
+    print 'Time compute modulus = %.2f'%(time.time()-start2)
+
+    # obtain the value of the kpar and kper for each bin
+    for ipar in xrange(0,imax_par+1):
+        for iper in xrange(0,imax_per+1):
+            index = (imax_par+1)*iper + ipar
+            kpar[index] = 0.5*(ipar + ipar+1)*kF
+            kper[index] = 0.5*(iper + iper+1)*kF
+
+    # keep fundamental frequency and give units
+    Pk = Pk*(BoxSize/dims**2)**3/Nmodes
+    print 'Time taken = %.2f seconds'%(time.time()-start)
+
+    return [kpar,kper,Pk,Nmodes]
 ################################################################################
 ################################################################################
 
@@ -770,11 +779,17 @@ cdef double func_1D(double y, double x, log10_k, Pk, double k_par):
     return x*Pk_3D
 
 # This routines computes first the 3D P(k) and then computes the 1D P(k) using
-# P_1D(k_par) = 1/(2*pi) \int dk_perp k_perp P_3D(k_par,k_perp), where kmax_perp
+# P_1D(k_par) = 1/(2*pi) \int dk_per k_per P_3D(k_par,k_perp), where kmax_per
 # is set to kN. This routine will in general be slower than Pk_1D and it is 
 # only valid in real-space, so we recommend use Pk_1D to compute the 1D P(k) in
 # general and use this one only for validation purposes. The routine
-# returns the 3D and 1D power spectra of the field
+# returns the 3D and 1D power spectra of the field. The reason why the outcome
+# of this procedure is slightly different to the one from Pk_1D or Pk_1D_from_2D
+# is because P(k_par,k_per), for a given k_par is slighty different to 
+# P(k), where k=sqrt(k_par,k_per). In the latter we are averaging over all modes
+# with k, but the power spectrum near the Nyquist frequency exhibits a large
+# variance and therefore a large dependence on k_par. In this case, the correct
+# thing to do is to use Pk_1D or Pk_1D_from_2D.
 def Pk_1D_from_3D(delta,BoxSize,axis=2,MAS='CIC',threads=1):
 
     # compute 3D P(k) 
@@ -784,19 +799,70 @@ def Pk_1D_from_3D(delta,BoxSize,axis=2,MAS='CIC',threads=1):
     Pk_1D = np.zeros(len(k),dtype=np.float64)
     
     # only take perpendicular modes with |k_perp|<kN to make the integral
-    dims = len(delta);  kmax_perp = np.pi*dims/BoxSize #h/Mpc
+    dims = len(delta);  kN = (2.0*np.pi/BoxSize)*(dims/2)
 
     print 'Computing 1D P(k) from 3D P(k)...';  start = time.time()
     log10_k = np.log10(k)
     for i,k_par in enumerate(k):
-        yinit = [0.0];  k_perp_limits = [0,kmax_perp]
-        Pk_1D[i] = si.odeint(func_1D, yinit, k_perp_limits, 
+
+        if k_par>=kN:  continue
+        kmax_per = np.sqrt(kN**2 - k_par**2)
+            
+        yinit = [0.0];  kper_limits = [0,kmax_per]
+        Pk_1D[i] = si.odeint(func_1D, yinit, kper_limits, 
                              args=(log10_k,Pk0,k_par),
                              mxstep=1000000,rtol=1e-8, atol=1e-10, 
-                             h0=1e-10)[1][0]
-        Pk_1D[i] = Pk_1D[i]/(2.0*np.pi)
+                             h0=1e-10)[1][0]/(2.0*np.pi)
     print 'Time taken = %.2f seconds'%(time.time()-start)
 
     return [k,Pk_1D,Pk0]
+
+# This routines computes first the 2D P(k) and then computes the 1D P(k) using
+# P_1D(k_par) = 1/(2*pi) \int dk_perp k_perp P_3D(k_par,k_perp), where kmax_per
+# is set to sqrt(kN^2-kpar^2), i.e. taking only modes with |k|<kN. 
+# This routine will in general be slower than Pk_1D but its results should 
+# be similar to those from Pk_1D, so can be used for validation purposes.
+def Pk_1D_from_2D(delta,BoxSize,axis=2,MAS='CIC',threads=1):
+
+    # find number of modes along parallel and perpendicular directions
+    dims = len(delta);  middle = dims/2
+    kF = 2.0*np.pi/BoxSize;  kN = kF*middle
+    Nmodes_par = middle+1
+    Nmodes_per = int(np.sqrt(middle**2 + middle**2))+1
+
+    # define 1D P(k)
+    Pk_1D = np.zeros(Nmodes_par,dtype=np.float64)
+
+    # compute 2D P(k) 
+    kpar_2D,kper_2D,Pk2D,Nmodes_2D = Pk_2D(delta,BoxSize,axis=axis,
+                                           MAS=MAS,threads=threads)
+                                           
+    # put 2D power spectrum as matrix instead of 1D array: Pk[kper,kpar]
+    Pk = np.reshape(Pk2D,(Nmodes_per,Nmodes_par))
+
+    # find the value of the parallel and perpendicular modes sampled
+    k_par = (np.arange(0,Nmodes_par)+0.5)*kF  #h/Mpc
+    k_per = (np.arange(0,Nmodes_per)+0.5)*kF  #h/Mpc
+
+    # for each k_par mode compute \int dk_per k_per P_3D(k_par,k_per)/(2pi)
+    print 'Computing 1D P(k) from 2D P(k)...';  start = time.time()
+    for i in xrange(Nmodes_par):
+
+        # obtain the value of k_par, |k| and Pk(k_par,k_per)
+        kpar = k_par[i];  Pk_val = Pk[:,i]
+        k    = np.sqrt(kpar**2 + k_per**2);  log10_k = np.log10(k)
+
+        # find the value of kmax_per
+        if kpar>kN:  continue
+        kmax_per = np.sqrt(kN**2 - kpar**2)
+        
+        yinit = [0.0];  kper_limits = [0,kmax_per]
+        Pk_1D[i] = si.odeint(func_1D, yinit, kper_limits, 
+                             args=(log10_k,Pk_val,kpar),
+                             mxstep=1000000,rtol=1e-8, atol=1e-10, 
+                             h0=1e-10)[1][0]/(2.0*np.pi)
+    print 'Time taken = %.2f seconds'%(time.time()-start)
+
+    return [k_par,Pk_1D,kpar_2D,kper_2D,Pk2D,Nmodes_2D]
 ################################################################################
 ################################################################################
