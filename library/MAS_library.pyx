@@ -17,8 +17,6 @@ from libc.math cimport sqrt,pow,sin,floor,fabs
 ################################################################################
 ################################################################################
 
-
-
 ################################################################################
 # This function computes the density field of a cubic distribution of particles
 # pos ------> positions of the particles. Numpy array
@@ -33,17 +31,21 @@ cpdef np.ndarray[np.float32_t,ndim=2] CIC(np.ndarray[np.float32_t,ndim=2] pos,
     cdef int axis,dims
     cdef long i,particles
     cdef float inv_cell_size,dist
-    cdef np.ndarray[np.float32_t,ndim=1] u,d
-    cdef np.ndarray[np.int32_t,  ndim=1] index_d,index_u
+    cdef float u[3]
+    cdef float d[3]
+    cdef int index_u[3]
+    cdef int index_d[3]
+
+    # define arrays. This is slower than defining this as cython arrays
+    #cdef np.ndarray[np.float32_t,ndim=1] u,d
+    #cdef np.ndarray[np.int32_t,  ndim=1] index_d,index_u
+    #u       = np.zeros(3,dtype=np.float32) #for up
+    #d       = np.zeros(3,dtype=np.float32) #for down
+    #index_u = np.zeros(3,dtype=np.int32)
+    #index_d = np.zeros(3,dtype=np.int32)
     
     # find number of particles, the inverse of the cell size and dims
     particles = len(pos);  dims = len(number);  inv_cell_size = dims/BoxSize
-    
-    # define arrays
-    u       = np.zeros(3,dtype=np.float32) #for up
-    d       = np.zeros(3,dtype=np.float32) #for down
-    index_u = np.zeros(3,dtype=np.int32)
-    index_d = np.zeros(3,dtype=np.int32)
     
     # do a loop over all particles
     for i in xrange(particles):
