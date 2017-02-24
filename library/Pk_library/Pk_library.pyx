@@ -9,17 +9,15 @@ from libc.math cimport sqrt,pow,sin,log10,abs
 from libc.stdlib cimport malloc, free
 
 ################################ ROUTINES ####################################
-# Pk(delta,BoxSize,axis=2,MAS='CIC',threads=1)
-#   k1D Pk1D Nmodes1D
-#   kpar kper Pk2D Nmodes2D
-#   k3D Pk0 Pk2 Pk4 Nmodes3D
+# Pk(delta, BoxSize, axis=2, MAS='CIC', threads=1)
+#   1D: k1D[k]   Pk1D[k]    Nmodes1D[k] 
+#   2D: kpar[k]  kper[k]    Pk2D[k]   Nmodes2D[k]
+#   3D: k3D[k]   Pk[k,ell]  Nmodes3D[k] ===> Pk0 = Pk[:,0];  Pk2 = Pk[:,1]
 
-# XPk(delta1,delta2,BoxSize,axis=2,MAS1='CIC',MAS2='CIC',threads=1)
-#   [k,
-#    PkX_0,PkX_2,PkX_4,
-#    Pk1_0,Pk1_2,Pk1_4,
-#    Pk2_0,Pk2_2,Pk2_4,
-#    Nmodes]
+# XPk([delta1,delta2], BoxSize, axis=2, MAS=['CIC','CIC'], threads=1)
+#   1D: k1D[k]  Pk1D[k,field]   PkX1D[k,field]   Nmodes1D[k]
+#   2D: kpar[k] kper[k]         Pk2D[k,field]    PkX2D[k,field]  Nmodes2D[k]
+#   3D: k3D[k]  Pk[k,ell,field] XPk[k,ell,field] Nmodes3D[k]
 
 # Pk_theta(Vx,Vy,Vz,BoxSize,axis=2,MAS='CIC',threads=1)
 #   [k,Pk_theta,Nmodes]
@@ -252,7 +250,8 @@ class Pk:
             k1D[i]  = (k1D[i]/Nmodes1D[i])*kF      #give units
             kmaxper = sqrt(kN**2 - k1D[i]**2)
             Pk1D[i] = Pk1D[i]*(np.pi*kmaxper**2/Nmodes1D[i])/(2.0*np.pi)**2
-        self.k1D = k1D;  self.Pk1D = Pk1D;  self.Nmodes1D = Nmodes1D  
+        self.k1D = np.asarray(k1D);  self.Pk1D = np.asarray(Pk1D)
+        self.Nmodes1D = np.asarray(Nmodes1D  )
 
         # Pk2D. Keep DC mode bin, give units to Pk2D and find kpar & kper
         kpar = np.zeros((kmax_par+1)*(kmax_per+1), dtype=np.float64)
@@ -264,8 +263,8 @@ class Pk:
                 kper[index_2D] = 0.5*(k_per + k_per+1)*kF
         for i in xrange(len(kpar)):
             Pk2D[i] = Pk2D[i]*(BoxSize/dims**2)**3/Nmodes2D[i]
-        self.kpar = kpar;  self.kper = kper;  self.Pk2D = Pk2D
-        self.Nmodes2D = Nmodes2D
+        self.kpar = np.asarray(kpar);  self.kper = np.asarray(kper)
+        self.Pk2D = np.asarray(Pk2D);  self.Nmodes2D = np.asarray(Nmodes2D)
 
         # Pk3D. Check modes, discard DC mode bin and give units
         # we need to multiply the multipoles by (2*ell + 1)
@@ -276,8 +275,8 @@ class Pk:
             Pk3D[i,0] = (Pk3D[i,0]/Nmodes3D[i])*(BoxSize/dims**2)**3
             Pk3D[i,1] = (Pk3D[i,1]*5.0/Nmodes3D[i])*(BoxSize/dims**2)**3
             Pk3D[i,2] = (Pk3D[i,2]*9.0/Nmodes3D[i])*(BoxSize/dims**2)**3
-        self.k3D = k3D;  self.Nmodes3D = Nmodes3D
-        self.Pk0 = Pk3D[:,0];  self.Pk2 = Pk3D[:,1];  self.Pk4 = Pk3D[:,2]
+        self.k3D = np.asarray(k3D);  self.Nmodes3D = np.asarray(Nmodes3D)
+        self.Pk = np.asarray(Pk3D)
 
         print 'Time taken = %.2f seconds'%(time.time()-start)
 ################################################################################
@@ -520,8 +519,8 @@ class XPk:
             for j in xrange(Xfields):
                 PkX1D[i,j] = PkX1D[i,j]*fact #give units
                 PkX1D[i,j] = PkX1D[i,j]*(np.pi*kmaxper**2/Nmodes1D[i])/(2.0*np.pi)**2
-        self.k1D = k1D;    self.Nmodes1D = Nmodes1D  
-        self.Pk1D = Pk1D;  self.PkX1D = PkX1D
+        self.k1D = np.asarray(k1D);    self.Nmodes1D = np.asarray(Nmodes1D)  
+        self.Pk1D = np.asarray(Pk1D);  self.PkX1D = np.asarray(PkX1D)
 
         # Pk2D. Keep DC mode bin, give units to Pk2D and find kpar & kper
         kpar = np.zeros((kmax_par+1)*(kmax_per+1), dtype=np.float64)
@@ -536,8 +535,9 @@ class XPk:
                 Pk2D[i,j] = Pk2D[i,j]*fact/Nmodes2D[i]
             for j in xrange(Xfields):
                 PkX2D[i,j] = PkX2D[i,j]*fact/Nmodes2D[i]
-        self.kpar = kpar;  self.kper = kper;  self.Nmodes2D = Nmodes2D
-        self.Pk2D = Pk2D;  self.PkX2D = PkX2D
+        self.kpar = np.asarray(kpar);  self.kper = np.asarray(kper)
+        self.Nmodes2D = np.asarray(Nmodes2D)
+        self.Pk2D = np.asarray(Pk2D);  self.PkX2D = np.asarray(PkX2D)
 
         # Pk3D. Check modes, discard DC mode bin and give units
         # we need to multiply the multipoles by (2*ell + 1)
@@ -557,8 +557,8 @@ class XPk:
                 PkX3D[i,1,j] = (PkX3D[i,1,j]*5.0/Nmodes3D[i])*fact
                 PkX3D[i,2,j] = (PkX3D[i,2,j]*9.0/Nmodes3D[i])*fact
 
-        self.k3D = k3D;  self.Nmodes3D = Nmodes3D
-        self.Pk = Pk3D;  self.XPk = PkX3D
+        self.k3D = np.asarray(k3D);  self.Nmodes3D = np.asarray(Nmodes3D)
+        self.Pk = np.asarray(Pk3D);  self.XPk = np.asarray(PkX3D)
 
         print 'Time taken = %.2f seconds'%(time.time()-start)
 ################################################################################
