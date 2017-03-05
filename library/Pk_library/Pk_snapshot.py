@@ -207,15 +207,27 @@ def Pk_Gadget(snapshot_fname,dims,particle_type,do_RSD,axis,hydro,cpus):
             print 'saving results in:';  print fout1,'\n',fout2,'\n',fout12
 
             # This routine computes the auto- and cross-power spectra
-            data = PKL.XPk(delta[index1],delta[index2],BoxSize,axis=axis,
-                           MAS1='CIC',MAS2='CIC',threads=cpus)
+            data = PKL.XPk([delta[index1],delta[index2]],BoxSize,axis=axis,
+                           MAS=['CIC','CIC'],threads=cpus)
                                                         
-            k = data[0];   Nmodes = data[10]
+            k = data.k3D;   Nmodes = data.Nmodes3D
 
             # save power spectra results in the output files
-            np.savetxt(fout12,np.transpose([k,data[1],data[2],data[3],Nmodes]))
-            np.savetxt(fout1, np.transpose([k,data[4],data[5],data[6],Nmodes]))
-            np.savetxt(fout2, np.transpose([k,data[7],data[8],data[9],Nmodes]))
+            np.savetxt(fout12,np.transpose([k,
+                                            data.XPk[:,0,0],
+                                            data.XPk[:,1,0],
+                                            data.XPk[:,2,0],
+                                            Nmodes]))
+            np.savetxt(fout1, np.transpose([k,
+                                            data.Pk[:,0,0],
+                                            data.Pk[:,1,0],
+                                            data.Pk[:,2,0],
+                                            Nmodes]))
+            np.savetxt(fout2, np.transpose([k,
+                                            data.Pk[:,0,1],
+                                            data.Pk[:,1,1],
+                                            data.Pk[:,2,1],
+                                            Nmodes]))
     #####################################################################
 
     #####################################################################
@@ -235,10 +247,14 @@ def Pk_Gadget(snapshot_fname,dims,particle_type,do_RSD,axis,hydro,cpus):
     delta_tot /= Omega_tot;  del delta;  fout = fout[:-1] #avoid '+' in the end
     
     # compute power spectrum
-    [k,Pk0,Pk2,Pk4,Nmodes] = PKL.Pk(delta_tot,BoxSize,axis=axis,MAS='CIC',
-                                    threads=cpus);  del delta_tot
+    data = PKL.Pk(delta_tot,BoxSize,axis=axis,MAS='CIC',
+                  threads=cpus);  del delta_tot
 
     # write P(k) to output file
-    np.savetxt(fout+suffix, np.transpose([k,Pk0,Pk2,Pk4,Nmodes]))
+    np.savetxt(fout+suffix, np.transpose([data.k3D,
+                                          data.Pk[:,0],
+                                          data.Pk[:,1],
+                                          data.Pk[:,2],
+                                          data.Nmodes3D]))
 ###############################################################################
 ###############################################################################
