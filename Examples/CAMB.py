@@ -5,8 +5,8 @@ import sys,os
 
 ################################## INPUT ######################################
 # neutrino parameters
-hierarchy = 'degenerate' #'degenerate', 'normal', 'inverted'
-Mnu       = 0.60  #eV
+hierarchy = 'normal' #'degenerate', 'normal', 'inverted'
+Mnu       = 0.06  #eV
 Nnu       = 3  #number of massive neutrinos
 
 # cosmological parameters
@@ -23,18 +23,32 @@ pivot_scalar = 0.05
 pivot_tensor = 0.05
 
 # redshifts and k-range
-redshifts    = [0.0, 0.5, 1.0, 2.0, 3.0, 5.0, 10.0] 
+redshifts    = [0.0, 0.5, 1, 2, 3, 99] 
 kmax         = 10.0
-k_per_logint = 5
+k_per_logint = 10
+
+# dz, relative difference dz/z to compute growths
+dz = 0.01
 ###############################################################################
+
+# create a new redshift list to compute growth rates
+zs = []
+for z in redshifts:
+    dz_abs = (1.0+z)*dz
+    if z==0.0:
+        zs.append(z);  zs.append(z+dz_abs)
+    else:
+        zs.append(z-dz_abs);  zs.append(z);  zs.append(z+dz_abs)
+z_list = redshifts;  redshifts = zs
+
 
 Omega_cb = Omega_c + Omega_b
 
 pars = camb.CAMBparams()
 
 # set accuracy of the calculation
-pars.set_accuracy(AccuracyBoost=2.0, lSampleBoost=2.0, 
-                  lAccuracyBoost=2.0, HighAccuracyDefault=True, 
+pars.set_accuracy(AccuracyBoost=5.0, lSampleBoost=5.0, 
+                  lAccuracyBoost=5.0, HighAccuracyDefault=True, 
                   DoLateRadTruncation=True)
 
 # set value of the cosmological parameters
@@ -89,6 +103,7 @@ k, zs, Pknn = results.get_matter_power_spectrum(minkh=2e-5, maxkh=kmax,
                                                 have_power_spectra=True, 
                                                 params=None)
 
+
 print pars
 
 # get sigma_8 and Hz in km/s/(kpc/h)
@@ -118,3 +133,31 @@ for i,z in enumerate(zs):
     # notice that transfer functions have an inverted order:i=0 ==>z_max
     #np.savetxt(fout,np.transpose([Tk[0,:,i],Tk[1,:,i],Tk[2,:,i],Tk[3,:,i],
     #                               Tk[4,:,i],Tk[5,:,i],Tk[6,:,i]]))
+
+
+# compute growth rates
+for z in z_list:
+    
+    dz_abs = (1.0+z)*dz
+    for suffix in ['mm','cb','nn']:
+
+        fout = 'f%s_z=%.3f.txt'%(suffix,z)
+        f2   = 'Pk_%s_z=%.3f.txt'%(suffix,z+dz_abs)
+
+        if z==0.0:
+            f1 = 'Pk_%s_z=%.3f.txt'%(suffix,z);  fac = 1.0
+            
+        else:
+            f1 = 'Pk_%s_z=%.3f.txt'%(suffix,z-dz_abs);  fac = 2.0
+            
+        k1,Pk1 = np.loadtxt(f1,unpack=True)
+        k2,Pk2 = np.loadtxt(f2,unpack=True)
+
+        if np.any(k1!=k2):
+            print 'Error!'; sys.exit()
+
+        f = -0.5*(1.0+z)*np.log(Pk2/Pk1)/(fac*dz_abs)
+        np.savetxt(fout,np.transpose([k1,f]))
+
+        os.system('rm '+f2)
+        if z!=0.0:  os.system('rm '+f1)
