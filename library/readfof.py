@@ -121,3 +121,81 @@ class FoF_catalog:
                 f.close()
                 fnb+=1
                 if fnb==Nfiles: Final=True
+
+
+# This function is used to write one single file for the FoF instead of having
+# many files. This will make faster the reading of the FoF file
+def writeFoFCatalog(fc, tabFile, idsFile=None):
+    if fc.TotNids > (1<<32)-1: raise Exception('TotNids overflow')
+
+    f = open(tabFile, 'wb')
+    np.asarray(fc.TotNgroups).tofile(f)
+    np.asarray(fc.TotNgroups).tofile(f)
+    np.asarray(fc.TotNids, dtype=np.int32).tofile(f)
+    np.asarray(fc.TotNids).tofile(f)
+    np.asarray(1, dtype=np.uint32).tofile(f)
+    fc.GroupLen.tofile(f)
+    fc.GroupOffset.tofile(f)
+    fc.GroupMass.tofile(f)
+    fc.GroupPos.tofile(f)
+    fc.GroupVel.tofile(f)
+    fc.GroupTLen.tofile(f)
+    fc.GroupTMass.tofile(f)
+    if hasattr(fc, 'GroupSFR'):
+        fc.GroupSFR.tofile(f)
+    f.close()
+
+    if idsFile:
+        f = open(idsFile, 'wb')
+        np.asarray(fc.TotNgroups).tofile(f)
+        np.asarray(fc.TotNgroups).tofile(f)
+        np.asarray(fc.TotNids, dtype=np.uint32).tofile(f) 
+        np.asarray(fc.TotNids).tofile(f)
+        np.asarray(1, dtype=np.uint32).tofile(f)
+        np.asarray(0, dtype=np.uint32).tofile(f) 
+        fc.GroupIDs.tofile(f)
+        f.close()
+
+
+
+# This is an example on how to change files
+"""
+root = '/mnt/xfs1/home/fvillaescusa/data/Neutrino_simulations/Sims_Dec16_2/'
+################################## INPUT ######################################
+folders = ['0.0eV/','0.06eV/','0.10eV/','0.10eV_degenerate/',
+           '0.15eV/','0.6eV/',
+           '0.0eV_0.798/','0.0eV_0.807/','0.0eV_0.818/','0.0eV_0.822/',
+           '0.0eV_s8c/','0.0eV_s8m/']
+###############################################################################
+
+# do a loop over the different cosmologies
+for folder in folders:
+
+    # do a loop over the different realizations
+    for i in xrange(1,101):
+
+        snapdir = root + folder + '%d/'%i
+        
+        # do a loop over the different redshift
+        for snapnum in [0,1,2,3]:
+
+            FoF_folder     = snapdir+'groups_%03d'%snapnum
+            old_FoF_folder = snapdir+'original_groups_%03d'%snapnum
+            if os.path.exists(FoF_folder):
+                print '%s\t%d\t%d\texists'%(folder,i,snapnum)
+
+                if os.path.exists(old_FoF_folder):
+                    continue
+
+                # create new FoF file
+                f_tab = '%s/group_tab_%03d.0'%(snapdir,snapnum)
+                f_ids = '%s/group_ids_%03d.0'%(snapdir,snapnum)
+                FoF = readfof.FoF_catalog(snapdir,snapnum,long_ids=False,
+                                          swap=False,SFR=False)
+                writeFoFCatalog(FoF, f_tab, idsFile=f_ids)
+           
+                # rename FoF folder, create new FoF folder and move files to it
+                os.system('mv '+FoF_folder+' '+old_FoF_folder)
+                os.system('mkdir '+FoF_folder)
+                os.system('mv '+f_tab+' '+f_ids+' '+FoF_folder)
+"""
