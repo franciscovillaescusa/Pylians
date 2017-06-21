@@ -1,4 +1,4 @@
-import numpy as np
+import numpy as np 
 import time,sys,os
 cimport numpy as np
 cimport cython
@@ -14,6 +14,7 @@ from libc.math cimport sqrt,pow,sin,floor,fabs
 # CICW(pos,number,BoxSize,W)
 # TSCW(pos,number,BoxSize,W)
 # PCSW(pos,number,BoxSize,W)
+# CIC_interp(pos,density,BoxSize,dens)
 ################################################################################
 ################################################################################
 
@@ -374,4 +375,57 @@ cpdef np.ndarray[np.float32_t,ndim=2] PCSW(np.ndarray[np.float32_t,ndim=2] pos,
                     number[index[0,l],index[1,m],index[2,n]] += C[0,l]*C[1,m]*C[2,n]*W[i]
             
     return number
+################################################################################
+
+################################################################################
+# This function takes a 3D grid called density. The routine finds the CIC 
+# interpolated value of the grid onto the positions input as pos
+# density --> 3D array with containing the density field
+# BoxSize --> Size of the box
+# pos ------> positions where the density field will be interpolated
+# den ------> array with the interpolated density field at pos
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+cpdef np.ndarray[np.float32_t,ndim=2] CIC_interp(np.ndarray[np.float32_t,ndim=3] density,
+                                                 float BoxSize,
+                                                 np.ndarray[np.float32_t,ndim=2] pos,
+                                                 np.ndarray[np.float32_t,ndim=1] den):
+    cdef int axis,dims
+    cdef long i,particles
+    cdef float inv_cell_size,dist
+    cdef float u[3]
+    cdef float d[3]
+    cdef int index_u[3]
+    cdef int index_d[3]
+    
+    # find number of particles, the inverse of the cell size and dims
+    particles = len(pos);  dims = len(density);  inv_cell_size = dims/BoxSize
+
+    # do a loop over all particles
+    for i in xrange(particles):
+
+        # $: grid point, X: particle position
+        # $.........$..X......$
+        # ------------>         dist    (1.3)
+        # --------->            index_d (1)
+        # --------------------> index_u (2)
+        #           --->        u       (0.3)
+        #              -------> d       (0.7)
+        for axis in xrange(3):
+            dist          = pos[i,axis]*inv_cell_size
+            u[axis]       = dist - <int>dist
+            d[axis]       = 1.0 - u[axis]
+            index_d[axis] = (<int>dist)%dims
+            index_u[axis] = index_d[axis] + 1
+            index_u[axis] = index_u[axis]%dims #seems this is faster
+
+        den[i] = density[index_d[0],index_d[1],index_d[2]]*d[0]*d[1]*d[2]+\
+                 density[index_d[0],index_d[1],index_u[2]]*d[0]*d[1]*u[2]+\
+                 density[index_d[0],index_u[1],index_d[2]]*d[0]*u[1]*d[2]+\
+                 density[index_d[0],index_u[1],index_u[2]]*d[0]*u[1]*u[2]+\
+                 density[index_u[0],index_d[1],index_d[2]]*u[0]*d[1]*d[2]+\
+                 density[index_u[0],index_d[1],index_u[2]]*u[0]*d[1]*u[2]+\
+                 density[index_u[0],index_u[1],index_d[2]]*u[0]*u[1]*d[2]+\
+                 density[index_u[0],index_u[1],index_u[2]]*u[0]*u[1]*u[2]
 ################################################################################

@@ -10,6 +10,8 @@ For a new machine first install git and then from the terminal:
 
 For submit changes to the server:
 
+1) git status
+2) To see changes in modified files: git diff filename
 1) git add borrar.py or git add --all
 2) git commit -m "change in library"
 3) git push origin master

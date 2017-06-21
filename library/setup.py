@@ -10,6 +10,10 @@ ext_modules = [
     Extension("HI_clusters_library",["HI_clusters_library.pyx"]),
     Extension("MAS_library", ["MAS_library.pyx"]),
     Extension("Pk_library.Pk_library", ["Pk_library/Pk_library.pyx"]),
+    Extension("redshift_space_library",["redshift_space_library.pyx"]),
+    Extension("HI_library",["HI_library.pyx"])
+    #Extension("nearest_point_library",["nearest_point_library.pyx"]),
+              
               #extra_compile_args=['-O3']),
               #extra_link_args=['-O3']),
               #extra_compile_args=['-O3', '-fopenmp'],

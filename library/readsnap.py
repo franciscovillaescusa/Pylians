@@ -67,7 +67,7 @@ class snapshot_header:
     self.redshift = (np.fromfile(f,dtype=np.float64,count=1))[0]
     self.sfr = (np.fromfile(f,dtype=np.int32,count=1))[0]
     self.feedback = (np.fromfile(f,dtype=np.int32,count=1))[0]
-    self.nall = np.fromfile(f,dtype=np.int32,count=6)
+    self.nall = np.fromfile(f,dtype=np.uint32,count=6)
     self.cooling = (np.fromfile(f,dtype=np.int32,count=1))[0]
     self.filenum = (np.fromfile(f,dtype=np.int32,count=1))[0]
     self.boxsize = (np.fromfile(f,dtype=np.float64,count=1))[0]

@@ -103,14 +103,15 @@ def read_block(filename, block, parttype, physical_velocities=True,
 
         data[offset_array:offset_array+particles] = curdat
         offset_array += particles
-    print '%d: Time to read files = %.2f'%(myrank,Time.time()-start)
+    if verbose:
+        print '%d: Time to read files = %.2f'%(myrank,Time.time()-start)
 
 
     # slaves send master the particles read
     if myrank>0:
         comm.send(Nall_local, dest=0, tag=1) #number of particles read
         comm.Send(data,       dest=0, tag=2) #property read (pos,vel,ID..)
-        return None
+        return 0 #put 0 to avoid problems when reading pos and /1e3 #Mpc/h
     
     # master collect all information from slaves and return the array
     else:
@@ -120,7 +121,8 @@ def read_block(filename, block, parttype, physical_velocities=True,
         for i in xrange(1,nprocs):
             npart = comm.recv(source=i, tag=1)
             comm.Recv(data[offset:offset+npart], source=i, tag=2)
-            print 'Time to transfer files = %.2f'%(Time.time()-start)
+            if verbose:
+                print 'Time to transfer files = %.2f'%(Time.time()-start)
             offset += npart
 
         if physical_velocities and block=="VEL " and redshift!=0:
