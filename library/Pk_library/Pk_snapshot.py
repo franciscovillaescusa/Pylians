@@ -37,6 +37,7 @@ def Pk_comp(snapshot_fname,ptype,dims,do_RSD,axis,hydro,cpus):
     print 'Computing power spectrum...'
     head     = readsnap.snapshot_header(snapshot_fname)
     BoxSize  = head.boxsize/1e3 #Mpc/h
+    Masses   = head.massarr*1e10 #Msun/h
     Nall     = head.nall;  Ntotal = np.sum(Nall,dtype=np.int64)
     Omega_m  = head.omega_m
     Omega_l  = head.omega_l
@@ -44,6 +45,11 @@ def Pk_comp(snapshot_fname,ptype,dims,do_RSD,axis,hydro,cpus):
     Hubble   = 100.0*np.sqrt(Omega_m*(1.0+redshift)**3+Omega_l)  #km/s/(Mpc/h)
     z        = '%.3f'%redshift
         
+    # find output file name
+    fout = 'Pk_' + name_dict[str(ptype)]
+    if do_RSD:  fout += ('_RS_axis=' + str(axis) + '_z=' + z + '.dat')
+    else:       fout +=                           ('_z=' + z + '.dat')
+
     # read the positions of the particles
     pos = readsnap.read_block(snapshot_fname,"POS ",parttype=ptype)/1e3 #Mpc/h
     print '%.3f < X [Mpc/h] < %.3f'%(np.min(pos[:,0]),np.max(pos[:,0]))
@@ -78,16 +84,11 @@ def Pk_comp(snapshot_fname,ptype,dims,do_RSD,axis,hydro,cpus):
         mean = len(pos)*1.0/dims**3
         MASL.CIC(pos,delta,BoxSize); del pos
 
-    # compute the P(k)
+    # compute the P(k) and save results to file
     delta /= mean;  delta -= 1.0
-    [k,Pk0,Pk2,Pk4,Nmodes] = PKL.Pk(delta,BoxSize,axis=axis,MAS='CIC',
-                                    threads=cpus);  del delta
-
-    # write P(k) to output file
-    fout = 'Pk_' + name_dict[str(ptype)]
-    if do_RSD:  fout += ('_RS_axis=' + str(axis) + '_z=' + z + '.dat')
-    else:       fout +=                           ('_z=' + z + '.dat')
-    np.savetxt(fout,np.transpose([k,Pk0,Pk2,Pk4,Nmodes]))
+    Pk = PKL.Pk(delta,BoxSize,axis=axis,MAS='CIC',threads=cpus);  del delta
+    np.savetxt(fout,np.transpose([Pk.k3D, Pk.Pk[:,0], Pk.Pk[:,1], Pk.Pk[:,2],
+                                  Pk.Nmodes3D]))
 ###############################################################################
 
 ###############################################################################
