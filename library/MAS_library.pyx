@@ -6,6 +6,7 @@ from libc.math cimport sqrt,pow,sin,floor,fabs
 
 ################################################################################
 ################################# ROUTINES #####################################
+# MA(pos,number,BoxSize,MAS='CIC',W=None) ---> main routine
 # NGP(pos,number,BoxSize)
 # CIC(pos,number,BoxSize)
 # TSC(pos,number,BoxSize)
@@ -18,6 +19,51 @@ from libc.math cimport sqrt,pow,sin,floor,fabs
 ################################################################################
 ################################################################################
 
+# This is the main function to use when performing the mass assignment
+# pos --------> array containing the positions of the particles: 2D or 3D
+# numbers ----> array containing the density field: 2D or 3D
+# BoxSize ----> size of the simulation box
+# MAS --------> mass assignment scheme: NGP, CIC, TSC or PCS
+# W ----------> array containing the weights to be used: 1D array (optional)
+def MA(pos, number, BoxSize, MAS='CIC', W=None):
+
+    #number of coordinates to work in 2D or 3D
+    coord,coord_aux = len(pos[0]), len(number.shape) 
+
+    # check that the number of dimensions match
+    if coord!=coord_aux:
+        print 'pos have %d dimensions and the density %d!!!'%(coord,coord_aux)
+        sys.exit()
+
+    print '\nUsing %s mass assignment scheme'%MAS;  start = time.clock()
+    if coord==3:
+        if   MAS=='NGP' and W is None:  NGP(pos,number,BoxSize)
+        elif MAS=='CIC' and W is None:  CIC(pos,number,BoxSize)
+        elif MAS=='TSC' and W is None:  TSC(pos,number,BoxSize)
+        elif MAS=='PCS' and W is None:  PCS(pos,number,BoxSize)
+        elif MAS=='NGP' and W is not None:  NGPW(pos,number,BoxSize,W)
+        elif MAS=='CIC' and W is not None:  CICW(pos,number,BoxSize,W)
+        elif MAS=='TSC' and W is not None:  TSCW(pos,number,BoxSize,W)
+        elif MAS=='PCS' and W is not None:  PCSW(pos,number,BoxSize,W)
+        else:
+            print 'option not valid!!!';  sys.exit()
+
+    if coord==2:
+        number2 = np.expand_dims(number,axis=2)
+        if   MAS=='NGP' and W is None:  NGP(pos,number2,BoxSize)
+        elif MAS=='CIC' and W is None:  CIC(pos,number2,BoxSize)
+        elif MAS=='TSC' and W is None:  TSC(pos,number2,BoxSize)
+        elif MAS=='PCS' and W is None:  PCS(pos,number2,BoxSize)
+        elif MAS=='NGP' and W is not None:  NGPW(pos,number2,BoxSize,W)
+        elif MAS=='CIC' and W is not None:  CICW(pos,number2,BoxSize,W)
+        elif MAS=='TSC' and W is not None:  TSCW(pos,number2,BoxSize,W)
+        elif MAS=='PCS' and W is not None:  PCSW(pos,number2,BoxSize,W)
+        else:
+            print 'option not valid!!!';  sys.exit()
+        number = number2[:,:,0]
+    print 'Time taken = %.3f seconds\n'%(time.clock()-start)
+    
+
 ################################################################################
 # This function computes the density field of a cubic distribution of particles
 # pos ------> positions of the particles. Numpy array
@@ -26,10 +72,9 @@ from libc.math cimport sqrt,pow,sin,floor,fabs
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cpdef np.ndarray[np.float32_t,ndim=2] CIC(np.ndarray[np.float32_t,ndim=2] pos,
-                                          np.ndarray[np.float32_t,ndim=3] number,
-                                          float BoxSize):
-    cdef int axis,dims
+def CIC(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
+        
+    cdef int axis,dims,coord
     cdef long i,particles
     cdef float inv_cell_size,dist
     cdef float u[3]
@@ -37,17 +82,13 @@ cpdef np.ndarray[np.float32_t,ndim=2] CIC(np.ndarray[np.float32_t,ndim=2] pos,
     cdef int index_u[3]
     cdef int index_d[3]
 
-    # define arrays. This is slower than defining this as cython arrays
-    #cdef np.ndarray[np.float32_t,ndim=1] u,d
-    #cdef np.ndarray[np.int32_t,  ndim=1] index_d,index_u
-    #u       = np.zeros(3,dtype=np.float32) #for up
-    #d       = np.zeros(3,dtype=np.float32) #for down
-    #index_u = np.zeros(3,dtype=np.int32)
-    #index_d = np.zeros(3,dtype=np.int32)
-    
     # find number of particles, the inverse of the cell size and dims
-    particles = len(pos);  dims = len(number);  inv_cell_size = dims/BoxSize
+    particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
+    inv_cell_size = dims/BoxSize
     
+    # when computing things in 2D, use this plane
+    index_d[2] = 0;  index_u[2] = 0;  d[2] = 1.0;  u[2] = 1.0
+
     # do a loop over all particles
     for i in xrange(particles):
 
@@ -58,7 +99,7 @@ cpdef np.ndarray[np.float32_t,ndim=2] CIC(np.ndarray[np.float32_t,ndim=2] pos,
         # --------------------> index_u (2)
         #           --->        u       (0.3)
         #              -------> d       (0.7)
-        for axis in xrange(3):
+        for axis in xrange(coord):
             dist          = pos[i,axis]*inv_cell_size
             u[axis]       = dist - <int>dist
             d[axis]       = 1.0 - u[axis]
@@ -74,8 +115,6 @@ cpdef np.ndarray[np.float32_t,ndim=2] CIC(np.ndarray[np.float32_t,ndim=2] pos,
         number[index_u[0],index_d[1],index_u[2]] += u[0]*d[1]*u[2]
         number[index_u[0],index_u[1],index_d[2]] += u[0]*u[1]*d[2]
         number[index_u[0],index_u[1],index_u[2]] += u[0]*u[1]*u[2]
-        
-    return number
 ################################################################################
 
 ################################################################################
@@ -88,36 +127,28 @@ cpdef np.ndarray[np.float32_t,ndim=2] CIC(np.ndarray[np.float32_t,ndim=2] pos,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cpdef np.ndarray[np.float32_t,ndim=2] CICW(np.ndarray[np.float32_t,ndim=2] pos,
-                                           np.ndarray[np.float32_t,ndim=3] number,
-                                           float BoxSize,
-                                           np.ndarray[np.float32_t,ndim=1] W):
-    cdef int axis,dims
+def CICW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
+         np.float32_t[:] W):
+
+    cdef int axis,dims,coord
     cdef long i,particles
     cdef float inv_cell_size,dist
-    cdef np.ndarray[np.float32_t,ndim=1] u,d
-    cdef np.ndarray[np.int32_t,  ndim=1] index_d,index_u
+    cdef float u[3]
+    cdef float d[3]
+    cdef int index_d[3]
+    cdef int index_u[3]
     
     # find number of particles, the inverse of the cell size and dims
-    particles = len(pos);  dims = len(number);  inv_cell_size = dims/BoxSize
+    particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
+    inv_cell_size = dims/BoxSize
     
-    # define arrays
-    u       = np.zeros(3,dtype=np.float32) #for up
-    d       = np.zeros(3,dtype=np.float32) #for down
-    index_u = np.zeros(3,dtype=np.int32)
-    index_d = np.zeros(3,dtype=np.int32)
-    
+    # when computing things in 2D, use this plane
+    index_d[2] = 0;  index_u[2] = 0;  d[2] = 1.0;  u[2] = 1.0
+
     # do a loop over all particles
     for i in xrange(particles):
 
-        # $: grid point, X: particle position
-        # $.........$..X......$
-        # ------------>         dist    (1.3)
-        # --------->            index_d (1)
-        # --------------------> index_u (2)
-        #           --->        u       (0.3)
-        #              -------> d       (0.7)
-        for axis in xrange(3):
+        for axis in xrange(coord):
             dist          = pos[i,axis]*inv_cell_size
             u[axis]       = dist - <int>dist
             d[axis]       = 1.0 - u[axis]
@@ -133,57 +164,56 @@ cpdef np.ndarray[np.float32_t,ndim=2] CICW(np.ndarray[np.float32_t,ndim=2] pos,
         number[index_u[0],index_d[1],index_u[2]] += u[0]*d[1]*u[2]*W[i]
         number[index_u[0],index_u[1],index_d[2]] += u[0]*u[1]*d[2]*W[i]
         number[index_u[0],index_u[1],index_u[2]] += u[0]*u[1]*u[2]*W[i]
-        
-    return number
 ################################################################################
 
 ################################################################################
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cpdef np.ndarray[np.float32_t,ndim=2] NGP(np.ndarray[np.float32_t,ndim=2] pos,
-                                          np.ndarray[np.float32_t,ndim=3] number,
-                                          float BoxSize):
-    cdef int axis,dims
+def NGP(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
+
+    cdef int axis,dims,coord
     cdef long i,particles
     cdef float inv_cell_size
-    cdef np.ndarray[np.int32_t,  ndim=1] index
-    
+    cdef int index[3]
+
     # find number of particles, the inverse of the cell size and dims
-    particles = len(pos);  dims = len(number);  inv_cell_size = dims/BoxSize
-    index = np.zeros(3,dtype=np.int32)
+    particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
+    inv_cell_size = dims/BoxSize
+
+    # when computing things in 2D, use this plane
+    index[2] = 0
 
     # do a loop over all particles
     for i in xrange(particles):
-        for axis in xrange(3):
+        for axis in xrange(coord):
             index[axis] = <int>(pos[i,axis]*inv_cell_size + 0.5)
             index[axis] = index[axis]%dims
         number[index[0],index[1],index[2]] += 1.0
-
-    return number
-
 ################################################################################
 
 ################################################################################
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cpdef np.ndarray[np.float32_t,ndim=2] NGPW(np.ndarray[np.float32_t,ndim=2] pos,
-                                           np.ndarray[np.float32_t,ndim=3] number,
-                                           float BoxSize,
-                                           np.ndarray[np.float32_t,ndim=1] W):
-    cdef int axis,dims
+def NGPW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
+        np.float32_t[:] W):
+
+    cdef int axis,dims,coord
     cdef long i,particles
     cdef float inv_cell_size
-    cdef np.ndarray[np.int32_t,  ndim=1] index
-    
+    cdef int index[3]
+
     # find number of particles, the inverse of the cell size and dims
-    particles = len(pos);  dims = len(number);  inv_cell_size = dims/BoxSize
-    index = np.zeros(3,dtype=np.int32)
+    particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
+    inv_cell_size = dims/BoxSize
+
+    # when computing things in 2D, use this plane
+    index[2] = 0    
 
     # do a loop over all particles
     for i in xrange(particles):
-        for axis in xrange(3):
+        for axis in xrange(coord):
             index[axis] = <int>(pos[i,axis]*inv_cell_size + 0.5)
             index[axis] = index[axis]%dims
         number[index[0],index[1],index[2]] += W[i]
@@ -199,42 +229,42 @@ cpdef np.ndarray[np.float32_t,ndim=2] NGPW(np.ndarray[np.float32_t,ndim=2] pos,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cpdef np.ndarray[np.float32_t,ndim=2] TSC(np.ndarray[np.float32_t,ndim=2] pos,
-                                          np.ndarray[np.float32_t,ndim=3] number,
-                                          float BoxSize):
-    cdef int axis,dims,minimum,j,l,m,n
-    cdef long i,particles
-    cdef float inv_cell_size,dist,diff
-    cdef np.ndarray[np.float32_t,ndim=2] C
-    cdef np.ndarray[np.int32_t,  ndim=2] index
-    
+def TSC(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
+
+    cdef int axis, dims, minimum
+    cdef int j, l, m, n, coord
+    cdef long i, particles
+    cdef float inv_cell_size, dist, diff
+    cdef float C[3][4]
+    cdef int index[3][4]
+
     # find number of particles, the inverse of the cell size and dims
-    particles = len(pos);  dims = len(number);  inv_cell_size = dims/BoxSize
+    particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
+    inv_cell_size = dims/BoxSize
     
-    # define arrays
-    C     = np.zeros((3,4),dtype=np.float32) #contribution of particle to grid point
-    index = np.zeros((3,4),dtype=np.int32)   #index of the grid point
+    # define arrays: for 2D set we have C[2,:] = 1.0 and index[2,:] = 0
+    for i in xrange(3):
+        for j in xrange(4):
+            C[i][j] = 1.0;  index[i][j] = 0
 
     # do a loop over all particles
     for i in xrange(particles):
 
-        # do a loop over the three axes of the particle
-        for axis in xrange(3):
+        # do a loop over the axes of the particle
+        for axis in xrange(coord):
             dist    = pos[i,axis]*inv_cell_size
             minimum = <int>floor(dist-1.5)
             for j in xrange(4): #only 4 cells/dimension can contribute
-                index[axis,j] = (minimum+j+dims)%dims
+                index[axis][j] = (minimum+j+dims)%dims
                 diff = fabs(minimum+j - dist)
-                if diff<0.5:    C[axis,j] = 0.75-diff*diff
-                elif diff<1.5:  C[axis,j] = 0.5*(1.5-diff)*(1.5-diff)
-                else:           C[axis,j] = 0.0
+                if diff<0.5:    C[axis][j] = 0.75-diff*diff
+                elif diff<1.5:  C[axis][j] = 0.5*(1.5-diff)*(1.5-diff)
+                else:           C[axis][j] = 0.0
 
         for l in xrange(4):  
             for m in xrange(4):  
                 for n in xrange(4): 
-                    number[index[0,l],index[1,m],index[2,n]] += C[0,l]*C[1,m]*C[2,n]
-            
-    return number
+                    number[index[0][l],index[1][m],index[2][n]] += C[0][l]*C[1][m]*C[2][n]
 ################################################################################
 
 ################################################################################
@@ -245,43 +275,42 @@ cpdef np.ndarray[np.float32_t,ndim=2] TSC(np.ndarray[np.float32_t,ndim=2] pos,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cpdef np.ndarray[np.float32_t,ndim=2] TSCW(np.ndarray[np.float32_t,ndim=2] pos,
-                                           np.ndarray[np.float32_t,ndim=3] number,
-                                           float BoxSize,
-                                           np.ndarray[np.float32_t,ndim=1] W):
-    cdef int axis,dims,minimum,j,l,m,n
+def TSCW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
+         np.float32_t[:] W):
+
+    cdef int axis,dims,minimum,j,l,m,n,coord
     cdef long i,particles
     cdef float inv_cell_size,dist,diff
-    cdef np.ndarray[np.float32_t,ndim=2] C
-    cdef np.ndarray[np.int32_t,  ndim=2] index
-    
-    # find number of particles, the inverse of the cell size and dims
-    particles = len(pos);  dims = len(number);  inv_cell_size = dims/BoxSize
-    
-    # define arrays
-    C     = np.zeros((3,4),dtype=np.float32) #contribution of particle to grid point
-    index = np.zeros((3,4),dtype=np.int32)   #index of the grid point
+    cdef float C[3][4]
+    cdef int index[3][4]
 
+    # find number of particles, the inverse of the cell size and dims
+    particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
+    inv_cell_size = dims/BoxSize
+    
+    # define arrays: for 2D set we have C[2,:] = 1.0 and index[2,:] = 0
+    for i in xrange(3):
+        for j in xrange(4):
+            C[i][j] = 1.0;  index[i][j] = 0
+    
     # do a loop over all particles
     for i in xrange(particles):
 
         # do a loop over the three axes of the particle
-        for axis in xrange(3):
+        for axis in xrange(coord):
             dist    = pos[i,axis]*inv_cell_size
             minimum = <int>floor(dist-1.5)
             for j in xrange(4): #only 4 cells/dimension can contribute
-                index[axis,j] = (minimum+j+dims)%dims
+                index[axis][j] = (minimum+j+dims)%dims
                 diff = fabs(minimum+j - dist)
-                if diff<0.5:    C[axis,j] = 0.75-diff*diff
-                elif diff<1.5:  C[axis,j] = 0.5*(1.5-diff)*(1.5-diff)
-                else:           C[axis,j] = 0.0
+                if diff<0.5:    C[axis][j] = 0.75-diff*diff
+                elif diff<1.5:  C[axis][j] = 0.5*(1.5-diff)*(1.5-diff)
+                else:           C[axis][j] = 0.0
 
         for l in xrange(4):  
             for m in xrange(4):  
                 for n in xrange(4): 
-                    number[index[0,l],index[1,m],index[2,n]] += C[0,l]*C[1,m]*C[2,n]*W[i]
-            
-    return number
+                    number[index[0][l],index[1][m],index[2][n]] += C[0][l]*C[1][m]*C[2][n]*W[i]
 ################################################################################
 
 ################################################################################
@@ -292,42 +321,41 @@ cpdef np.ndarray[np.float32_t,ndim=2] TSCW(np.ndarray[np.float32_t,ndim=2] pos,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cpdef np.ndarray[np.float32_t,ndim=2] PCS(np.ndarray[np.float32_t,ndim=2] pos,
-                                          np.ndarray[np.float32_t,ndim=3] number,
-                                          float BoxSize):
-    cdef int axis,dims,minimum,j,l,m,n
+def PCS(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
+
+    cdef int axis,dims,minimum,j,l,m,n,coord
     cdef long i,particles
     cdef float inv_cell_size,dist,diff
-    cdef np.ndarray[np.float32_t,ndim=2] C
-    cdef np.ndarray[np.int32_t,  ndim=2] index
-    
+    cdef float C[3][5]
+    cdef int index[3][5]
+
     # find number of particles, the inverse of the cell size and dims
-    particles = len(pos);  dims = len(number);  inv_cell_size = dims/BoxSize
-    
-    # define arrays
-    C     = np.zeros((3,5),dtype=np.float32) #contribution of particle to grid point
-    index = np.zeros((3,5),dtype=np.int32)   #index of the grid point
+    particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
+    inv_cell_size = dims/BoxSize
+        
+    # define arrays: for 2D set we have C[2,:] = 1.0 and index[2,:] = 0
+    for i in xrange(3):
+        for j in xrange(5):
+            C[i][j] = 1.0;  index[i][j] = 0
 
     # do a loop over all particles
     for i in xrange(particles):
 
         # do a loop over the three axes of the particle
-        for axis in xrange(3):
+        for axis in xrange(coord):
             dist    = pos[i,axis]*inv_cell_size
             minimum = <int>floor(dist-2.0)
             for j in xrange(5): #only 5 cells/dimension can contribute
-                index[axis,j] = (minimum+j+dims)%dims
+                index[axis][j] = (minimum+j+dims)%dims
                 diff = fabs(minimum+j - dist)
-                if diff<1.0:    C[axis,j] = (4.0 - 6.0*diff*diff + 3.0*diff*diff*diff)/6.0
-                elif diff<2.0:  C[axis,j] = (2.0 - diff)*(2.0 - diff)*(2.0 - diff)/6.0
-                else:           C[axis,j] = 0.0
+                if diff<1.0:    C[axis][j] = (4.0 - 6.0*diff*diff + 3.0*diff*diff*diff)/6.0
+                elif diff<2.0:  C[axis][j] = (2.0 - diff)*(2.0 - diff)*(2.0 - diff)/6.0
+                else:           C[axis][j] = 0.0
 
         for l in xrange(5):  
             for m in xrange(5):  
                 for n in xrange(5): 
-                    number[index[0,l],index[1,m],index[2,n]] += C[0,l]*C[1,m]*C[2,n]
-            
-    return number
+                    number[index[0][l],index[1][m],index[2][n]] += C[0][l]*C[1][m]*C[2][n]
 ################################################################################
 
 ################################################################################
@@ -338,43 +366,42 @@ cpdef np.ndarray[np.float32_t,ndim=2] PCS(np.ndarray[np.float32_t,ndim=2] pos,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cpdef np.ndarray[np.float32_t,ndim=2] PCSW(np.ndarray[np.float32_t,ndim=2] pos,
-                                           np.ndarray[np.float32_t,ndim=3] number,
-                                           float BoxSize,
-                                           np.ndarray[np.float32_t,ndim=1] W):
-    cdef int axis,dims,minimum,j,l,m,n
+def PCSW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
+         np.float32_t[:] W):
+
+    cdef int axis,dims,minimum,j,l,m,n,coord
     cdef long i,particles
     cdef float inv_cell_size,dist,diff
-    cdef np.ndarray[np.float32_t,ndim=2] C
-    cdef np.ndarray[np.int32_t,  ndim=2] index
-    
-    # find number of particles, the inverse of the cell size and dims
-    particles = len(pos);  dims = len(number);  inv_cell_size = dims/BoxSize
-    
-    # define arrays
-    C     = np.zeros((3,5),dtype=np.float32) #contribution of particle to grid point
-    index = np.zeros((3,5),dtype=np.int32)   #index of the grid point
+    cdef float C[3][5]
+    cdef int index[3][5]
 
+    # find number of particles, the inverse of the cell size and dims
+    particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
+    inv_cell_size = dims/BoxSize
+
+    # define arrays: for 2D set we have C[2,:] = 1.0 and index[2,:] = 0
+    for i in xrange(3):
+        for j in xrange(5):
+            C[i][j] = 1.0;  index[i][j] = 0
+    
     # do a loop over all particles
     for i in xrange(particles):
 
         # do a loop over the three axes of the particle
-        for axis in xrange(3):
+        for axis in xrange(coord):
             dist    = pos[i,axis]*inv_cell_size
             minimum = <int>floor(dist-2.0)
             for j in xrange(5): #only 5 cells/dimension can contribute
-                index[axis,j] = (minimum+j+dims)%dims
+                index[axis][j] = (minimum+j+dims)%dims
                 diff = fabs(minimum+j - dist)
-                if diff<1.0:    C[axis,j] = (4.0 - 6.0*diff*diff + 3.0*diff*diff*diff)/6.0
-                elif diff<2.0:  C[axis,j] = (2.0 - diff)*(2.0 - diff)*(2.0 - diff)/6.0
-                else:           C[axis,j] = 0.0
+                if diff<1.0:    C[axis][j] = (4.0 - 6.0*diff*diff + 3.0*diff*diff*diff)/6.0
+                elif diff<2.0:  C[axis][j] = (2.0 - diff)*(2.0 - diff)*(2.0 - diff)/6.0
+                else:           C[axis][j] = 0.0
 
         for l in xrange(5):  
             for m in xrange(5):  
                 for n in xrange(5): 
-                    number[index[0,l],index[1,m],index[2,n]] += C[0,l]*C[1,m]*C[2,n]*W[i]
-            
-    return number
+                    number[index[0][l],index[1][m],index[2][n]] += C[0][l]*C[1][m]*C[2][n]*W[i]
 ################################################################################
 
 ################################################################################
