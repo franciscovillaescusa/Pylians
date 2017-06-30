@@ -5,19 +5,23 @@ import numpy
 
 
 ext_modules = [
-    Extension("MAS_library", ["MAS_library.pyx"]),
+    Extension("MAS_library", ["MAS_library.pyx"],
+              extra_compile_args=['-O3','-ffast-math','-mtune=native']),
+
     Extension("density_field_library",["density_field_library.pyx"]),
+
     Extension("HI_clusters_library",["HI_clusters_library.pyx"]),
-    Extension("MAS_library", ["MAS_library.pyx"]),
+
     Extension("Pk_library.Pk_library", ["Pk_library/Pk_library.pyx"]),
+
     Extension("redshift_space_library",["redshift_space_library.pyx"]),
-    Extension("HI_library",["HI_library.pyx"])
+
+    Extension("HI_library",["HI_library.pyx"]),
+
     #Extension("nearest_point_library",["nearest_point_library.pyx"]),
-              
-              #extra_compile_args=['-O3']),
-              #extra_link_args=['-O3']),
-              #extra_compile_args=['-O3', '-fopenmp'],
-              #extra_link_args=['-O3','-fopenmp']),
+    #extra_link_args=['-O3']),
+    #extra_compile_args=['-O3', '-fopenmp'],
+    #extra_link_args=['-O3','-fopenmp']),
 ]
 
 
@@ -27,5 +31,6 @@ setup(
     include_dirs=[numpy.get_include()],
 )
 
-#ext_modules = cythonize(["*.pyx","*/*.pyx"]),
+
+
 

@@ -34,7 +34,8 @@
 #compiled by calling those functions within this file, otherwise it gives errors
 
 import numpy as np
-import scipy.weave as wv
+#import scipy.weave as wv
+import weave as wv
 import sys
 
 ################################################################################
@@ -607,7 +608,7 @@ def TSC_serial(positions,dims,BoxSize,cic_densities,weights=None):
              for (i=0;i<4;i++){
                 for (j=0;j<4;j++){
                    for (k=0;k<4;k++){
-                       index=dims2*num[0][i]+dims*num[1][j]+num[2][k];
+                       index=dims*(dims*num[0][i]+num[1][j])+num[2][k];
                        cont=W[0][i]*W[1][j]*W[2][k];
                        cic_densities(index)+=cont;
                    }

@@ -4,6 +4,7 @@ cimport numpy as np
 cimport cython
 from libc.math cimport sqrt,pow,sin,floor,fabs
 
+
 ################################################################################
 ################################# ROUTINES #####################################
 # MA(pos,number,BoxSize,MAS='CIC',W=None) ---> main routine
@@ -16,6 +17,8 @@ from libc.math cimport sqrt,pow,sin,floor,fabs
 # TSCW(pos,number,BoxSize,W)
 # PCSW(pos,number,BoxSize,W)
 # CIC_interp(pos,density,BoxSize,dens)
+# TO-DO: 2D computations are suboptimal for CIC,TSC and PCS as particles along
+# the axis 2 are repeated 2,3 and 4 times, respectively
 ################################################################################
 ################################################################################
 
@@ -35,8 +38,10 @@ def MA(pos, number, BoxSize, MAS='CIC', W=None):
         print 'pos have %d dimensions and the density %d!!!'%(coord,coord_aux)
         sys.exit()
 
-    print '\nUsing %s mass assignment scheme'%MAS;  start = time.clock()
-    if coord==3:
+    if W is None:  print '\nUsing %s mass assignment scheme'%MAS;
+    else:          print '\nUsing %s mass assignment scheme with weights'%MAS;
+    start = time.clock()
+    if coord==3: 
         if   MAS=='NGP' and W is None:  NGP(pos,number,BoxSize)
         elif MAS=='CIC' and W is None:  CIC(pos,number,BoxSize)
         elif MAS=='TSC' and W is None:  TSC(pos,number,BoxSize)
@@ -50,14 +55,22 @@ def MA(pos, number, BoxSize, MAS='CIC', W=None):
 
     if coord==2:
         number2 = np.expand_dims(number,axis=2)
-        if   MAS=='NGP' and W is None:  NGP(pos,number2,BoxSize)
-        elif MAS=='CIC' and W is None:  CIC(pos,number2,BoxSize)
-        elif MAS=='TSC' and W is None:  TSC(pos,number2,BoxSize)
-        elif MAS=='PCS' and W is None:  PCS(pos,number2,BoxSize)
-        elif MAS=='NGP' and W is not None:  NGPW(pos,number2,BoxSize,W)
-        elif MAS=='CIC' and W is not None:  CICW(pos,number2,BoxSize,W)
-        elif MAS=='TSC' and W is not None:  TSCW(pos,number2,BoxSize,W)
-        elif MAS=='PCS' and W is not None:  PCSW(pos,number2,BoxSize,W)
+        if   MAS=='NGP' and W is None:  
+            NGP(pos,number2,BoxSize)
+        elif MAS=='CIC' and W is None:  
+            CIC(pos,number2,BoxSize);  number2 /= 2.0
+        elif MAS=='TSC' and W is None:  
+            TSC(pos,number2,BoxSize);  number2 /= 3.0
+        elif MAS=='PCS' and W is None:  
+            PCS(pos,number2,BoxSize);  number2 /= 4.0
+        elif MAS=='NGP' and W is not None:  
+            NGPW(pos,number2,BoxSize,W)
+        elif MAS=='CIC' and W is not None:  
+            CICW(pos,number2,BoxSize,W);  number2 /= 2.0
+        elif MAS=='TSC' and W is not None:  
+            TSCW(pos,number2,BoxSize,W);  number2 /= 3.0
+        elif MAS=='PCS' and W is not None:  
+            PCSW(pos,number2,BoxSize,W);  number2 /= 4.0
         else:
             print 'option not valid!!!';  sys.exit()
         number = number2[:,:,0]
@@ -86,8 +99,9 @@ def CIC(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
     particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
     inv_cell_size = dims/BoxSize
     
-    # when computing things in 2D, use this plane
-    index_d[2] = 0;  index_u[2] = 0;  d[2] = 1.0;  u[2] = 1.0
+    # when computing things in 2D, use the index_ud[2]=0 plane
+    for i in xrange(3):
+        index_d[i] = 0;  index_u[i] = 0;  d[i] = 1.0;  u[i] = 1.0
 
     # do a loop over all particles
     for i in xrange(particles):
@@ -142,8 +156,9 @@ def CICW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
     particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
     inv_cell_size = dims/BoxSize
     
-    # when computing things in 2D, use this plane
-    index_d[2] = 0;  index_u[2] = 0;  d[2] = 1.0;  u[2] = 1.0
+    # when computing things in 2D, use the index_ud[2]=0 plane
+    for i in xrange(3):
+        index_d[i] = 0;  index_u[i] = 0;  d[i] = 1.0;  u[i] = 1.0
 
     # do a loop over all particles
     for i in xrange(particles):
@@ -181,8 +196,8 @@ def NGP(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
     particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
     inv_cell_size = dims/BoxSize
 
-    # when computing things in 2D, use this plane
-    index[2] = 0
+    # when computing things in 2D, use the index[2]=0 plane
+    for i in xrange(3):  index[i] = 0
 
     # do a loop over all particles
     for i in xrange(particles):
@@ -193,6 +208,12 @@ def NGP(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
 ################################################################################
 
 ################################################################################
+# This function computes the density field of a cubic distribution of particles
+# using weights
+# pos ------> positions of the particles. Numpy array
+# number ---> array with the density field. Numpy array (dims,dims,dims)
+# BoxSize --> Size of the box
+# W --------> weights of the particles
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
@@ -208,8 +229,8 @@ def NGPW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
     particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
     inv_cell_size = dims/BoxSize
 
-    # when computing things in 2D, use this plane
-    index[2] = 0    
+    # when computing things in 2D, use the index[2]=0 plane
+    for i in xrange(3):  index[i] = 0
 
     # do a loop over all particles
     for i in xrange(particles):
@@ -235,8 +256,8 @@ def TSC(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
     cdef int j, l, m, n, coord
     cdef long i, particles
     cdef float inv_cell_size, dist, diff
-    cdef float C[3][4]
-    cdef int index[3][4]
+    cdef float C[3][3]
+    cdef int index[3][3]
 
     # find number of particles, the inverse of the cell size and dims
     particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
@@ -244,9 +265,9 @@ def TSC(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
     
     # define arrays: for 2D set we have C[2,:] = 1.0 and index[2,:] = 0
     for i in xrange(3):
-        for j in xrange(4):
+        for j in xrange(3):
             C[i][j] = 1.0;  index[i][j] = 0
-
+            
     # do a loop over all particles
     for i in xrange(particles):
 
@@ -254,24 +275,26 @@ def TSC(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
         for axis in xrange(coord):
             dist    = pos[i,axis]*inv_cell_size
             minimum = <int>floor(dist-1.5)
-            for j in xrange(4): #only 4 cells/dimension can contribute
-                index[axis][j] = (minimum+j+dims)%dims
-                diff = fabs(minimum+j - dist)
+            for j in xrange(3): #only 3 cells/dimension can contribute
+                index[axis][j] = (minimum+j+1+dims)%dims
+                diff = fabs(minimum + j+1 - dist)
                 if diff<0.5:    C[axis][j] = 0.75-diff*diff
                 elif diff<1.5:  C[axis][j] = 0.5*(1.5-diff)*(1.5-diff)
                 else:           C[axis][j] = 0.0
 
-        for l in xrange(4):  
-            for m in xrange(4):  
-                for n in xrange(4): 
+        for l in xrange(3):  
+            for m in xrange(3):  
+                for n in xrange(3): 
                     number[index[0][l],index[1][m],index[2][n]] += C[0][l]*C[1][m]*C[2][n]
 ################################################################################
 
 ################################################################################
 # This function computes the density field of a cubic distribution of particles
+# using weights
 # pos ------> positions of the particles. Numpy array
 # number ---> array with the density field. Numpy array (dims,dims,dims)
 # BoxSize --> Size of the box
+# W --------> weights of the particles
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
@@ -281,8 +304,8 @@ def TSCW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
     cdef int axis,dims,minimum,j,l,m,n,coord
     cdef long i,particles
     cdef float inv_cell_size,dist,diff
-    cdef float C[3][4]
-    cdef int index[3][4]
+    cdef float C[3][3]
+    cdef int index[3][3]
 
     # find number of particles, the inverse of the cell size and dims
     particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
@@ -290,7 +313,7 @@ def TSCW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
     
     # define arrays: for 2D set we have C[2,:] = 1.0 and index[2,:] = 0
     for i in xrange(3):
-        for j in xrange(4):
+        for j in xrange(3):
             C[i][j] = 1.0;  index[i][j] = 0
     
     # do a loop over all particles
@@ -300,16 +323,16 @@ def TSCW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
         for axis in xrange(coord):
             dist    = pos[i,axis]*inv_cell_size
             minimum = <int>floor(dist-1.5)
-            for j in xrange(4): #only 4 cells/dimension can contribute
-                index[axis][j] = (minimum+j+dims)%dims
-                diff = fabs(minimum+j - dist)
+            for j in xrange(3): #only 3 cells/dimension can contribute
+                index[axis][j] = (minimum+ j+1+ dims)%dims
+                diff = fabs(minimum+ j+1 - dist)
                 if diff<0.5:    C[axis][j] = 0.75-diff*diff
                 elif diff<1.5:  C[axis][j] = 0.5*(1.5-diff)*(1.5-diff)
                 else:           C[axis][j] = 0.0
 
-        for l in xrange(4):  
-            for m in xrange(4):  
-                for n in xrange(4): 
+        for l in xrange(3):  
+            for m in xrange(3):  
+                for n in xrange(3): 
                     number[index[0][l],index[1][m],index[2][n]] += C[0][l]*C[1][m]*C[2][n]*W[i]
 ################################################################################
 
@@ -326,8 +349,8 @@ def PCS(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
     cdef int axis,dims,minimum,j,l,m,n,coord
     cdef long i,particles
     cdef float inv_cell_size,dist,diff
-    cdef float C[3][5]
-    cdef int index[3][5]
+    cdef float C[3][4]
+    cdef int index[3][4]
 
     # find number of particles, the inverse of the cell size and dims
     particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
@@ -335,7 +358,7 @@ def PCS(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
         
     # define arrays: for 2D set we have C[2,:] = 1.0 and index[2,:] = 0
     for i in xrange(3):
-        for j in xrange(5):
+        for j in xrange(4):
             C[i][j] = 1.0;  index[i][j] = 0
 
     # do a loop over all particles
@@ -345,24 +368,26 @@ def PCS(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
         for axis in xrange(coord):
             dist    = pos[i,axis]*inv_cell_size
             minimum = <int>floor(dist-2.0)
-            for j in xrange(5): #only 5 cells/dimension can contribute
-                index[axis][j] = (minimum+j+dims)%dims
-                diff = fabs(minimum+j - dist)
+            for j in xrange(4): #only 4 cells/dimension can contribute
+                index[axis][j] = (minimum + j+1 + dims)%dims
+                diff = fabs(minimum + j+1 - dist)
                 if diff<1.0:    C[axis][j] = (4.0 - 6.0*diff*diff + 3.0*diff*diff*diff)/6.0
                 elif diff<2.0:  C[axis][j] = (2.0 - diff)*(2.0 - diff)*(2.0 - diff)/6.0
                 else:           C[axis][j] = 0.0
 
-        for l in xrange(5):  
-            for m in xrange(5):  
-                for n in xrange(5): 
+        for l in xrange(4):  
+            for m in xrange(4):  
+                for n in xrange(4): 
                     number[index[0][l],index[1][m],index[2][n]] += C[0][l]*C[1][m]*C[2][n]
 ################################################################################
 
 ################################################################################
 # This function computes the density field of a cubic distribution of particles
+# using weights
 # pos ------> positions of the particles. Numpy array
 # number ---> array with the density field. Numpy array (dims,dims,dims)
 # BoxSize --> Size of the box
+# W --------> weights of the particles
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
@@ -372,8 +397,8 @@ def PCSW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
     cdef int axis,dims,minimum,j,l,m,n,coord
     cdef long i,particles
     cdef float inv_cell_size,dist,diff
-    cdef float C[3][5]
-    cdef int index[3][5]
+    cdef float C[3][4]
+    cdef int index[3][4]
 
     # find number of particles, the inverse of the cell size and dims
     particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
@@ -381,7 +406,7 @@ def PCSW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
 
     # define arrays: for 2D set we have C[2,:] = 1.0 and index[2,:] = 0
     for i in xrange(3):
-        for j in xrange(5):
+        for j in xrange(4):
             C[i][j] = 1.0;  index[i][j] = 0
     
     # do a loop over all particles
@@ -391,16 +416,16 @@ def PCSW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
         for axis in xrange(coord):
             dist    = pos[i,axis]*inv_cell_size
             minimum = <int>floor(dist-2.0)
-            for j in xrange(5): #only 5 cells/dimension can contribute
-                index[axis][j] = (minimum+j+dims)%dims
-                diff = fabs(minimum+j - dist)
+            for j in xrange(4): #only 4 cells/dimension can contribute
+                index[axis][j] = (minimum + j+1 + dims)%dims
+                diff = fabs(minimum + j+1 - dist)
                 if diff<1.0:    C[axis][j] = (4.0 - 6.0*diff*diff + 3.0*diff*diff*diff)/6.0
                 elif diff<2.0:  C[axis][j] = (2.0 - diff)*(2.0 - diff)*(2.0 - diff)/6.0
                 else:           C[axis][j] = 0.0
 
-        for l in xrange(5):  
-            for m in xrange(5):  
-                for n in xrange(5): 
+        for l in xrange(4):
+            for m in xrange(4):
+                for n in xrange(4): 
                     number[index[0][l],index[1][m],index[2][n]] += C[0][l]*C[1][m]*C[2][n]*W[i]
 ################################################################################
 
@@ -414,10 +439,10 @@ def PCSW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cpdef np.ndarray[np.float32_t,ndim=2] CIC_interp(np.ndarray[np.float32_t,ndim=3] density,
-                                                 float BoxSize,
-                                                 np.ndarray[np.float32_t,ndim=2] pos,
-                                                 np.ndarray[np.float32_t,ndim=1] den):
+def CIC_interp(np.ndarray[np.float32_t,ndim=3] density, float BoxSize,
+               np.ndarray[np.float32_t,ndim=2] pos,
+               np.ndarray[np.float32_t,ndim=1] den):
+
     cdef int axis,dims
     cdef long i,particles
     cdef float inv_cell_size,dist
