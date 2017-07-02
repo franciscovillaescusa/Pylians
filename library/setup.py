@@ -1,8 +1,8 @@
 from distutils.core import setup
+from setuptools import find_packages
 from Cython.Build import cythonize
 from distutils.extension import Extension
 import numpy
-
 
 ext_modules = [
     Extension("MAS_library", ["MAS_library.pyx"],
@@ -29,6 +29,12 @@ setup(
     name = 'Fcodes',
     ext_modules = cythonize(ext_modules),
     include_dirs=[numpy.get_include()],
+    packages=find_packages(),
+    py_modules=['HOD_library','bias_library','CAMB_library','cosmology_library',
+                'correlation_function_library','halos_library','IM_library',
+                'mass_function_library','readfof','readsnap','readsnap2',
+                'readsnapHDF5','readsnap_mpi','readsubf','routines',
+                'units_library','map']
 )
 
 
