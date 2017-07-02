@@ -28,10 +28,10 @@ from libc.math cimport sqrt,pow,sin,floor,fabs
 # BoxSize ----> size of the simulation box
 # MAS --------> mass assignment scheme: NGP, CIC, TSC or PCS
 # W ----------> array containing the weights to be used: 1D array (optional)
-def MA(pos, number, BoxSize, MAS='CIC', W=None):
+cpdef void MA(pos, number, BoxSize, MAS='CIC', W=None):
 
     #number of coordinates to work in 2D or 3D
-    coord,coord_aux = len(pos[0]), len(number.shape) 
+    coord,coord_aux = pos.shape[1], number.ndim 
 
     # check that the number of dimensions match
     if coord!=coord_aux:
@@ -84,8 +84,8 @@ def MA(pos, number, BoxSize, MAS='CIC', W=None):
 # BoxSize --> Size of the box
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(True)
-def CIC(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
+@cython.cdivision(True) 
+cdef void CIC(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
         
     cdef int axis,dims,coord
     cdef long i,particles
@@ -96,7 +96,7 @@ def CIC(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
     cdef int index_d[3]
 
     # find number of particles, the inverse of the cell size and dims
-    particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
+    particles = pos.shape[0];  coord = pos.shape[1];  dims = number.shape[0]
     inv_cell_size = dims/BoxSize
     
     # when computing things in 2D, use the index_ud[2]=0 plane
@@ -141,8 +141,8 @@ def CIC(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def CICW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
-         np.float32_t[:] W):
+cdef void CICW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
+               np.float32_t[:] W):
 
     cdef int axis,dims,coord
     cdef long i,particles
@@ -153,7 +153,7 @@ def CICW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
     cdef int index_u[3]
     
     # find number of particles, the inverse of the cell size and dims
-    particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
+    particles = pos.shape[0];  coord = pos.shape[1];  dims = number.shape[0]
     inv_cell_size = dims/BoxSize
     
     # when computing things in 2D, use the index_ud[2]=0 plane
@@ -185,7 +185,7 @@ def CICW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def NGP(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
+cdef void NGP(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
 
     cdef int axis,dims,coord
     cdef long i,particles
@@ -193,7 +193,7 @@ def NGP(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
     cdef int index[3]
 
     # find number of particles, the inverse of the cell size and dims
-    particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
+    particles = pos.shape[0];  coord = pos.shape[1];  dims = number.shape[0]
     inv_cell_size = dims/BoxSize
 
     # when computing things in 2D, use the index[2]=0 plane
@@ -217,8 +217,8 @@ def NGP(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def NGPW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
-        np.float32_t[:] W):
+cdef void NGPW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
+               np.float32_t[:] W):
 
     cdef int axis,dims,coord
     cdef long i,particles
@@ -226,7 +226,7 @@ def NGPW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
     cdef int index[3]
 
     # find number of particles, the inverse of the cell size and dims
-    particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
+    particles = pos.shape[0];  coord = pos.shape[1];  dims = number.shape[0]
     inv_cell_size = dims/BoxSize
 
     # when computing things in 2D, use the index[2]=0 plane
@@ -248,7 +248,7 @@ def NGPW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def TSC(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
+cdef void TSC(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
 
     cdef int axis, dims, minimum
     cdef int j, l, m, n, coord
@@ -258,7 +258,7 @@ def TSC(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
     cdef int index[3][3]
 
     # find number of particles, the inverse of the cell size and dims
-    particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
+    particles = pos.shape[0];  coord = pos.shape[1];  dims = number.shape[0]
     inv_cell_size = dims/BoxSize
     
     # define arrays: for 2D set we have C[2,:] = 1.0 and index[2,:] = 0
@@ -296,8 +296,8 @@ def TSC(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def TSCW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
-         np.float32_t[:] W):
+cdef void TSCW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
+               np.float32_t[:] W):
 
     cdef int axis,dims,minimum,j,l,m,n,coord
     cdef long i,particles
@@ -306,7 +306,7 @@ def TSCW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
     cdef int index[3][3]
 
     # find number of particles, the inverse of the cell size and dims
-    particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
+    particles = pos.shape[0];  coord = pos.shape[1];  dims = number.shape[0]
     inv_cell_size = dims/BoxSize
     
     # define arrays: for 2D set we have C[2,:] = 1.0 and index[2,:] = 0
@@ -342,7 +342,7 @@ def TSCW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def PCS(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
+cdef void PCS(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
 
     cdef int axis,dims,minimum,j,l,m,n,coord
     cdef long i,particles
@@ -351,7 +351,7 @@ def PCS(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
     cdef int index[3][4]
 
     # find number of particles, the inverse of the cell size and dims
-    particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
+    particles = pos.shape[0];  coord = pos.shape[1];  dims = number.shape[0]
     inv_cell_size = dims/BoxSize
         
     # define arrays: for 2D set we have C[2,:] = 1.0 and index[2,:] = 0
@@ -389,8 +389,8 @@ def PCS(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def PCSW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
-         np.float32_t[:] W):
+cdef void PCSW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
+               np.float32_t[:] W):
 
     cdef int axis,dims,minimum,j,l,m,n,coord
     cdef long i,particles
@@ -399,7 +399,7 @@ def PCSW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
     cdef int index[3][4]
 
     # find number of particles, the inverse of the cell size and dims
-    particles = len(pos);  coord = len(pos[0]);  dims = len(number);  
+    particles = pos.shape[0];  coord = pos.shape[1];  dims = number.shape[0]
     inv_cell_size = dims/BoxSize
 
     # define arrays: for 2D set we have C[2,:] = 1.0 and index[2,:] = 0
@@ -437,9 +437,9 @@ def PCSW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def CIC_interp(np.ndarray[np.float32_t,ndim=3] density, float BoxSize,
-               np.ndarray[np.float32_t,ndim=2] pos,
-               np.ndarray[np.float32_t,ndim=1] den):
+cpdef void CIC_interp(np.ndarray[np.float32_t,ndim=3] density, float BoxSize,
+                      np.ndarray[np.float32_t,ndim=2] pos,
+                      np.ndarray[np.float32_t,ndim=1] den):
 
     cdef int axis,dims
     cdef long i,particles
@@ -450,7 +450,8 @@ def CIC_interp(np.ndarray[np.float32_t,ndim=3] density, float BoxSize,
     cdef int index_d[3]
     
     # find number of particles, the inverse of the cell size and dims
-    particles = len(pos);  dims = len(density);  inv_cell_size = dims/BoxSize
+    particles = pos.shape[0];  dims = density.shape[0]
+    inv_cell_size = dims/BoxSize
 
     # do a loop over all particles
     for i in xrange(particles):
