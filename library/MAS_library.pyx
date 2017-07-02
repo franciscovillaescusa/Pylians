@@ -238,8 +238,6 @@ def NGPW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
             index[axis] = <int>(pos[i,axis]*inv_cell_size + 0.5)
             index[axis] = index[axis]%dims
         number[index[0],index[1],index[2]] += W[i]
-
-    return number
 ################################################################################
 
 ################################################################################
