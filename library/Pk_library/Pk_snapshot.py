@@ -78,11 +78,11 @@ def Pk_comp(snapshot_fname,ptype,dims,do_RSD,axis,hydro,cpus):
             M = readsnap.read_block(snapshot_fname,"MASS",parttype=-1)*1e10
         
         mean = np.sum(M,dtype=np.float64)/dims**3
-        MASL.CICW(pos,delta,BoxSize,M); del pos,M
+        MASL.MA(pos,delta,BoxSize,'CIC',M); del pos,M
 
     else:  
         mean = len(pos)*1.0/dims**3
-        MASL.CIC(pos,delta,BoxSize); del pos
+        MASL.MA(pos,delta,BoxSize,'CIC'); del pos
 
     # compute the P(k) and save results to file
     delta /= mean;  delta -= 1.0
@@ -185,7 +185,7 @@ def Pk_Gadget(snapshot_fname,dims,particle_type,do_RSD,axis,hydro,cpus):
 
         # compute the deltas
         delta[index] = np.zeros((dims,dims,dims),dtype=np.float32)
-        MASL.CIC(pos,delta[index],BoxSize);  del pos
+        MASL.MA(pos,delta[index],BoxSize,'CIC');  del pos
         delta[index] /= mean_number;  delta[index] -= 1.0
     #####################################################################
 
