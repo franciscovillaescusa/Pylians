@@ -14,6 +14,9 @@ ext_modules = [
 
     Extension("Pk_library.Pk_library", ["Pk_library/Pk_library.pyx"]),
 
+    Extension("Pk_library.bispectrum_library", 
+              ["Pk_library/bispectrum_library.pyx"]),
+
     Extension("redshift_space_library",["redshift_space_library.pyx"]),
 
     Extension("HI_library",["HI_library.pyx"]),

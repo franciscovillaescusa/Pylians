@@ -60,7 +60,7 @@ def MAS_function(MAS):
 # This function implement the MAS correction to modes amplitude
 #@cython.cdivision(False)
 #@cython.boundscheck(False)
-cdef double MAS_correction(double x, int MAS_index):
+cpdef inline double MAS_correction(double x, int MAS_index):
     return (1.0 if (x==0.0) else pow(x/sin(x),MAS_index))
 
 # This function checks that all independent modes have been counted
