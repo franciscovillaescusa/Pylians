@@ -32,16 +32,15 @@ cdef inline double MAS_correction(double x, int MAS_index):
 class Bk:
     def __init__(self, delta, BoxSize, k1, k2, theta, MAS='CIC', threads=1):
                  
-                 
         start = time.time()
         cdef int kxx, kyy, kzz, kx, ky, kz, MAS_index
         cdef int dims, dims2, middle, bins, i, j
         cdef long ID
         cdef list numbers
-        cdef double k, prefact, triangles
+        cdef double k, prefact, triangles, pairs
         cdef double MAS_corr[3]
         cdef np.ndarray[np.float64_t, ndim=1] k_min, k_max
-        cdef np.ndarray[np.float64_t, ndim=1] B
+        cdef np.ndarray[np.float64_t, ndim=1] B, Q, kall, Pk
         ####### change this for double precision ######
         cdef float MAS_factor
         cdef np.complex64_t[:,:,::1] delta_k, delta1_k, delta2_k, delta3_k
@@ -59,9 +58,13 @@ class Bk:
         # find the number of bins in theta. Define B, k_min, k_max arrays values of k3
         bins  = theta.shape[0]
         B     = np.zeros(bins,   dtype=np.float64)
+        Q     = np.zeros(bins,   dtype=np.float64)
         k_min = np.zeros(bins+2, dtype=np.float64)
         k_max = np.zeros(bins+2, dtype=np.float64)
+        k_all = np.zeros(bins+2, dtype=np.float64)
+        Pk    = np.zeros(bins+2, dtype=np.float64)
         k3    = np.sqrt((k2*np.sin(theta))**2 + (k2*np.cos(theta)+k1)**2)
+        k_all[0] = k1;  k_all[1] = k2;  k_all[2:] = k3
 
         # define the structure hosting the IDs of the cells within the spherical
         # shells. numbers[1] will be a list containing the IDs = dims^2*i+dims*j+k
@@ -80,7 +83,7 @@ class Bk:
 
         # do a loop over the independent modes.
         # compute k,k_par,k_per, mu for each mode. k's are in kF units
-        start2 = time.time();  prefact = np.pi/dims
+        prefact = np.pi/dims
         for kxx in xrange(dims):
             kx = (kxx-dims if (kxx>middle) else kxx)
             MAS_corr[0] = MAS_correction(prefact*kx,MAS_index)
@@ -125,6 +128,16 @@ class Bk:
         delta1 = PKL.IFFT3Dr_f(delta1_k, threads);  del delta1_k
         I1     = PKL.IFFT3Dr_f(I1_k,     threads);  del I1_k
 
+        # compute Pk(k1)
+        Pk[0],pairs = 0.0, 0.0
+        for kxx in xrange(dims):        
+            for kyy in xrange(dims):
+                for kzz in xrange(dims):
+                    Pk[0] += (delta1[kxx,kyy,kzz]*delta1[kxx,kyy,kzz])
+                    pairs += (I1[kxx,kyy,kzz]*I1[kxx,kyy,kzz])
+        Pk[0] = (Pk[0]/pairs)*(BoxSize/dims**2)**3
+        
+
         # fill the delta2_k array and compute delta2
         delta2_k = np.zeros((dims, dims, dims/2+1), dtype=np.complex64)
         I2_k     = np.zeros((dims, dims, dims/2+1), dtype=np.complex64)
@@ -136,6 +149,15 @@ class Bk:
         delta2 = PKL.IFFT3Dr_f(delta2_k, threads);  del delta2_k
         I2     = PKL.IFFT3Dr_f(I2_k,     threads);  del I2_k
         
+        # compute Pk(k2)
+        Pk[1],pairs = 0.0, 0.0
+        for kxx in xrange(dims):        
+            for kyy in xrange(dims):
+                for kzz in xrange(dims):
+                    Pk[1] += (delta2[kxx,kyy,kzz]*delta2[kxx,kyy,kzz])
+                    pairs += (I2[kxx,kyy,kzz]*I2[kxx,kyy,kzz])
+        Pk[1] = (Pk[1]/pairs)*(BoxSize/dims**2)**3
+
         # fill the delta3_k array for the different theta bins
         for j in xrange(bins):
             delta3_k = np.zeros((dims, dims, dims/2+1), dtype=np.complex64)
@@ -148,6 +170,15 @@ class Bk:
             delta3 = PKL.IFFT3Dr_f(delta3_k, threads)
             I3     = PKL.IFFT3Dr_f(I3_k,     threads)
 
+            # compute Pk(k3)
+            Pk[j+2],pairs = 0.0, 0.0
+            for kxx in xrange(dims):        
+                for kyy in xrange(dims):
+                    for kzz in xrange(dims):
+                        Pk[j+2] += (delta3[kxx,kyy,kzz]*delta3[kxx,kyy,kzz])
+                        pairs += (I3[kxx,kyy,kzz]*I3[kxx,kyy,kzz])
+            Pk[j+2] = (Pk[j+2]/pairs)*(BoxSize/dims**2)**3
+
             # make the final sum and save bispectrum in B
             B[j],triangles = 0.0, 0.0
             for kxx in xrange(dims):        
@@ -156,8 +187,52 @@ class Bk:
                         B[j] += (delta1[kxx,kyy,kzz]*delta2[kxx,kyy,kzz]*delta3[kxx,kyy,kzz])
                         triangles += (I1[kxx,kyy,kzz]*I2[kxx,kyy,kzz]*I3[kxx,kyy,kzz])
             B[j] = (B[j]/triangles)*(BoxSize**2/dims**3)**3                
+            Q[j] = B[j]/(Pk[0]*Pk[1]+Pk[0]*Pk[j+2]+Pk[1]*Pk[j+2])
     
-        self.B = B
-        print 'Time to compute bispectrum = %.2f'%(time.time()-start2)
+        self.B  = B
+        self.Q  = Q
+        self.k  = k_all
+        self.Pk = Pk
+        print 'Time to compute bispectrum = %.2f'%(time.time()-start)
 
 
+# F2 kernel
+def F2(k1_vec, k2_vec):
+    k1_mod = np.sqrt(np.dot(k1_vec, k1_vec))
+    k2_mod = np.sqrt(np.dot(k2_vec, k2_vec))
+    ctheta = np.dot(k1_vec, k2_vec)/(k1_mod*k2_mod)
+    return 5.0/7.0 + 1.0/2.0*ctheta*(k1_mod/k2_mod + k2_mod/k1_mod) + 2.0/7.0*ctheta**2
+        
+
+# This routine computes the tree-level bispectrum given k1,k2 and the linear Pk
+def Bispectrum_theory(k,Pk,k1,k2):
+
+    bins = 50
+    B = np.zeros(bins, dtype=np.float64)
+
+    thetas = np.linspace(0, np.pi, bins)
+    k1_vec = np.array([0, 0, k1])
+
+    Pk1 = np.interp(np.log(k1), np.log(k), Pk)
+    Pk2 = np.interp(np.log(k2), np.log(k), Pk)
+
+    for i,theta in enumerate(thetas):
+        k2_vec = np.array([0,  k2*np.sin(theta), k2*np.cos(theta)])
+        k3_vec = np.array([0, -k2*np.sin(theta),-k2*np.cos(theta)-k1])
+        k3 = np.sqrt(np.dot(k3_vec, k3_vec))
+        Pk3 = np.interp(np.log(k3), np.log(k), Pk)
+        
+        F2_12 = F2(k1_vec, k2_vec)
+        F2_13 = F2(k1_vec, k3_vec)
+        F2_23 = F2(k2_vec, k3_vec)
+
+        B[i] = 2.0*Pk1*Pk2*F2_12 + 2.0*Pk1*Pk3*F2_13 + 2.0*Pk2*Pk3*F2_23
+        print F2_12, F2_13, F2_23
+        print k1,k2,k3
+        print Pk1,Pk2,Pk3
+        print B[i]
+        print '' 
+
+    return thetas,B
+        
+        
