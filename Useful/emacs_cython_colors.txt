@@ -1,6 +1,6 @@
 In order to enable color highlights in emacs while writting in cython:
 
-1) Place the file cython-mode.el in ~/emacs.d/
+1) Place the file cython-mode.el in ~/.emacs.d/
    If you dont have that file in your system just google it
 
 2) Open the file ~/.emacs and add at the end:

@@ -7,8 +7,8 @@ import Pk_library as PKL
 import sys,os
 
 ########### routines ############
-# Pk_comp(snapshot_fname,ptype,dims,do_RSD,axis,hydro,cpus)
-# Pk_Gadget(snapshot_fname,dims,particle_type,do_RSD,axis,hydro,cpus)
+# Pk_comp(snapshot_fname,ptype,dims,do_RSD,axis,cpus)
+# Pk_Gadget(snapshot_fname,dims,particle_type,do_RSD,axis,cpus)
 #################################
 
 
@@ -29,10 +29,9 @@ name_dict = {'0' :'GAS',  '01':'GCDM',  '02':'GNU',    '04':'Gstars',
 # dims ---------------------> Total number of cells is dims^3 to compute Pk
 # do_RSD -------------------> Pk in redshift-space (True) or real-space (False)
 # axis ---------------------> axis along which move particles in redshift-space
-# hydro --------------------> whether snapshot is hydro (True) or not (False)
 # cpus ---------------------> Number of cpus to compute power spectra 
 # folder_out ---------------> directory where to save the output
-def Pk_comp(snapshot_fname,ptype,dims,do_RSD,axis,hydro,cpus,folder_out):
+def Pk_comp(snapshot_fname,ptype,dims,do_RSD,axis,cpus,folder_out):
 
     # read relevant paramaters on the header
     print 'Computing power spectrum...'
@@ -69,7 +68,7 @@ def Pk_comp(snapshot_fname,ptype,dims,do_RSD,axis,hydro,cpus,folder_out):
 
     # when dealing with all particles take into account their different masses
     if ptype==-1:
-        if not(hydro):
+        if Nall[0]==0: #if not hydro
             M = np.zeros(Ntotal,dtype=np.float32) #define the mass array
             offset = 0
             for ptype in [0,1,2,3,4,5]:
@@ -103,10 +102,9 @@ def Pk_comp(snapshot_fname,ptype,dims,do_RSD,axis,hydro,cpus,folder_out):
 # particle_type ------------> compute Pk of those particles, e.g. [1,2]
 # do_RSD -------------------> Pk in redshift-space (True) or real-space (False)
 # axis ---------------------> axis along which move particles in redshift-space
-# hydro --------------------> whether snapshot is hydro (True) or not (False)
 # cpus ---------------------> Number of cpus to compute power spectra
 # folder_out ---------------> folder where to put outputs
-def Pk_Gadget(snapshot_fname,dims,particle_type,do_RSD,axis,hydro,cpus,
+def Pk_Gadget(snapshot_fname,dims,particle_type,do_RSD,axis,cpus,
               folder_out=None):
 
     # find folder to place output files. Default is current directory
@@ -115,7 +113,7 @@ def Pk_Gadget(snapshot_fname,dims,particle_type,do_RSD,axis,hydro,cpus,
     # for either one single species or all species use this routine
     if len(particle_type)==1:
         Pk_comp(snapshot_fname,particle_type[0],dims,do_RSD,
-                axis,hydro,cpus,folder_out)
+                axis,cpus,folder_out)
         return None
 
     # read snapshot head and obtain BoxSize, Omega_m and Omega_L

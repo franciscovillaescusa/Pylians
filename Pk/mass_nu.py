@@ -12,7 +12,7 @@ parser.add_argument("Pk_file", help="computes sigma_8 value from file")
 parser.add_argument("Omega_cb", type=float, help="value of Omega_cb")
 parser.add_argument("--Mmin", default=1e9,  type=float, help="Mmin in Msun/h")
 parser.add_argument("--Mmax", default=1e15, type=float, help="Mmax in Msun/h")
-parser.add_argument("--bins", default=60,   type=float, help="number of bins")
+parser.add_argument("--bins", default=60,   type=int, help="number of bins")
 args = parser.parse_args()
 
 # find values of rho_crit, delta_c, Mmin, Mmax and bins
