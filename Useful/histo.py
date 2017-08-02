@@ -42,7 +42,10 @@ else:
 elements_x = np.histogram(x,bins=bins)[0] #number of elements in the x-bins
 sum_y      = np.histogram(x,bins=bins,weights=y)[0] #sum of y in the x-bins
 mean_y     = sum_y*1.0/elements_x #mean value of y in the x-bins
+sum_y2     = np.histogram(x,bins=bins,weights=y**2)[0] #sum of y^2 in the x-bins
+std_y      = np.sqrt(sum_y2*1.0/elements_x - mean_y**2)
 
 # save results to file
-np.savetxt(args.file_out, np.transpose([mean_x, mean_y, elements_x, sum_y]))
+np.savetxt(args.file_out, np.transpose([mean_x, mean_y, std_y,
+                                        elements_x, sum_y]))
 
