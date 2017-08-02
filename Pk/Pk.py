@@ -10,7 +10,6 @@ snapshot_fname = ['../ics',
                   
 dims           = 1024
 particle_type  = [1,2] #list with particle types. [-1] for total matter
-hydro          = False
 cpus           = 14
 ###############################################################################
 
@@ -19,13 +18,13 @@ for snapshot in snapshot_fname:
 
     ######## REAL-SPACE ########
     do_RSD = False;  axis = 0 
-    PKL.Pk_Gadget(snapshot,dims,particle_type,do_RSD,axis,hydro,cpus)
+    PKL.Pk_Gadget(snapshot,dims,particle_type,do_RSD,axis,cpus)
                   
 
     ###### REDSHIFT-SPACE ######
     do_RSD = True
     for axis in [0,1,2]:
-        PKL.Pk_Gadget(snapshot,dims,particle_type,do_RSD,axis,hydro,cpus)
+        PKL.Pk_Gadget(snapshot,dims,particle_type,do_RSD,axis,cpus)
                   
 
 

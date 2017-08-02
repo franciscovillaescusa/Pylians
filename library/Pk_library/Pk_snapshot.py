@@ -7,8 +7,8 @@ import Pk_library as PKL
 import sys,os
 
 ########### routines ############
-# Pk_comp(snapshot_fname,ptype,dims,do_RSD,axis,hydro,cpus)
-# Pk_Gadget(snapshot_fname,dims,particle_type,do_RSD,axis,hydro,cpus)
+# Pk_comp(snapshot_fname,ptype,dims,do_RSD,axis,cpus)
+# Pk_Gadget(snapshot_fname,dims,particle_type,do_RSD,axis,cpus)
 #################################
 
 
@@ -29,9 +29,9 @@ name_dict = {'0' :'GAS',  '01':'GCDM',  '02':'GNU',    '04':'Gstars',
 # dims ---------------------> Total number of cells is dims^3 to compute Pk
 # do_RSD -------------------> Pk in redshift-space (True) or real-space (False)
 # axis ---------------------> axis along which move particles in redshift-space
-# hydro --------------------> whether snapshot is hydro (True) or not (False)
 # cpus ---------------------> Number of cpus to compute power spectra 
-def Pk_comp(snapshot_fname,ptype,dims,do_RSD,axis,hydro,cpus):
+# folder_out ---------------> directory where to save the output
+def Pk_comp(snapshot_fname,ptype,dims,do_RSD,axis,cpus,folder_out):
 
     # read relevant paramaters on the header
     print 'Computing power spectrum...'
@@ -46,7 +46,7 @@ def Pk_comp(snapshot_fname,ptype,dims,do_RSD,axis,hydro,cpus):
     z        = '%.3f'%redshift
         
     # find output file name
-    fout = 'Pk_' + name_dict[str(ptype)]
+    fout = folder_out+'/Pk_' + name_dict[str(ptype)]
     if do_RSD:  fout += ('_RS_axis=' + str(axis) + '_z=' + z + '.dat')
     else:       fout +=                           ('_z=' + z + '.dat')
 
@@ -68,7 +68,7 @@ def Pk_comp(snapshot_fname,ptype,dims,do_RSD,axis,hydro,cpus):
 
     # when dealing with all particles take into account their different masses
     if ptype==-1:
-        if not(hydro):
+        if Nall[0]==0: #if not hydro
             M = np.zeros(Ntotal,dtype=np.float32) #define the mass array
             offset = 0
             for ptype in [0,1,2,3,4,5]:
@@ -102,13 +102,18 @@ def Pk_comp(snapshot_fname,ptype,dims,do_RSD,axis,hydro,cpus):
 # particle_type ------------> compute Pk of those particles, e.g. [1,2]
 # do_RSD -------------------> Pk in redshift-space (True) or real-space (False)
 # axis ---------------------> axis along which move particles in redshift-space
-# hydro --------------------> whether snapshot is hydro (True) or not (False)
 # cpus ---------------------> Number of cpus to compute power spectra
-def Pk_Gadget(snapshot_fname,dims,particle_type,do_RSD,axis,hydro,cpus):
+# folder_out ---------------> folder where to put outputs
+def Pk_Gadget(snapshot_fname,dims,particle_type,do_RSD,axis,cpus,
+              folder_out=None):
+
+    # find folder to place output files. Default is current directory
+    if folder_out is None:  folder_out = os.getcwd()
 
     # for either one single species or all species use this routine
     if len(particle_type)==1:
-        Pk_comp(snapshot_fname,particle_type[0],dims,do_RSD,axis,hydro,cpus)
+        Pk_comp(snapshot_fname,particle_type[0],dims,do_RSD,
+                axis,cpus,folder_out)
         return None
 
     # read snapshot head and obtain BoxSize, Omega_m and Omega_L
@@ -198,9 +203,12 @@ def Pk_Gadget(snapshot_fname,dims,particle_type,do_RSD,axis,hydro,cpus):
             index1 = index_dict[ptype1];  index2 = index_dict[ptype2]
 
             # choose the name of the output files
-            fout1  = 'Pk_' + name_dict[str(ptype1)]             + suffix
-            fout2  = 'Pk_' + name_dict[str(ptype2)]             + suffix
-            fout12 = 'Pk_' + name_dict[str(ptype1)+str(ptype2)] + suffix
+            fout1  = '/Pk_' + name_dict[str(ptype1)]             + suffix
+            fout2  = '/Pk_' + name_dict[str(ptype2)]             + suffix
+            fout12 = '/Pk_' + name_dict[str(ptype1)+str(ptype2)] + suffix
+            fout1  = folder_out + fout1
+            fout2  = folder_out + fout2
+            fout12 = folder_out + fout12
 
             # some verbose
             print '\nComputing the auto- and cross-power spectra of types: '\
@@ -238,7 +246,7 @@ def Pk_Gadget(snapshot_fname,dims,particle_type,do_RSD,axis,hydro,cpus):
     # define delta of all components
     delta_tot = np.zeros((dims,dims,dims),dtype=np.float32)
 
-    Omega_tot = 0.0;  fout = 'Pk_'
+    Omega_tot = 0.0;  fout = folder_out + '/Pk_'
     for ptype in particle_type:
         index = index_dict[ptype]
         delta_tot += (Omega_dict[ptype]*delta[index])
