@@ -8,7 +8,7 @@ f_out = 'slice_new.png'
 ###############################################################################
 
 # read image and create structure for the new image
-data = misc.imread('slice.png');  data2 = np.zeros_like(data)
+data = misc.imread(f_in);  data2 = np.zeros_like(data)
 print 'data format =',data.shape
 
 # go to each pixel and change colors, opacity...etc
