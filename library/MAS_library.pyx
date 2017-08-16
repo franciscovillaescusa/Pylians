@@ -2,7 +2,7 @@ import numpy as np
 import time,sys,os
 cimport numpy as np
 cimport cython
-from libc.math cimport sqrt,pow,sin,floor,fabs
+from libc.math cimport sqrt,pow,sin,cos,floor,fabs
 
 
 ################################################################################
@@ -480,3 +480,87 @@ cpdef void CIC_interp(np.ndarray[np.float32_t,ndim=3] density, float BoxSize,
                  density[index_u[0],index_u[1],index_d[2]]*u[0]*u[1]*d[2]+\
                  density[index_u[0],index_u[1],index_u[2]]*u[0]*u[1]*u[2]
 ################################################################################
+
+
+# This routine computes the 2D density field from a set of voronoi cells that
+# have masses and volumes.
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+cpdef void voronoi_NGP_2D(np.ndarray[np.float64_t,ndim=2] density, 
+                          np.ndarray[np.float32_t,ndim=2] pos,
+                          np.ndarray[np.float32_t,ndim=1] mass,
+                          np.ndarray[np.float32_t,ndim=1] volume,
+                          float x_min, float y_min, float BoxSize,
+                          long particles_per_cell, int r_divisions):
+
+    cdef float pi = np.pi
+    cdef long i, j, k, particles, particles_shell, dims
+    cdef double R1, R2, V_shell, dtheta, angle
+    cdef np.float32_t[:] R
+    cdef np.float32_t[:,:] pos_tracer
+    cdef float radius, x, y, inv_cell_size, W, radius_voronoi_cell
+    cdef int index_x, index_y
+
+    # verbose
+    print 'Finding density field of the voronoi tracers...'
+    start = time.time()
+
+    # find the number of particles to analyze and inv_cell_size
+    particles     = pos.shape[0]
+    dims          = density.shape[0]
+    inv_cell_size = dims*1.0/BoxSize
+
+    # compute the number of particles in each shell and the angle between them
+    particles_shell = particles_per_cell/r_divisions
+    dtheta          = 2.0*pi/particles_shell
+
+    # define the array containing the normalized radii
+    R = np.zeros(r_divisions, dtype=np.float32)
+
+    # do a loop over the different shells and compute the mean radii to them
+    V_shell, R1 = (4.0*pi/3.0)/r_divisions, 0.0
+    for j in xrange(r_divisions):
+        R2 = (3.0*V_shell/(4.0*pi) + R1**3)**(1.0/3.0)
+        R[j] = 0.5*(R1+R2)
+        R1 = R2
+
+    # define and fill the array containing pos_tracer
+    pos_tracer = np.zeros((particles_shell,2), dtype=np.float32)
+    angle = 0.0
+    for i in xrange(particles_shell):
+        pos_tracer[i,0] = cos(angle)
+        pos_tracer[i,1] = sin(angle)
+        angle += dtheta
+        
+        
+        
+    # do a loop over all particles
+    for i in xrange(particles):
+        
+        # compute the weight of each voronoi-cell tracer
+        W = mass[i]*1.0/(particles_shell*r_divisions)
+        
+        # compute the "radius" of the voronoi cell
+        radius_voronoi_cell = (3.0*volume[i]/(4.0*pi))**(1.0/3.0)
+
+        # do a loop over the different shells of the sphere
+        for j in xrange(r_divisions):
+
+            radius = R[j]*radius_voronoi_cell
+            
+            # do a loop over all particles in the shell
+            for k in xrange(particles_shell):
+                
+                x = pos[i,0] + radius*pos_tracer[k,0]
+                y = pos[i,1] + radius*pos_tracer[k,1]
+            
+                index_x = <int>((x-x_min)*inv_cell_size + 0.5)
+                index_y = <int>((y-y_min)*inv_cell_size + 0.5)
+                
+                density[index_x, index_y] += W
+
+    print 'Time taken = %.3f s'%(time.time()-start)
+
+
+
