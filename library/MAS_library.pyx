@@ -496,7 +496,7 @@ cpdef void voronoi_NGP_2D(np.ndarray[np.float64_t,ndim=2] density,
 
     cdef float pi = np.pi
     cdef long i, j, k, particles, particles_shell, dims
-    cdef double R1, R2, V_shell, dtheta, angle
+    cdef double R1, R2, A_shell, dtheta, angle
     cdef np.float32_t[:] R
     cdef np.float32_t[:,:] pos_tracer
     cdef float radius, x, y, inv_cell_size, W, radius_voronoi_cell
@@ -519,9 +519,9 @@ cpdef void voronoi_NGP_2D(np.ndarray[np.float64_t,ndim=2] density,
     R = np.zeros(r_divisions, dtype=np.float32)
 
     # do a loop over the different shells and compute the mean radii to them
-    V_shell, R1 = (4.0*pi/3.0)/r_divisions, 0.0
+    A_shell, R1 = 4.0*pi/r_divisions, 0.0
     for j in xrange(r_divisions):
-        R2 = (3.0*V_shell/(4.0*pi) + R1**3)**(1.0/3.0)
+        R2 = sqrt(A_shell/(4.0*pi) + R1**2)
         R[j] = 0.5*(R1+R2)
         R1 = R2
 
