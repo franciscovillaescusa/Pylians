@@ -8,6 +8,7 @@ import sys,os
 hierarchy = 'normal' #'degenerate', 'normal', 'inverted'
 Mnu       = 0.06  #eV
 Nnu       = 3  #number of massive neutrinos
+Neff      = 3.046
 
 # cosmological parameters
 h       = 0.6711
@@ -55,7 +56,8 @@ pars.set_accuracy(AccuracyBoost=5.0, lSampleBoost=5.0,
 pars.set_cosmology(H0=h*100.0, ombh2=Omega_b*h**2, omch2=Omega_c*h**2, 
                    mnu=Mnu, omk=Omega_k, 
                    neutrino_hierarchy=hierarchy, 
-                   num_massive_neutrinos = Nnu,
+                   num_massive_neutrinos=Nnu,
+                   nnu=Neff,
                    tau=tau)
                    
 # set the value of the primordial power spectrum parameters
