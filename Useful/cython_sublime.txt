@@ -1,0 +1,5 @@
+>> preferences >> Package control
+
+Install package
+
+Cython
