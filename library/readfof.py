@@ -21,7 +21,7 @@
 #GroupVel by (1+z)
 
 import numpy as np
-import os
+import os, sys
 from struct import unpack
 
 class FoF_catalog:
@@ -84,6 +84,7 @@ class FoF_catalog:
             f.seek(0,os.SEEK_END)
             if curpos != f.tell():
                 print "Warning: finished reading before EOF for tab file",fnb
+                sys.exit()
             f.close()
             fnb+=1
             if fnb==self.Nfiles: Final=True
@@ -118,6 +119,7 @@ class FoF_catalog:
                 f.seek(0,os.SEEK_END)
                 if curpos != f.tell():
                     print "Warning: finished reading before EOF for IDs file",fnb
+                    sys.exit()
                 f.close()
                 fnb+=1
                 if fnb==Nfiles: Final=True
