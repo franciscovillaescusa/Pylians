@@ -25,13 +25,19 @@ snapdir = args.snapdir
 
 for snapnum in args.snapnums:
 
+    print '\nWorking with snapnum %d'%snapnum
+
     # find the names of the old and new group folders
     FoF_folder     = snapdir+'groups_%03d'%snapnum
     old_FoF_folder = snapdir+'original_groups/'
 
-    # create original FoF folder
+    # if original files exists continue
     if os.path.exists(old_FoF_folder+'groups_%03d'%snapnum):
-        raise Exception('files already merged!')
+        continue
+
+    # if files already merger continue
+    if len(os.listdir(FoF_folder))<3:
+        continue
 
     # create new FoF file
     f_tab = '%s/group_tab_%03d.0'%(snapdir,snapnum)
@@ -60,7 +66,7 @@ for snapnum in args.snapnums:
     if Nids_in!=Nids_out:
         raise Exception('Number of FoF halos is different in new/old files!!!')
         
-    print '\nFiles correctly merged!!!'
+    print 'Files correctly merged!!!'
     print '# of halos in original file = %ld'%Ngroups_in
     print '# of halos in new file      = %ld'%Ngroups_out
     print '# of ids   in original file = %ld'%Nids_in
