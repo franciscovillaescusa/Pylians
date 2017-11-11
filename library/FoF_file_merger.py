@@ -40,7 +40,7 @@ for snapnum in args.snapnums:
                               swap=args.swap, SFR=args.SFR)
     Ngroups_in = FoF.TotNgroups
     Nids_in    = FoF.TotNids
-    readfof.writeFoFCatalog(FoF, f_tab, idsFile=f_ids)
+    readfof.writeFoFCatalog(FoF, f_tab, idsFile=f_ids);  del FoF
            
     # rename FoF folder, create new FoF folder and move files to it
     if not(os.path.exists(old_FoF_folder)):
@@ -53,7 +53,7 @@ for snapnum in args.snapnums:
     FoF = readfof.FoF_catalog(snapdir, snapnum, long_ids=args.long_ids, 
                               swap=args.swap, SFR=args.SFR)
     Ngroups_out = FoF.TotNgroups
-    Nids_out    = FoF.TotNids
+    Nids_out    = FoF.TotNids;  del FoF
 
     if Ngroups_in!=Ngroups_out:
         raise Exception('Number of FoF halos is different in new/old files!!!')
