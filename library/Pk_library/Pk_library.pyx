@@ -7,7 +7,7 @@ cimport cython
 #from cython.parallel import prange
 from libc.math cimport sqrt,pow,sin,log10,abs
 from libc.stdlib cimport malloc, free
-from libcpp cimport bool
+from cpython cimport bool
 
 ################################ ROUTINES ####################################
 # Pk(delta, BoxSize, axis=2, MAS='CIC', threads=1)
@@ -1397,9 +1397,9 @@ def correct_MAS(delta,BoxSize,MAS='CIC',threads=1):
     delta = IFFT3Dr_f(delta_k,threads)
     #################################
 
-    return delta
-
     print 'Time taken = %.2f seconds'%(time.time()-start)
+
+    return delta
 ################################################################################
 ################################################################################
 
@@ -1418,15 +1418,18 @@ def correct_MAS(delta,BoxSize,MAS='CIC',threads=1):
 def expected_Pk(np.float32_t[:] k_in, np.float32_t[:] Pk_in, 
                 float BoxSize, int dims):
 
-    cdef int k_len,i 
+    cdef int k_len, i, j, bins
     cdef int kx, kxx, ky, kyy, kz, kzz, middle, k_index
     cdef float kF, kN, k0, k, Pk_interp
+    cdef float kmin_in, kmax_in, deltak
     cdef np.float64_t[::1] k3D, Pk3D, Nmodes3D
+    cdef np.float32_t[::1] k_in_interp, Pk_in_interp
 
     start2 = time.time()
 
     middle = dims/2
     kF,kN,kmax_par,kmax_per,kmax = frequencies(BoxSize,dims)
+    bins = 750 #number of bins in the interpolated k_input,Pk_input
 
     # check if input Pk is sorted
     k_len = k_in.shape[0]
@@ -1436,8 +1439,21 @@ def expected_Pk(np.float32_t[:] k_in, np.float32_t[:] Pk_in,
         k0 = k_in[i]
 
     # check that k from grid are within input k range
-    if k_in[0]<kF or k_in[k_len]>kmax*kF:
+    if kF<k_in[0] or kmax*kF>k_in[k_len-1]:
         raise Exception('k value in grid outside input k range')
+
+    # create a new interpolated array
+    kmin_in = k_in[0];  kmax_in = k_in[k_len-1];  j = 1
+    deltak = (log10(kmax_in) - log10(kmin_in))/(bins-1.0)
+    k_in_interp  = np.zeros(bins, dtype=np.float32)
+    Pk_in_interp = np.zeros(bins, dtype=np.float32)
+    for i in xrange(bins):
+        k_in_interp[i] = 10**(log10(kmin_in) + deltak*i)
+        while (1):
+            if k_in_interp[i]>k_in[j]:  j+=1
+            else:                       break
+        Pk_in_interp[i] = (Pk_in[j]-Pk_in[j-1])/(k_in[j]-k_in[j-1])*\
+                          (k_in_interp[i]-k_in[j-1]) + Pk_in[j-1]
 
     # define arrays containing k3D, Pk3D and Nmodes3D. We need kmax+1
     # bins since the mode (middle,middle, middle) has an index = kmax
@@ -1475,11 +1491,8 @@ def expected_Pk(np.float32_t[:] k_in, np.float32_t[:] Pk_in,
                 k = k*kF
 
                 # find the value of Pk(k) by interpolating input Pk
-                for i in xrange(1,k_len):
-                    if k_in[i]>=k:
-                        Pk_interp = (Pk_in[i]-Pk_in[i-1])/(k_in[i]-k_in[i-1])*\
-                                    (k-k_in[i-1]) + Pk_in[i-1]
-                        break
+                i = <int>((log10(k) - log10(kmin_in))/deltak)
+                Pk_interp = (Pk_in_interp[i+1]-Pk_in_interp[i])/(k_in_interp[i+1]-k_in_interp[i])*(k-k_in_interp[i]) + Pk_in_interp[i]
 
                 # Pk3D
                 k3D[k_index]      += k

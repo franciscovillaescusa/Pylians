@@ -47,10 +47,10 @@ if obj_type=='Pk':
     for input_file, f_out in zip(input_files, f_outs):
 
         # read input file
-        k_in, Pk_in = np.loadtxt(input_file,unpack=True)
+        k_in, Pk_in = np.loadtxt(input_file, dtype=np.float32, unpack=True)
 
         # compute expected Pk
-        k, Pk, Nmodes = PKL.expected(k_in, Pk_in, BoxSize, dims)
+        k, Pk, Nmodes = PKL.expected_Pk(k_in, Pk_in, BoxSize, dims)
 
         # save results to file ignoring DC mode
         np.savetxt(f_out, np.transpose([k,Pk,Nmodes]))
