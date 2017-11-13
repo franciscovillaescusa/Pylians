@@ -7,6 +7,7 @@ cimport cython
 #from cython.parallel import prange
 from libc.math cimport sqrt,pow,sin,log10,abs
 from libc.stdlib cimport malloc, free
+from libcpp cimport bool
 
 ################################ ROUTINES ####################################
 # Pk(delta, BoxSize, axis=2, MAS='CIC', threads=1)
@@ -36,6 +37,9 @@ from libc.stdlib cimport malloc, free
 
 # correct_MAS(delta,BoxSize,MAS='CIC',threads=1)
 #   delta_corrected
+
+# expected_Pk(k, Pk, BoxSize, dims)
+#   [k, Pk]
 ##############################################################################
 
 # This function determines the fundamental (kF) and Nyquist (kN) frequencies
@@ -1398,3 +1402,96 @@ def correct_MAS(delta,BoxSize,MAS='CIC',threads=1):
     print 'Time taken = %.2f seconds'%(time.time()-start)
 ################################################################################
 ################################################################################
+
+################################################################################
+################################################################################
+# This function computes the expected k, Pk for a cubic box with a resolution
+# of dims^3 given an input Pk. This routine can be used when comparing the Pk
+# from a simulation against expected one from linear theory or PT
+# k -----------> input k array
+# Pk ----------> input Pk array
+# BoxSize -----> size of the cubic box
+# dims --------> grid size
+@cython.boundscheck(False)
+@cython.cdivision(True)
+@cython.wraparound(False)
+def expected_Pk(np.float32_t[:] k_in, np.float32_t[:] Pk_in, 
+                float BoxSize, int dims):
+
+    cdef int k_len,i 
+    cdef int kx, kxx, ky, kyy, kz, kzz, middle, k_index
+    cdef float kF, kN, k0, k, Pk_interp
+    cdef np.float64_t[::1] k3D, Pk3D, Nmodes3D
+
+    start2 = time.time()
+
+    middle = dims/2
+    kF,kN,kmax_par,kmax_per,kmax = frequencies(BoxSize,dims)
+
+    # check if input Pk is sorted
+    k_len = k_in.shape[0]
+    k0    = k_in[0]
+    for i in xrange(1,k_len):
+        if k_in[i]<=k0:  raise Exception("Input k-array not sorted!!!")
+        k0 = k_in[i]
+
+    # check that k from grid are within input k range
+    if k_in[0]<kF or k_in[k_len]>kmax*kF:
+        raise Exception('k value in grid outside input k range')
+
+    # define arrays containing k3D, Pk3D and Nmodes3D. We need kmax+1
+    # bins since the mode (middle,middle, middle) has an index = kmax
+    k3D      = np.zeros(kmax+1, dtype=np.float64)
+    Pk3D     = np.zeros(kmax+1, dtype=np.float64)
+    Nmodes3D = np.zeros(kmax+1, dtype=np.float64)
+
+
+    # do a loop over the independent modes.
+    # compute k,k_par,k_per, mu for each mode. k's are in kF units
+    for kxx in xrange(dims):
+        kx = (kxx-dims if (kxx>middle) else kxx)
+        
+        for kyy in xrange(dims):
+            ky = (kyy-dims if (kyy>middle) else kyy)
+
+            for kzz in xrange(middle+1): #kzz=[0,1,..,middle] --> kz>0
+                kz = (kzz-dims if (kzz>middle) else kzz)
+
+                # kz=0 and kz=middle planes are special
+                if kz==0 or (kz==middle and dims%2==0):
+                    if kx<0: continue
+                    elif kx==0 or (kx==middle and dims%2==0):
+                        if ky<0.0: continue
+
+
+                # compute |k| of the mode and its integer part
+                k       = sqrt(kx*kx + ky*ky + kz*kz)
+                k_index = <int>k
+
+                # avoid the DC mode
+                if k==0.0:  continue
+
+                # give units to k
+                k = k*kF
+
+                # find the value of Pk(k) by interpolating input Pk
+                for i in xrange(1,k_len):
+                    if k_in[i]>=k:
+                        Pk_interp = (Pk_in[i]-Pk_in[i-1])/(k_in[i]-k_in[i-1])*\
+                                    (k-k_in[i-1]) + Pk_in[i-1]
+                        break
+
+                # Pk3D
+                k3D[k_index]      += k
+                Pk3D[k_index]     += Pk_interp
+                Nmodes3D[k_index] += 1.0
+
+    # final post-processing
+    k3D  = k3D[1:];  Nmodes3D = Nmodes3D[1:];  Pk3D = Pk3D[1:]
+    for i in xrange(k3D.shape[0]):
+        k3D[i]  = (k3D[i]/Nmodes3D[i])
+        Pk3D[i] = (Pk3D[i]/Nmodes3D[i])
+
+    print 'Time take = %.2f'%(time.time()-start2)
+
+    return k3D, Pk3D, Nmodes3D
