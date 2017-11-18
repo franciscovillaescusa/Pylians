@@ -21,6 +21,12 @@ ext_modules = [
 
     Extension("HI_library",["HI_library.pyx"]),
 
+    Extension("void_library.void_library", ["void_library/void_library.pyx"],
+              libraries=["m"],
+              extra_compile_args = ["-O3", "-ffast-math", "-march=native", 
+                                    "-fopenmp" ],
+              extra_link_args=['-fopenmp'])
+
     #Extension("nearest_point_library",["nearest_point_library.pyx"]),
     #extra_link_args=['-O3']),
     #extra_compile_args=['-O3', '-fopenmp'],
