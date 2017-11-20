@@ -636,7 +636,8 @@ cpdef void voronoi_RT_2D_no_periodic(np.ndarray[np.float64_t,ndim=2] density,
                                      np.ndarray[np.float32_t,ndim=2] pos,
                                      np.ndarray[np.float32_t,ndim=1] mass,
                                      np.ndarray[np.float32_t,ndim=1] radius,
-                                     float x_min, float y_min, float BoxSize):
+                                     float x_min, float y_min, float BoxSize,
+                                     verbose=True):
 
     start = time.time()
     cdef long particles, i
@@ -684,4 +685,4 @@ cpdef void voronoi_RT_2D_no_periodic(np.ndarray[np.float64_t,ndim=2] density,
                 if dist2<radius2:
                     density[i_cell,j_cell] += 2.0*rho*sqrt(radius2 - dist2)
                     
-    print 'Time taken = %.2f seconds'%(time.time()-start)
+    if verbose:  print 'Time taken = %.2f seconds'%(time.time()-start)
