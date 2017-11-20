@@ -1,11 +1,13 @@
 import numpy as np 
 import time,sys,os,h5py
+import readsnapHDF5 as rs
 cimport numpy as np
 cimport cython
-from libc.math cimport sqrt,pow,sin,log10,abs,exp,log
+from libc.math cimport sqrt,pow,sin,log10,abs,exp,log,rint
 import readsnap, groupcat
 import units_library as UL
 import MAS_library as MASL
+import units_library as UL
 
 
 ################################# UNITS #####################################
@@ -303,16 +305,23 @@ cpdef M_HI_halos_galaxies(np.int64_t[:] pars, done,
                 
             # update halo variables
             halo_num += 1
-            if halo_num<num_halos:  
-                start_h = end_h
-                end_h   = end_h + halo_len[halo_num]
-            else:
+
+            if halo_num>=num_halos:
                 # check that all galaxies have been counted
                 if gal_num!=np.sum(gal_in_halo, dtype=np.int64)-1:
                     print 'gal_num  = %ld'%gal_num
                     print 'galaxies = %ld'%(np.sum(gal_in_halo, dtype=np.int64)-1)
                     raise Exception("Finished without counting all galaxies")
                 done = True;  break
+
+            #if halo_num<num_halos:
+                #start_h = end_h
+                #end_h   = end_h + halo_len[halo_num]
+            while halo_len[halo_num]==0 and halo_num<num_halos:
+                gal_num  += gal_in_halo[halo_num]
+                halo_num += 1
+            start_h = end_h
+            end_h   = end_h + halo_len[halo_num]
 
             # restart galaxy variables
             if gal_num<num_galaxies and gal_in_halo[halo_num]>0:
@@ -510,6 +519,721 @@ def HI_from_UVB(snapshot_fname, double Gamma_UVB,
 
     print 'Time taken = %.3f s'%(time.clock()-start)
     return np.asarray(nH0)
+############################################################################
+
+
+############################################################################
+# This routine looks for halos around the selected halos
+@cython.boundscheck(False)
+@cython.cdivision(True)
+@cython.wraparound(False)
+cpdef locate_nearby_halos(np.float32_t[:,:] halos_pos, 
+        np.float32_t[:,:] selected_halos_pos, float BoxSize):
+
+    print 'Starting routine...';  start = time.time()
+    cdef np.int64_t[:] index, index_sort, indexes, cube_indexes
+    cdef int ii, jj, kk, dims2, iii, jjj, kkk
+    cdef long all_halos, selected_halos, i, j, dims3
+    cdef int dims, number
+    cdef np.float32_t[:,:] halos_pos_new
+    cdef float dist, x, y, z
+    cdef np.int64_t[:] offset
+
+    # find the total number of halos in the catalogue
+    all_halos = halos_pos.shape[0]
+    selected_halos = selected_halos_pos.shape[0]
+    dims  = <int>(BoxSize/2.0) # we consider the max radius of a halo to be 2 Mpc/h
+    dims2 = dims*dims
+    dims3 = dims*dims*dims
+
+    # for each halo compute its index
+    index      = np.zeros(all_halos,   dtype=np.int64)-1 #initialize to -1
+    index_sort = np.zeros(all_halos,   dtype=np.int64)
+    cube_indexes = np.zeros(27, dtype=np.int64)
+
+    # for each halo find its index
+    for i in xrange(all_halos):
+        ii = <int>(halos_pos[i,0]*dims/BoxSize)
+        if ii==dims:  ii = 0
+        jj = <int>(halos_pos[i,1]*dims/BoxSize)
+        if jj==dims:  jj = 0
+        kk = <int>(halos_pos[i,2]*dims/BoxSize)
+        if kk==dims:  kk = 0
+
+        index[i] = ii*dims2 + jj*dims + kk
+
+
+    indexes = np.argsort(index)
+    halos_pos_new = np.copy(halos_pos)
+    print index
+
+    for i in xrange(indexes.shape[0]):
+        halos_pos_new[i,0] = halos_pos[indexes[i],0]
+        halos_pos_new[i,1] = halos_pos[indexes[i],1]
+        halos_pos_new[i,2] = halos_pos[indexes[i],2]
+        index_sort[i]      = index[indexes[i]]
+
+
+    # current_number = index_sort[0]
+    # offset[index_sort[0]] = 0
+    # for i in xrange(all_halos):
+    #     if index_sort[i]!=current_number:
+    #         offset[index_sort[i]] = i
+    #         current_number = index_sort[i]
+    # offset[all_halos] = dims3
+
+    # current_number = dims3
+    # for i in xrange(all_halos,-1, -1):
+    #     if offset[i]==-1:  offset[i] = current_number
+    #     else:              current_number = offset[i]
+
+
+    # print index_sort
+
+    for i in xrange(all_halos):
+        if i%1000==0:
+            print i
+        x = halos_pos[i,0]
+        y = halos_pos[i,1]
+        z = halos_pos[i,2]
+        for j in xrange(selected_halos):
+            dist = sqrt((selected_halos_pos[j,0]-x)**2 + \
+                        (selected_halos_pos[j,1]-y)**2 + \
+                        (selected_halos_pos[j,2]-z)**2)
+
+    # # do a loop over the selected halos
+    # for i in xrange(selected_halos_pos.shape[0]):
+    #     ii = <int>(selected_halos_pos[i,0]*dims/BoxSize)
+    #     if ii==dims:  ii = 0
+    #     jj = <int>(selected_halos_pos[i,1]*dims/BoxSize)
+    #     if jj==dims:  jj = 0
+    #     kk = <int>(selected_halos_pos[i,2]*dims/BoxSize)
+    #     if kk==dims:  kk = 0
+        
+    #     number = 0
+    #     for iii in xrange(ii-1, ii+2):
+    #         for jjj in xrange(jj-1, jj+2):
+    #             for kkk in xrange(kk-1, kk+2):
+    #                 cube_indexes[number] = 
+
+    #     cube_indexes
+
+    #     for j in xrange(all_halos):
+
+    #         if index
+
+    print 'Time taken = %.3f seconds'%(time.time()-start)
+
+
+############################################################################
+
+@cython.boundscheck(False)
+@cython.cdivision(True)
+@cython.wraparound(False)
+cpdef HI_profile(np.float32_t[:,:] halo_pos, np.float32_t[:] halo_R,
+    np.int64_t[:] halo_id, np.float32_t[:,:] pos, np.float32_t[:] MHI, 
+    np.int64_t[:] offset, np.float64_t[:,:] HI_mass_shell, 
+    np.int64_t[:] part_in_halo, float BoxSize, float R1):
+    
+    start = time.time()
+    cdef long i, j, particles, halos, index, index_box, begin, end
+    cdef float x, y, z, x_h, y_h, z_h, dx, dy, dz
+    cdef float MHI_part, middle, R2, radius, radius2, R12
+    cdef int dims, dims2, bins, bin, index_x, index_y, index_z, 
+    cdef int ii, jj, kk, iii, jjj, kkk
+
+    particles = pos.shape[0]
+    halos     = halo_pos.shape[0]
+    bins      = HI_mass_shell.shape[1]
+    dims      = <int>rint((offset.shape[0]-1)**(1.0/3.0))
+    dims2     = dims*dims
+    R12       = R1*R1
+    middle    = BoxSize/2.0
+
+    # do a loop over all halos
+    for i in xrange(halos):
+
+        x_h     = halo_pos[i,0]
+        y_h     = halo_pos[i,1]
+        z_h     = halo_pos[i,2]
+        radius  = halo_R[i]
+        radius2 = radius*radius
+        index   = halo_id[i]
+
+        index_x = index/dims2
+        index_y = (index%dims2)/dims
+        index_z = (index%dims2)%dims
+
+        for ii in xrange(-1,2):
+            iii = (index_x + ii + dims)%dims
+
+            for jj in xrange(-1,2):
+                jjj = (index_y + jj + dims)%dims
+
+                for kk in xrange(-1,2):
+                    kkk = (index_z + kk + dims)%dims
+
+                    index_box = dims2*iii + dims*jjj + kkk
+
+                    begin = offset[index_box]
+                    end   = offset[index_box+1]
+
+                    for j in xrange(begin,end):
+
+                        x        = pos[j,0]
+                        y        = pos[j,1]
+                        z        = pos[j,2]
+                        MHI_part = MHI[j]
+
+                        dx = abs(x - x_h)
+                        if dx>middle:  dx = BoxSize - dx
+                        if dx>radius:  continue
+
+                        dy = abs(y - y_h)
+                        if dy>middle:  dy = BoxSize - dy
+                        if dy>radius:  continue
+
+                        dz = abs(z - z_h)
+                        if dz>middle:  dz = BoxSize - dz
+                        if dz>radius:  continue
+
+                        R2 = dx*dx + dy*dy + dz*dz
+                        if R2<radius2:
+
+                            if R2<=R12:  bin = 0
+                            else:     
+                                bin = <int>(log10(R2/R12)/log10(radius2/R12)*(bins-1))+1
+                            HI_mass_shell[i,bin]  += MHI_part
+                            part_in_halo[i] += 1
+
+
+    print 'Time taken = %.2f seconds'%(time.time()-start)
+######################################################################################
+
+# This routine computes the HI profile of one signale halo using brute force
+# This is used mainly for validation purposes
+@cython.boundscheck(False)
+@cython.cdivision(True)
+@cython.wraparound(False)
+cpdef HI_profile_1halo_brute_force(np.float32_t[:] halo_pos, float radius,
+    np.float32_t[:,:] pos, np.float32_t[:] MHI, 
+    np.float64_t[:] HI_mass_shell, float BoxSize, float R1, np.int64_t[:] part_in_halo):
+    
+    
+    start = time.time()
+    cdef long j, particles
+    cdef float x, y, z, x_h, y_h, z_h, dx, dy, dz
+    cdef float MHI_part, middle, R2, radius2, R12
+    cdef int bin, bins
+
+    particles = pos.shape[0]
+    bins      = HI_mass_shell.shape[0]
+    R12       = R1*R1
+    middle    = BoxSize/2.0
+
+    x_h     = halo_pos[0]
+    y_h     = halo_pos[1]
+    z_h     = halo_pos[2]
+    radius2 = radius*radius
+
+    # do a loop over all particles
+    for j in xrange(particles):
+
+        x        = pos[j,0]
+        y        = pos[j,1]
+        z        = pos[j,2]
+        MHI_part = MHI[j]
+
+        dx = abs(x - x_h)
+        if dx>middle:  dx = BoxSize - dx
+        if dx>radius:  continue
+
+        dy = abs(y - y_h)
+        if dy>middle:  dy = BoxSize - dy
+        if dy>radius:  continue
+
+        dz = abs(z - z_h)
+        if dz>middle:  dz = BoxSize - dz
+        if dz>radius:  continue
+
+        R2 = dx*dx + dy*dy + dz*dz
+        if R2<radius2:
+
+            if R2<=R12:  bin = 0
+            else:     
+                bin = <int>(log10(R2/R12)/log10(radius2/R12)*(bins-1))+1
+            HI_mass_shell[bin]  += MHI_part
+            part_in_halo[0] += 1
+
+
+    print 'Time taken = %.2f seconds'%(time.time()-start)
+
+
+
+cpdef overlap_particles_halos(np.float32_t[:,:] halo_pos, float Rvir, float BoxSize,
+        float x_min, float x_max, float y_min, float y_max, 
+        float z_min, float z_max):
+
+    cdef long halos, i
+    cdef float x, y, z, x1, x2, y1, y2, z1, z2
+
+    halos = halo_pos.shape[0]
+
+    for i in xrange(halos):
+        x = halo_pos[i,0]
+        y = halo_pos[i,1]
+        z = halo_pos[i,2]
+
+        x1 = (x-Rvir)%BoxSize
+        x2 = (x+Rvir)%BoxSize
+        if x1<x_min or x1>x_max or x2<x_min or x2>x_max:
+            return True
+
+        y1 = (y-Rvir)%BoxSize
+        y2 = (y+Rvir)%BoxSize
+        if y1<y_min or y1>y_max or y2<y_min or y2>y_max:
+            return True
+
+        z1 = (z-Rvir)%BoxSize
+        z2 = (z+Rvir)%BoxSize
+        if z1<z_min or z1>z_max or z2<z_min or z2>z_max:
+            return True
+
+    return False
+
+
+# # This routine computes the cross-section of the DLAs
+# @cython.boundscheck(False)
+# @cython.cdivision(True)
+# @cython.wraparound(False)
+# def DLAs_cross_section_original(snapshot_root, snapnum, TREECOOL_file, resolution):
+
+#     cdef int subfile_num
+#     cdef long i, num_halos, begin, end, offset, start_h, end_h
+#     # cdef np.float32_t[:,:] pos_h
+#     # cdef np.float32_t[:] radii_h, MHI_h
+#     cdef np.float64_t[:] M_HI_tot, cross_section
+#     cdef np.int32_t[:] halo_len
+#     # cdef np.float32_t[:] mass,SFR,metals,rho,Volume,
+
+#     # find snapshot name and read header
+#     snapshot = snapshot_root + 'snapdir_%03d/snap_%03d'%(snapnum, snapnum)
+#     header   = rs.snapshot_header(snapshot)
+#     redshift = header.redshift
+#     BoxSize  = header.boxsize/1e3 #Mpc/h
+#     filenum  = header.filenum
+#     Omega_m  = header.omega0
+#     Omega_L  = header.omegaL
+#     h        = header.hubble
+
+#     print '\nBoxSize         = %.1f Mpc/h'%BoxSize
+#     print 'Number of files = %d'%filenum
+#     print 'Omega_m         = %.3f'%Omega_m
+#     print 'Omega_l         = %.3f'%Omega_L
+#     print 'redshift        = %.3f'%redshift
+
+#     # read number of particles in halos, their positions and masses
+#     halos = groupcat.loadHalos(snapshot_root, snapnum, 
+#             fields=['GroupLenType','GroupPos','GroupMass','Group_R_TopHat200'])
+#     halo_len    = halos['GroupLenType'][:,0]  
+#     halo_pos    = halos['GroupPos']/1e3
+#     halo_mass   = halos['GroupMass']*1e10
+#     halo_radius = halos['Group_R_TopHat200']/1e3
+#     del halos
+
+#     # factor to convert (Mpc/h)^{-2} to cm^{-2}
+#     factor = h*(1.0+redshift)**2*\
+#         (UL.units().Msun_g)/(UL.units().mH_g)/(UL.units().Mpc_cm)**2
+
+#     # find the total number of halos
+#     num_halos = halo_pos.shape[0]
+#     print 'Found %d halos'%num_halos
+#     M_HI_tot      = np.zeros(num_halos, dtype=np.float64)
+#     cross_section = np.zeros(num_halos, dtype=np.float64)
+
+#     # read the first subfile of the snapshot
+#     subfile_num = 0
+#     offset = 0
+#     snapshot = snapshot_root + 'snapdir_%03d/snap_%03d.%d'\
+#         %(snapnum, snapnum, subfile_num)
+#     header = rs.snapshot_header(snapshot)
+#     npart  = header.npart[0]
+
+#     # find positions, HI masses and radii of the gas particles
+#     pos  = rs.read_block(snapshot, 'POS ', parttype=0, verbose=False)/1e3
+#     pos  = pos.astype(np.float32)
+#     MHI  = rs.read_block(snapshot, 'NH  ', parttype=0, verbose=False)#HI/H
+#     mass = rs.read_block(snapshot, 'MASS', parttype=0, verbose=False)*1e10
+#     SFR  = rs.read_block(snapshot, 'SFR ', parttype=0, verbose=False)
+#     indexes = np.where(SFR>0.0)[0];  del SFR
+
+#     # find the metallicity of star-forming particles
+#     metals = rs.read_block(snapshot, 'GZ  ', parttype=0, verbose=False)
+#     metals = metals[indexes]/0.0127
+
+#     # find densities of star-forming particles: units of h^2 Msun/Mpc^3
+#     rho = rs.read_block(snapshot, 'RHO ', parttype=0, verbose=False)*1e19
+#     Volume = mass/rho                            #(Mpc/h)^3
+#     radii  = (Volume/(4.0*np.pi/3.0))**(1.0/3.0) #Mpc/h 
+
+#     # find density and radius of star-forming particles
+#     radii_SFR = radii[indexes]    
+#     rho       = rho[indexes]
+
+#     # find HI/H fraction for star-forming particles
+#     MHI[indexes] = Rahmati_HI_Illustris(rho, radii_SFR, metals, redshift, 
+#                                             h, TREECOOL_file, Gamma=None,
+#                                             fac=1, correct_H2=True) #HI/H
+#     MHI *= (0.76*mass)
+
+#     # do a loop over all halos
+#     begin_abs = 0
+#     for i in xrange(num_halos):
+
+#         # print i,subfile_num
+
+#         # find where the halo starts and ends in the file
+#         if i>0:  begin_abs += halo_len[i-1]
+#         end     = begin_abs + halo_len[i]
+#         start_h, end_h = 0, end-begin_abs
+#         begin   = begin_abs
+
+#         # if i==294689:
+#         #     print begin_abs,end
+
+#         # define arrays hosting positions, masses and radii of particles in halo
+#         pos_h   = np.zeros((end-begin,3), dtype=np.float32)
+#         radii_h = np.zeros(end-begin,     dtype=np.float32)
+#         MHI_h   = np.zeros(end-begin,     dtype=np.float32)
+
+#         # if halo is in current subfile fill it 
+#         if end<=(offset+npart):
+#             pos_h   = pos[begin-offset:end-offset]
+#             radii_h = radii[begin-offset:end-offset]
+#             MHI_h   = MHI[begin-offset:end-offset]
+#             M_HI_tot[i] = np.sum(MHI_h, dtype=np.float64)
+
+#             if len(pos_h)==0:  continue
+
+#             # check if all particles can produce a single DLA
+#             rho_h   = 3.0*MHI_h/(4.0*np.pi*radii_h**3)
+#             NHI_max = factor*2.0*np.sum(rho_h*radii_h, dtype=np.float64)
+#             if NHI_max<10**(20.3):  continue
+
+#             if halo_radius[i]>0.0:
+#                 dims = int(halo_radius[i]*1.0/resolution)
+#             else:
+#                 dims = 50
+
+#             area = DLAs_cross_section_1halo(pos_h, radii_h, MHI_h, dims, 
+#                 BoxSize, h, redshift)
+#             cross_section[i] = area
+#             if area>0.1:
+#                 print i,area
+#                 np.savetxt('borrar.dat',np.transpose([pos_h[:,0], pos_h[:,1], pos_h[:,2], radii_h, MHI_h]))  
+#                 sys.exit()
+#             continue
+#             # f=open('cross_section.dat','a')
+#             # f.write(str(halo_mass[i])+' '+str(area)+'\n')
+#             # f.close()
+
+#         else:
+#             pos_h[0:offset+npart-begin]   = pos[begin-offset:]
+#             radii_h[0:offset+npart-begin] = radii[begin-offset:]
+#             MHI_h[0:offset+npart-begin]   = MHI[begin-offset:]
+#             start_h = offset+npart-begin
+#             begin = offset+npart
+
+#         # do a loop over subfiles until all particles in the halo has been read
+#         done = False
+#         while not(done):
+#             offset += npart;  subfile_num += 1;  print subfile_num,i
+#             snapshot = snapshot_root + 'snapdir_%03d/snap_%03d.%d'\
+#                 %(snapnum, snapnum, subfile_num)
+#             header = rs.snapshot_header(snapshot)
+#             npart  = header.npart[0]
+
+#             # find positions, HI masses and radii of the gas particles
+#             pos  = rs.read_block(snapshot, 'POS ', parttype=0, verbose=False)/1e3
+#             pos  = pos.astype(np.float32)
+#             MHI  = rs.read_block(snapshot, 'NH  ', parttype=0, verbose=False)#HI/H
+#             mass = rs.read_block(snapshot, 'MASS', parttype=0, verbose=False)*1e10
+#             SFR  = rs.read_block(snapshot, 'SFR ', parttype=0, verbose=False)
+#             indexes = np.where(SFR>0.0)[0];  del SFR
+
+#             # find the metallicity of star-forming particles
+#             metals = rs.read_block(snapshot, 'GZ  ', parttype=0, verbose=False)
+#             metals = metals[indexes]/0.0127
+
+#             # find densities of star-forming particles: units of h^2 Msun/Mpc^3
+#             rho = rs.read_block(snapshot, 'RHO ', parttype=0, verbose=False)*1e19
+#             Volume = mass/rho                            #(Mpc/h)^3
+#             radii  = (Volume/(4.0*np.pi/3.0))**(1.0/3.0) #Mpc/h 
+
+#             # find density and radius of star-forming particles
+#             radii_SFR = radii[indexes]    
+#             rho       = rho[indexes]
+
+#             # find HI/H fraction for star-forming particles
+#             MHI[indexes] = Rahmati_HI_Illustris(rho, radii_SFR, metals, redshift, 
+#                                                     h, TREECOOL_file, Gamma=None,
+#                                                     fac=1, correct_H2=True) #HI/H
+#             MHI *= (0.76*mass)
+
+#             if end<=(offset+npart):
+#                 pos_h[start_h:]   = pos[begin-offset:end-offset]
+#                 radii_h[start_h:] = radii[begin-offset:end-offset]
+#                 MHI_h[start_h:]   = MHI[begin-offset:end-offset]
+#                 done = True
+#                 M_HI_tot[i] = np.sum(MHI_h, dtype=np.float64)
+
+#             else:
+#                 pos_h[start_h:start_h+offset+npart-begin]   = pos[begin-offset:]
+#                 radii_h[start_h:start_h+offset+npart-begin] = radii[begin-offset:]
+#                 MHI_h[start_h:start_h+offset+npart-begin]   = MHI[begin-offset:]
+#                 start_h = start_h+offset+npart-begin
+#                 begin = offset+npart
+
+#     return M_HI_tot, cross_section
+
+
+# This routine computes the cross-section of the DLAs
+# resolution -----> spatial resolution in Mpc/h for the grid
+# NHI_values -----> computes the cross-section for different NHI values
+@cython.boundscheck(False)
+@cython.cdivision(True)
+@cython.wraparound(False)
+def DLAs_cross_section(snapshot_root, snapnum, TREECOOL_file, resolution,
+    NHI_values):
+
+    cdef int subfile_num
+    cdef long i, k, num_halos, begin, end, offset, start_h, end_h
+    # cdef np.float32_t[:,:] pos_h
+    # cdef np.float32_t[:] radii_h, MHI_h
+    cdef np.float64_t[:] M_HI_tot, area 
+    cdef np.int32_t[:] halo_len
+    # cdef np.float64_t[:,:] cross_section
+    # cdef np.float32_t[:] mass,SFR,metals,rho,Volume,
+
+    # find snapshot name and read header
+    snapshot = snapshot_root + 'snapdir_%03d/snap_%03d'%(snapnum, snapnum)
+    header   = rs.snapshot_header(snapshot)
+    redshift = header.redshift
+    BoxSize  = header.boxsize/1e3 #Mpc/h
+    filenum  = header.filenum
+    Omega_m  = header.omega0
+    Omega_L  = header.omegaL
+    h        = header.hubble
+
+    print '\nBoxSize         = %.1f Mpc/h'%BoxSize
+    print 'Number of files = %d'%filenum
+    print 'Omega_m         = %.3f'%Omega_m
+    print 'Omega_l         = %.3f'%Omega_L
+    print 'redshift        = %.3f'%redshift
+
+    # read number of particles in halos, their positions and masses
+    halos = groupcat.loadHalos(snapshot_root, snapnum, 
+            fields=['GroupLenType','GroupPos','GroupMass','Group_R_TopHat200'])
+    halo_len    = halos['GroupLenType'][:,0]  
+    halo_pos    = halos['GroupPos']/1e3
+    halo_mass   = halos['GroupMass']*1e10
+    halo_radius = halos['Group_R_TopHat200']/1e3
+    del halos
+
+    # factor to convert (Mpc/h)^{-2} to cm^{-2}
+    factor = h*(1.0+redshift)**2*\
+        (UL.units().Msun_g)/(UL.units().mH_g)/(UL.units().Mpc_cm)**2
+
+    # find the total number of halos and define arrays contining MHI and sigma
+    num_halos = halo_pos.shape[0]
+    NHI_bins  = NHI_values.shape[0]
+    print 'Found %d halos'%num_halos
+    M_HI_tot      = np.zeros(num_halos,             dtype=np.float64)
+    cross_section = np.zeros((num_halos, NHI_bins), dtype=np.float64)
+
+    # do a loop over all halos
+    subfile_num, offset, npart, begin_abs = -1, 0, 0, 0
+    pos   = np.empty((0,3), dtype=np.float32)
+    radii = np.empty(0,     dtype=np.float32)
+    MHI   = np.empty(0,     dtype=np.float32)
+    for i in xrange(num_halos):
+
+        # find where the halo starts and ends in the file
+        if i>0:  begin_abs += halo_len[i-1]
+        end     = begin_abs + halo_len[i]
+        start_h, end_h = 0, end-begin_abs
+        begin   = begin_abs
+
+        # define arrays hosting positions, masses and radii of particles in halo
+        pos_h   = np.zeros((end-begin,3), dtype=np.float32)
+        radii_h = np.zeros(end-begin,     dtype=np.float32)
+        MHI_h   = np.zeros(end-begin,     dtype=np.float32)
+
+        # if halo is in current subfile fill it 
+        if end<=(offset+npart):
+            pos_h   = pos[begin-offset:end-offset]
+            radii_h = radii[begin-offset:end-offset]
+            MHI_h   = MHI[begin-offset:end-offset]
+            M_HI_tot[i] = np.sum(MHI_h, dtype=np.float64)
+
+            if len(pos_h)==0:  continue
+
+            # check if all particles can produce a single DLA
+            rho_h   = 3.0*MHI_h/(4.0*np.pi*radii_h**3)
+            NHI_max = factor*2.0*np.sum(rho_h*radii_h, dtype=np.float64)
+            if NHI_max<10**(20.3):  continue
+
+            if halo_radius[i]>0.0:  dims = int(halo_radius[i]*1.0/resolution)
+            else:                   dims = 50
+
+            cross_section[i] = DLAs_cross_section_1halo(pos_h, radii_h, MHI_h, dims, 
+                BoxSize, h, redshift, NHI_values, NHI_bins)
+            continue
+
+        else:
+            pos_h[0:offset+npart-begin]   = pos[begin-offset:]
+            radii_h[0:offset+npart-begin] = radii[begin-offset:]
+            MHI_h[0:offset+npart-begin]   = MHI[begin-offset:]
+            start_h = offset+npart-begin
+            begin = offset+npart
+
+        # do a loop over subfiles until all particles in the halo has been read
+        done = False
+        while not(done):
+            offset += npart;  subfile_num += 1;  print subfile_num,i
+            snapshot = snapshot_root + 'snapdir_%03d/snap_%03d.%d'\
+                %(snapnum, snapnum, subfile_num)
+            header = rs.snapshot_header(snapshot)
+            npart  = header.npart[0]
+
+            # find positions, HI masses and radii of the gas particles
+            pos  = rs.read_block(snapshot, 'POS ', parttype=0, verbose=False)/1e3
+            pos  = pos.astype(np.float32)
+            MHI  = rs.read_block(snapshot, 'NH  ', parttype=0, verbose=False)#HI/H
+            mass = rs.read_block(snapshot, 'MASS', parttype=0, verbose=False)*1e10
+            SFR  = rs.read_block(snapshot, 'SFR ', parttype=0, verbose=False)
+            indexes = np.where(SFR>0.0)[0];  del SFR
+
+            # find the metallicity of star-forming particles
+            metals = rs.read_block(snapshot, 'GZ  ', parttype=0, verbose=False)
+            metals = metals[indexes]/0.0127
+
+            # find densities of star-forming particles: units of h^2 Msun/Mpc^3
+            rho = rs.read_block(snapshot, 'RHO ', parttype=0, verbose=False)*1e19
+            Volume = mass/rho                            #(Mpc/h)^3
+            radii  = (Volume/(4.0*np.pi/3.0))**(1.0/3.0) #Mpc/h 
+
+            # find density and radius of star-forming particles
+            radii_SFR = radii[indexes]    
+            rho       = rho[indexes]
+
+            # find HI/H fraction for star-forming particles
+            MHI[indexes] = Rahmati_HI_Illustris(rho, radii_SFR, metals, redshift, 
+                                                    h, TREECOOL_file, Gamma=None,
+                                                    fac=1, correct_H2=True) #HI/H
+            MHI *= (0.76*mass)
+
+            if end<=(offset+npart):
+                pos_h[start_h:]   = pos[begin-offset:end-offset]
+                radii_h[start_h:] = radii[begin-offset:end-offset]
+                MHI_h[start_h:]   = MHI[begin-offset:end-offset]
+                done = True
+                M_HI_tot[i] = np.sum(MHI_h, dtype=np.float64)
+
+                if len(pos_h)==0:  continue
+
+                # check if all particles can produce a single DLA
+                rho_h   = 3.0*MHI_h/(4.0*np.pi*radii_h**3)
+                NHI_max = factor*2.0*np.sum(rho_h*radii_h, dtype=np.float64)
+                if NHI_max<10**(20.3):  continue
+
+                if halo_radius[i]>0.0:  dims = int(halo_radius[i]*1.0/resolution)
+                else:                   dims = 50
+
+                cross_section[i] = DLAs_cross_section_1halo(pos_h, radii_h, MHI_h, dims, 
+                    BoxSize, h, redshift, NHI_values, NHI_bins)
+
+            else:
+                pos_h[start_h:start_h+offset+npart-begin]   = pos[begin-offset:]
+                radii_h[start_h:start_h+offset+npart-begin] = radii[begin-offset:]
+                MHI_h[start_h:start_h+offset+npart-begin]   = MHI[begin-offset:]
+                start_h = start_h+offset+npart-begin
+                begin = offset+npart
+
+    return halo_mass, M_HI_tot, cross_section
+
+
+# This routine computes the DLAs cross-section of a single halo
+@cython.boundscheck(False)
+@cython.cdivision(True)
+@cython.wraparound(False)
+cpdef DLAs_cross_section_1halo(np.float32_t[:,:] pos, np.float32_t[:] radii,
+    np.float32_t[:] MHI, int dims, float BoxSize, float h, float redshift,
+    np.float64_t[:] NHI_values, int NHI_bins):
+
+    cdef int i, j, k, particles
+    cdef float x_min, x_max, y_min, y_max, xW, yW, middle, BoxSize_region
+    cdef double factor 
+    cdef np.float64_t[:,:] NHI
+    cdef np.float64_t[:] sigma, threshold
+
+    particles = pos.shape[0]
+    middle = BoxSize/2.0
+
+    sigma     = np.zeros(NHI_bins, dtype=np.float64)
+    threshold = np.zeros(NHI_bins, dtype=np.float64)
+
+    # find the edges of the region
+    x_min = np.min(pos[:,0]);  x_max = np.max(pos[:,0]);  xW = x_max-x_min
+    y_min = np.min(pos[:,1]);  y_max = np.max(pos[:,1]);  yW = y_max-y_min
+
+    if xW>BoxSize/2.0:
+        for i in xrange(particles):
+            if pos[i,0]<middle:  pos[i,0] += BoxSize
+        x_min = np.min(pos[:,0]);  x_max = np.max(pos[:,0]);  xW = x_max-x_min
+    
+    if yW>BoxSize/2.0:
+        for i in xrange(particles):
+            if pos[i,1]<middle:  pos[i,1] += BoxSize
+        y_min = np.min(pos[:,1]);  y_max = np.max(pos[:,1]);  yW = y_max-y_min
+
+    BoxSize_region = max(yW, xW)
+
+    # define array contining column densities
+    NHI = np.zeros((dims,dims), dtype=np.float64)
+
+    MASL.voronoi_RT_2D_no_periodic(np.asarray(NHI), np.asarray(pos[:,0:2]), 
+        np.asarray(MHI), np.asarray(radii), x_min, y_min, BoxSize_region, verbose=False)
+
+    # convert (Msun/h)/(Mpc/h)^2 to cm^{-2}
+    factor = h*(1.0+redshift)**2*\
+        (UL.units().Msun_g)/(UL.units().mH_g)/(UL.units().Mpc_cm)**2
+    for k in xrange(NHI_bins):
+        threshold[k] = NHI_values[k]/factor
+
+    for i in xrange(dims):
+        for j in xrange(dims):
+            for k in xrange(NHI_bins):
+                if NHI[i,j]>threshold[k]:  sigma[k] += 1.0
+                else:                      break
+ 
+    for k in xrange(NHI_bins):
+        sigma[k] = sigma[k]*BoxSize_region**2*1.0/(dims*dims)
+
+    return np.asarray(sigma)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
