@@ -158,55 +158,51 @@ def find_block(filename, format, swap, block, block_num, only_list_blocks=False)
 # ----- read data block -----
 #for snapshots with very very large number of particles set nall manually
 #for instance nall=np.array([0,2048**3,0,0,0,0]) 
-def read_block(filename, block, parttype=-1, physical_velocities=True, arepo=0, no_masses=False, verbose=False, nall=[0,0,0,0,0,0]):
-  if (verbose):
-    print "reading block", block
+def read_block(filename, block, parttype=-1, physical_velocities=True, 
+    arepo=0, no_masses=False, verbose=False, nall=[0,0,0,0,0,0]):
+  
+  if (verbose):  print "reading block", block
   
   blockadd=0
   blocksub=0
   
   if arepo==0:
-    if (verbose):	
-      print "Gadget format"
+    if (verbose):  print "Gadget format"
     blockadd=0
   if arepo==1:
-    if (verbose):	
-      print "Arepo format"
-    blockadd=1	
+    if (verbose):  print "Arepo format"
+    blockadd=1  
   if arepo==2:
-    if (verbose):
-      print "Arepo extended format"
-    blockadd=4	
+    if (verbose):  print "Arepo extended format"
+    blockadd=4  
   if no_masses==True:
-    if (verbose):	
-      print "No mass block present"    
+    if (verbose):  print "No mass block present"    
     blocksub=1
-		 
+         
   if parttype not in [-1,0,1,2,3,4,5]:
-    print "wrong parttype given"
-    sys.exit()
+    print "wrong parttype given";  sys.exit()
   
-  if os.path.exists(filename):
+  if os.path.exists(filename):        
     curfilename = filename
-  elif os.path.exists(filename+".0"):
+    single_file = True
+  elif os.path.exists(filename+".0"):   
     curfilename = filename+".0"
+    single_file = False
   else:
     print "file not found:", filename
-    print "and:", curfilename
-    sys.exit()
+    print "and:", curfilename;  sys.exit()
   
   head = snapshot_header(curfilename)
-  format = head.format
-
-  print "FORMAT=", format
-  swap = head.swap
-  npart = head.npart
-  massarr = head.massarr
+  format   = head.format
+  swap     = head.swap
+  npart    = head.npart
+  massarr  = head.massarr
+  filenum  = head.filenum
+  redshift = head.redshift
+  time     = head.time
   if np.all(nall==[0,0,0,0,0,0]):
     nall = head.nall
-  filenum = head.filenum
-  redshift = head.redshift
-  time = head.time
+  if verbose:  print "FORMAT=", format
   del head
   
   # - description of data blocks -
@@ -234,9 +230,11 @@ def read_block(filename, block, parttype=-1, physical_velocities=True, arepo=0, 
     data_for_type[np.where(massarr==0)] = True
     block_num = 5
     if parttype>=0 and massarr[parttype]>0:   
-      if (verbose):	
-	      print "filling masses according to massarr"   
-      return np.ones(nall[parttype],dtype=dt)*massarr[parttype]
+        if (verbose):    print "filling masses according to massarr"
+        if single_file:
+          return np.ones(npart[parttype],dtype=dt)*massarr[parttype]
+        else:
+          return np.ones(nall[parttype],dtype=dt)*massarr[parttype]
   elif block=="U   ":
     data_for_type[0] = True
     block_num = 6-blocksub
@@ -255,7 +253,7 @@ def read_block(filename, block, parttype=-1, physical_velocities=True, arepo=0, 
     block_num = 10-blocksub
   elif block=="NFAC":
     data_for_type[0] = True
-    dt = np.dtype(np.int64)        #depends on code version, most recent hast int32, old MyIDType	
+    dt = np.dtype(np.int64)        #depends on code version, most recent hast int32, old MyIDType   
     block_num = 11-blocksub
   elif block=="NE  ":
     data_for_type[0] = True
@@ -308,14 +306,22 @@ def read_block(filename, block, parttype=-1, physical_velocities=True, arepo=0, 
   for j in range(6):
     species_offset[j] = allpartnum
     if actual_data_for_type[j]:
-      allpartnum += nall[j]
-    
-  for i in range(filenum): # main loop over files
-    if filenum>1:
-      curfilename = filename+"."+str(i)
+        if single_file:
+            allpartnum += npart[j]
+        else:
+          allpartnum += nall[j]
+
+  # define the array containing the information
+  data = np.empty(allpartnum,dt)
+
+  # loop over all subfiles    
+  for i in range(filenum):
+
+    if not(single_file) and filenum>1: 
+        curfilename = filename+"."+str(i)
       
     if i>0:
-      head = snapshot_header(curfilename)
+      head  = snapshot_header(curfilename)
       npart = head.npart  
       del head
       
@@ -348,12 +354,8 @@ def read_block(filename, block, parttype=-1, physical_velocities=True, arepo=0, 
     f.seek(offset + add_offset*np.dtype(dt).itemsize, os.SEEK_CUR)  
     curdat = np.fromfile(f,dtype=dt,count=actual_curpartnum) # read data
     f.close()  
-    if swap:
-      curdat.byteswap(True)  
-      
-    if i==0:
-      data = np.empty(allpartnum,dt)
-    
+    if swap:  curdat.byteswap(True)  
+          
     for j in range(6):
       if actual_data_for_type[j]:
         if block=="MASS" and massarr[j]>0: # add mass block for particles for which the mass is specified in the snapshot header
@@ -367,6 +369,9 @@ def read_block(filename, block, parttype=-1, physical_velocities=True, arepo=0, 
 
     del curdat
 
+    if single_file:  break
+
+
   if physical_velocities and block=="VEL " and redshift!=0:
     data *= math.sqrt(time)
 
@@ -375,24 +380,18 @@ def read_block(filename, block, parttype=-1, physical_velocities=True, arepo=0, 
 # ----- list all data blocks in a format 2 snapshot file -----
 
 def list_format2_blocks(filename):
-  if os.path.exists(filename):
-    curfilename = filename
-  elif os.path.exists(filename+".0"):
-    curfilename = filename+".0"
+  if   os.path.exists(filename):        curfilename = filename
+  elif os.path.exists(filename+".0"):   curfilename = filename+".0"
   else:
-    print "file not found:", filename
-    sys.exit()
+    print "file not found:", filename;  sys.exit()
   
-  head = snapshot_header(curfilename)
+  head   = snapshot_header(curfilename)
   format = head.format
-  swap = head.swap
-  del head
+  swap   = head.swap;  del head
   
   print 'GADGET FORMAT ',format
-  if (format != 2):
-    print "#   OFFSET   SIZE"
-  else:            
-    print "#   BLOCK   OFFSET   SIZE"
+  if (format != 2):  print "#   OFFSET   SIZE"
+  else:              print "#   BLOCK   OFFSET   SIZE"
   print "-------------------------"
   
   find_block(curfilename, format, swap, "XXXX", 0, only_list_blocks=True)
@@ -400,13 +399,10 @@ def list_format2_blocks(filename):
   print "-------------------------"
 
 def read_gadget_header(filename):
-  if os.path.exists(filename):
-    curfilename = filename
-  elif os.path.exists(filename+".0"):
-    curfilename = filename+".0"
+  if   os.path.exists(filename):      curfilename = filename
+  elif os.path.exists(filename+".0"): curfilename = filename+".0"
   else:
-    print "file not found:", filename
-    sys.exit()
+    print "file not found:", filename;  sys.exit()
 
   head=snapshot_header(curfilename)
   print 'npar=',head.npart
@@ -423,9 +419,12 @@ def read_gadget_header(filename):
   rhocrit=2.77536627e11 #h**2 M_sun/Mpc**3
   rhocrit=rhocrit/1e9 #h**2M_sun/kpc**3
   
-  Omega_DM=head.nall[1]*head.massarr[1]*1e10/(head.boxsize**3*rhocrit)
-  print 'DM mass=',head.massarr[1]*1e10,'Omega_DM=',Omega_DM
+  Omega_CDM=head.nall[1]*head.massarr[1]*1e10/(head.boxsize**3*rhocrit)
+  print 'DM mass=%.5e  Omega_DM = %.5f'\
+    %(head.massarr[1]*1e10, Omega_CDM)
   if head.nall[2]>0 and head.massarr[2]>0:
     Omega_NU=head.nall[2]*head.massarr[2]*1e10/(head.boxsize**3*rhocrit)
-    print 'NU mass=',head.massarr[2]*1e10,'Omega_NU=',Omega_NU
-    print 'Sum of neutrino masses=',Omega_NU*head.hubble**2*94.1745,'eV'
+    print 'NU mass=%.5e  Omega_NU = %.5f'\
+        %(head.massarr[2]*1e10, Omega_NU)
+    print 'Sum of neutrino masses=%.5f eV'\
+        %(Omega_NU*head.hubble**2*94.1745)

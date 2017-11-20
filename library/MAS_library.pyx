@@ -28,7 +28,7 @@ from libc.math cimport sqrt,pow,sin,cos,floor,fabs
 # BoxSize ----> size of the simulation box
 # MAS --------> mass assignment scheme: NGP, CIC, TSC or PCS
 # W ----------> array containing the weights to be used: 1D array (optional)
-cpdef void MA(pos, number, BoxSize, MAS='CIC', W=None):
+cpdef void MA(pos, number, BoxSize, MAS='CIC', W=None, verbose=False):
 
     #number of coordinates to work in 2D or 3D
     coord,coord_aux = pos.shape[1], number.ndim 
@@ -38,8 +38,9 @@ cpdef void MA(pos, number, BoxSize, MAS='CIC', W=None):
         print 'pos have %d dimensions and the density %d!!!'%(coord,coord_aux)
         sys.exit()
 
-    if W is None:  print '\nUsing %s mass assignment scheme'%MAS;
-    else:          print '\nUsing %s mass assignment scheme with weights'%MAS;
+    if verbose:
+        if W is None:  print '\nUsing %s mass assignment scheme'%MAS;
+        else:          print '\nUsing %s mass assignment scheme with weights'%MAS;
     start = time.clock()
     if coord==3: 
         if   MAS=='NGP' and W is None:  NGP(pos,number,BoxSize)
@@ -74,7 +75,8 @@ cpdef void MA(pos, number, BoxSize, MAS='CIC', W=None):
         else:
             print 'option not valid!!!';  sys.exit()
         number = number2[:,:,0]
-    print 'Time taken = %.3f seconds\n'%(time.clock()-start)
+    if verbose:
+        print 'Time taken = %.3f seconds\n'%(time.clock()-start)
     
 
 ################################################################################
@@ -634,7 +636,8 @@ cpdef void voronoi_RT_2D_no_periodic(np.ndarray[np.float64_t,ndim=2] density,
                                      np.ndarray[np.float32_t,ndim=2] pos,
                                      np.ndarray[np.float32_t,ndim=1] mass,
                                      np.ndarray[np.float32_t,ndim=1] radius,
-                                     float x_min, float y_min, float BoxSize):
+                                     float x_min, float y_min, float BoxSize,
+                                     verbose=True):
 
     start = time.time()
     cdef long particles, i
@@ -682,4 +685,4 @@ cpdef void voronoi_RT_2D_no_periodic(np.ndarray[np.float64_t,ndim=2] density,
                 if dist2<radius2:
                     density[i_cell,j_cell] += 2.0*rho*sqrt(radius2 - dist2)
                     
-    print 'Time taken = %.2f seconds'%(time.time()-start)
+    if verbose:  print 'Time taken = %.2f seconds'%(time.time()-start)

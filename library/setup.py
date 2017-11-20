@@ -21,6 +21,15 @@ ext_modules = [
 
     Extension("HI_library",["HI_library.pyx"]),
 
+    Extension("sorting_library",["sorting_library.pyx"],
+            extra_compile_args=['-O3','-ffast-math','-mtune=native']),
+
+    Extension("void_library.void_library", ["void_library/void_library.pyx"],
+              libraries=["m"],
+              extra_compile_args = ["-O3", "-ffast-math", "-march=native", 
+                                    "-fopenmp" ],
+              extra_link_args=['-fopenmp'])
+
     #Extension("nearest_point_library",["nearest_point_library.pyx"]),
     #extra_link_args=['-O3']),
     #extra_compile_args=['-O3', '-fopenmp'],
@@ -37,7 +46,7 @@ setup(
                 'correlation_function_library','halos_library','IM_library',
                 'mass_function_library','readfof','readsnap','readsnap2',
                 'readsnapHDF5','readsnap_mpi','readsubf','routines',
-                'units_library','map']
+                'units_library','map','HI/HI_image_library']
 )
 
 

@@ -3,7 +3,8 @@
 # the simulations. This is to provide a more fair comparison between theory and
 # results from simulations. It is relatively important for bins with few modes
 import numpy as np
-import Power_spectrum_library as PSL
+import Pk_library as PKL
+#import Power_spectrum_library as PSL
 import sys,os
 
 
@@ -39,41 +40,28 @@ BoxSize = 1000.0 #Mpc/h
 dims    = 1024
 #############################################################################
 
-# compute the value of |k| in each cell of the grid
-[array,k] = PSL.CIC_correction(dims);  del array
 
 if obj_type=='Pk':
 
-    # here k is in dimensionless units: k=0,1,sqrt(2),sqrt(3),2....
-    bins_r = int(np.sqrt(3*int(0.5*(dims+1))**2))+1
-    k_N = np.pi*dims/BoxSize  #Nyquist frequency    
-
-    # count modes
-    count = PSL.lin_histogram(bins_r, 0.0, bins_r*1.0, k)
-
-    # define k-binning and value of k in it and give physical units
-    bins_k = np.linspace(0.0, bins_r, bins_r+1)
-    k = k.astype(np.float64) #to avoid problems with np.histogram
-    k_bin = np.histogram(k,bins_k,weights=k)[0]/count  #value of k in the k-bin
-    k_bin = k_bin*2.0*np.pi/BoxSize
-
     # do a loop over the different input files
-    for input_file,f_out in zip(input_files,f_outs):
+    for input_file, f_out in zip(input_files, f_outs):
 
         # read input file
-        k_input,Pk_input = np.loadtxt(input_file,unpack=True)
+        k_in, Pk_in = np.loadtxt(input_file, dtype=np.float32, unpack=True)
 
-        # compute the value of P(k) in each cell
-        delta_k2 = np.interp(k*2.0*np.pi/BoxSize, k_input, Pk_input)
+        # compute expected Pk
+        k, Pk, Nmodes = PKL.expected_Pk(k_in, Pk_in, BoxSize, dims)
 
-        # compute the P(k)=<delta_k^2>
-        Pk = PSL.lin_histogram(bins_r, 0.0, bins_r*1.0, k, weights=delta_k2)
-        Pk = Pk/count
-        
         # save results to file ignoring DC mode
-        np.savetxt(f_out,np.transpose([k_bin[1:],Pk[1:]]))
+        np.savetxt(f_out, np.transpose([k,Pk,Nmodes]))
 
+
+# WARNING!!!! This is still the old version
+# UPDATE!!!!!
 elif obj_type=='CF':
+
+    # compute the value of |k| in each cell of the grid
+    [array,k] = PSL.CIC_correction(dims);  del array
 
     bins_CF = dims/2+1
 
