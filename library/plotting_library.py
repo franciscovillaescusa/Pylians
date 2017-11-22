@@ -78,7 +78,7 @@ def density_field_2D(snapshot_fname, x_min, x_max, y_min, y_max, z_min, z_max,
     overdensity = np.zeros((dims,dims), dtype=np.float32)
 
     # do a loop over all subfiles in the snapshot
-    total_mass = 0.0;  renormalize_2D = False
+    total_mass, mass_slice = 0.0, 0.0;  renormalize_2D = False
     for i in xrange(filenum):
 
         # find the name of the subfile
@@ -115,10 +115,11 @@ def density_field_2D(snapshot_fname, x_min, x_max, y_min, y_max, z_min, z_max,
                 MASL.MA(pos, overdensity, BoxSize_slice, MAS=MAS, W=mass,
                         renormalize_2D=renormalize_2D)
             else:
+                mass_slice += len(pos)
                 MASL.MA(pos, overdensity, BoxSize_slice, MAS=MAS, W=None,
                         renormalize_2D=renormalize_2D)
 
-    print 'Expected mass = %.7e'%total_mass
+    print 'Expected mass = %.7e'%mass_slice
     print 'Computed mass = %.7e'%np.sum(overdensity, dtype=np.float64)
 
     # compute mean density in the whole box
