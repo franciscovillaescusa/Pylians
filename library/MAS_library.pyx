@@ -28,7 +28,11 @@ from libc.math cimport sqrt,pow,sin,cos,floor,fabs
 # BoxSize ----> size of the simulation box
 # MAS --------> mass assignment scheme: NGP, CIC, TSC or PCS
 # W ----------> array containing the weights to be used: 1D array (optional)
-cpdef void MA(pos, number, BoxSize, MAS='CIC', W=None, verbose=False):
+# renormalize_2D ---> when computing the density field by reading multiple 
+# subfiles, the normalization factor /2.0, /3.0, /4.0 should be added manually
+# only at the end, otherwise the results will be incorrect!!
+cpdef void MA(pos, number, BoxSize, MAS='CIC', W=None, verbose=False,
+              renormalize_2D=True):
 
     #number of coordinates to work in 2D or 3D
     coord,coord_aux = pos.shape[1], number.ndim 
@@ -59,19 +63,25 @@ cpdef void MA(pos, number, BoxSize, MAS='CIC', W=None, verbose=False):
         if   MAS=='NGP' and W is None:  
             NGP(pos,number2,BoxSize)
         elif MAS=='CIC' and W is None:  
-            CIC(pos,number2,BoxSize);  number2 /= 2.0
+            CIC(pos,number2,BoxSize);
+            if renormalize_2D:  number2 /= 2.0
         elif MAS=='TSC' and W is None:  
-            TSC(pos,number2,BoxSize);  number2 /= 3.0
+            TSC(pos,number2,BoxSize);  
+            if renormalize_2D:  number2 /= 3.0
         elif MAS=='PCS' and W is None:  
-            PCS(pos,number2,BoxSize);  number2 /= 4.0
+            PCS(pos,number2,BoxSize);
+            if renormalize_2D:  number2 /= 4.0
         elif MAS=='NGP' and W is not None:  
             NGPW(pos,number2,BoxSize,W)
         elif MAS=='CIC' and W is not None:  
-            CICW(pos,number2,BoxSize,W);  number2 /= 2.0
+            CICW(pos,number2,BoxSize,W);
+            if renormalize_2D:  number2 /= 2.0
         elif MAS=='TSC' and W is not None:  
-            TSCW(pos,number2,BoxSize,W);  number2 /= 3.0
+            TSCW(pos,number2,BoxSize,W);
+            if renormalize_2D:  number2 /= 3.0
         elif MAS=='PCS' and W is not None:  
-            PCSW(pos,number2,BoxSize,W);  number2 /= 4.0
+            PCSW(pos,number2,BoxSize,W); 
+            if renormalize_2D:  number2 /= 4.0
         else:
             print 'option not valid!!!';  sys.exit()
         number = number2[:,:,0]

@@ -46,7 +46,8 @@ setup(
                 'correlation_function_library','halos_library','IM_library',
                 'mass_function_library','readfof','readsnap','readsnap2',
                 'readsnapHDF5','readsnap_mpi','readsubf','routines',
-                'units_library','map','HI/HI_image_library']
+                'units_library','map','HI/HI_image_library', 
+                'plotting_library']
 )
 
 
