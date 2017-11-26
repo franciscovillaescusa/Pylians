@@ -101,10 +101,11 @@ class void_finder:
             start = time.time()
             print 'Smoothing field with top-hat filter of radius %.2f'%R
             delta_sm = gaussian_smoothing(delta, BoxSize, R, threads)
+            print '%.3f < delta < %.3f'%(np.min(delta_sm), np.max(delta_sm))
+            print '<delta> = %.3f'%(np.mean(delta, dtype=np.float64))
             if np.min(delta_sm)>threshold:
                 print 'No cells with delta < %.2f\n'%threshold
                 continue
-            print '%.3f < delta < %.3f'%(np.min(delta_sm), np.max(delta_sm))
             print 'Density smoothing took %.3f seconds'%(time.time()-start)
 
             # find cells with delta<threshold and not belonging to existing voids
