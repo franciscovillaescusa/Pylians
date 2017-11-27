@@ -55,7 +55,8 @@ def gaussian_smoothing(delta, float BoxSize, float R, int threads=1):
 @cython.wraparound(False)
 class void_finder:
     def __init__(self, np.ndarray[np.float32_t, ndim=3] delta, float BoxSize, 
-        float threshold, float Rmax, float Rmin, float Omega_m, int threads):
+        float threshold, float Rmax, float Rmin, int bins, 
+        float Omega_m, int threads):
 
         cdef float R = Rmax
         cdef float dist, R_gridx, rho_crit, mean_rho, pi
@@ -92,7 +93,7 @@ class void_finder:
         in_void = np.zeros((dims,dims,dims), dtype=np.int32)
         delta_v = np.zeros((dims3,2),        dtype=np.float32)
 
-        Radii = np.logspace(np.log10(Rmax),np.log10(Rmin), 20, dtype=np.float32)
+        Radii = np.logspace(np.log10(Rmax),np.log10(Rmin), bins, dtype=np.float32)
 
 
         for R in Radii:
