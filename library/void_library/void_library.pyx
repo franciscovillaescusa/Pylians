@@ -9,6 +9,7 @@ from cython.parallel import prange
 from libc.math cimport sqrt,pow,sin,cos,log10,fabs
 from libc.stdlib cimport malloc, free
 
+
 # The function takes a density field and smooth it with a 3D top-hat filter
 # of radius R:  W = 3/(4*pi*R^3) if r<R;  W = 0  otherwise
 @cython.boundscheck(False)
@@ -66,6 +67,7 @@ class void_finder:
         cdef int dims = delta.shape[0]
         cdef int[:,:,::1] in_void
         cdef np.ndarray[np.float32_t, ndim=2] delta_v
+        cdef np.ndarray[np.int64_t, ndim=1] indexes
         cdef float[:] Radii
         cdef float[:,:,::1] delta_sm
         cdef list void_pos, void_mass, void_radius
@@ -93,7 +95,8 @@ class void_finder:
         in_void = np.zeros((dims,dims,dims), dtype=np.int32)
         delta_v = np.zeros((dims3,2),        dtype=np.float32)
 
-        Radii = np.logspace(np.log10(Rmax),np.log10(Rmin), bins, dtype=np.float32)
+        Radii = np.logspace(np.log10(Rmax),np.log10(Rmin), bins, 
+                dtype=np.float32)
 
 
         for R in Radii:
@@ -126,9 +129,9 @@ class void_finder:
 
             # sort the cell underdensities
             start = time.time()
-            delta_v[:local_voids].sort(axis=0)
+            indexes = np.argsort(delta_v[:local_voids,0])
+            delta_v[:local_voids] = delta_v[:local_voids][indexes]
             print 'Sorting took %.3f seconds'%(time.time()-start)
-            
 
             # do a loop over all underdense cells and identify voids
             start = time.time()
