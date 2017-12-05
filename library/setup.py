@@ -6,7 +6,7 @@ import numpy
 
 ext_modules = [
     Extension("MAS_library", ["MAS_library.pyx"],
-              extra_compile_args=['-O3','-ffast-math','-mtune=native']),
+              extra_compile_args=['-O3','-ffast-math','-march=native']),
 
     Extension("density_field_library",["density_field_library.pyx"]),
 
@@ -22,7 +22,7 @@ ext_modules = [
     Extension("HI_library",["HI_library.pyx"]),
 
     Extension("sorting_library",["sorting_library.pyx"],
-            extra_compile_args=['-O3','-ffast-math','-mtune=native']),
+            extra_compile_args=['-O3','-ffast-math','-march=native']),
 
     Extension("void_library.void_library", ["void_library/void_library.pyx"],
               libraries=["m"],
