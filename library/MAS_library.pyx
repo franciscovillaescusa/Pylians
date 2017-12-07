@@ -17,6 +17,12 @@ from libc.math cimport sqrt,pow,sin,cos,floor,fabs
 # TSCW(pos,number,BoxSize,W)
 # PCSW(pos,number,BoxSize,W)
 # CIC_interp(pos,density,BoxSize,dens)
+# voronoi_NGP_2D(density,pos,mass,volume,x_min,y_min,BoxSize,
+#                          particles_per_cell,r_divisions)
+# voronoi_RT_2D_periodic(density,pos,mass,radius,x_min,y_min,BoxSize)
+# voronoi_RT_2D_no_periodic(density,pos,mass,radius,x_min,y_min,BoxSize)
+# SPH_NGP(density,pos,radius,r_bins,part_in_shell,BoxSize,verbose)
+# SPH_NGPW(density,pos,radius,W,r_bins,part_in_shell,BoxSize,verbose)
 # TO-DO: 2D computations are suboptimal for CIC,TSC and PCS as particles along
 # the axis 2 are repeated 2,3 and 4 times, respectively
 ################################################################################
@@ -215,7 +221,7 @@ cdef void NGP(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
     for i in xrange(particles):
         for axis in xrange(coord):
             index[axis] = <int>(pos[i,axis]*inv_cell_size + 0.5)
-            index[axis] = index[axis]%dims
+            index[axis] = (index[axis]+dims)%dims
         number[index[0],index[1],index[2]] += 1.0
 ################################################################################
 
@@ -248,7 +254,7 @@ cdef void NGPW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
     for i in xrange(particles):
         for axis in xrange(coord):
             index[axis] = <int>(pos[i,axis]*inv_cell_size + 0.5)
-            index[axis] = index[axis]%dims
+            index[axis] = (index[axis]+dims)%dims
         number[index[0],index[1],index[2]] += W[i]
 ################################################################################
 
@@ -696,3 +702,164 @@ cpdef void voronoi_RT_2D_no_periodic(np.ndarray[np.float64_t,ndim=2] density,
                     density[i_cell,j_cell] += 2.0*rho*sqrt(radius2 - dist2)
                     
     if verbose:  print 'Time taken = %.2f seconds'%(time.time()-start)
+
+
+############################################################################### 
+# This function generates 2N+1 points in the surface of a sphere of radius 1
+# uniformly distributed. See https://arxiv.org/pdf/0912.4540.pdf for details
+def sphere_points(N):
+
+    points = np.empty((2*N+1, 3), dtype=np.float32)
+    
+    i   = np.arange(-N, N+1, 1)
+    lat = np.arcsin(2.0*i/(2.0*N+1))
+    lon = 2.0*np.pi*i*2.0/(1.0+np.sqrt(5.0))
+    
+    points[:,0] = np.cos(lat)*np.cos(lon)
+    points[:,1] = np.cos(lat)*np.sin(lon)
+    points[:,2] = np.sin(lat)
+    
+    return points
+
+# The standard SPH kernel is: u = r/R, where R is the SPH radius
+#                  [ 1-6u^2 + 6u^3  if 0<u<0.5
+# W(r) = 8/(pi*R^3)[ 2(1-u)^3       if 0.5<u<1 
+#                  [ 0              otherwise
+# This function returns 4*pi int_0^r r^2 W(r) dr
+# We use this function to split the sphere into shells of equal weight
+def sph_kernel_volume(u):
+    if u<0.5:    return 32.0/15.0*u**3*(5.0 - 18.0*u**2 + 15.0*u**3)
+    elif u<=1.0:  return -1.0/15.0 - 64.0*(u**6/6.0 - 3.0/5.0*u**5 + 3.0/4.0*u**4 -u**3/3.0)
+    else:        return 0.0
+
+# This is just a vectorization of the above function
+def vsph_kernel_volume(u):
+    func = np.vectorize(sph_kernel_volume)
+    return func(u)
+
+# This routine computes the density field of a set of particles taking into
+# account their physical extent given by its SPH radius
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+cpdef void SPH_NGP(float[:,:,::1] density, float[:,::1] pos,  
+                   float[::1] radius, int r_bins, int part_in_shell,
+                   float BoxSize, verbose=True):
+
+    cdef int dims, index_x, index_y, index_z
+    cdef long i, j, num, particles, points_sph_sphere
+    cdef float R, inv_cell_size, X, Y, Z
+    cdef float[::1] r_values
+    cdef float[:,::1] points, sph_points
+
+    if verbose:  print 'Findind density field using SPH radii of particles...'
+
+    # determine the mean radii of the radial shells
+    radial_bins = np.linspace(0, 1, r_bins+1)
+    u_array  = np.linspace(0, 1, 1000)
+    V_array  = vsph_kernel_volume(u_array)
+    r_values = (np.interp(radial_bins, V_array, u_array)).astype(np.float32)
+    for i in xrange(r_bins):
+        r_values[i] = 0.5*(r_values[i]+r_values[i+1])
+
+    # generate points uniformly distributed in a sphere
+    points = sphere_points(part_in_shell)
+
+    # define the array containing the points in the SPH sphere
+    points_sph_sphere = r_bins*points.shape[0]
+    sph_points = np.empty((points_sph_sphere, 3), dtype=np.float32)
+
+    # find the position of all particles in the normalized SPH sphere
+    num = 0
+    for i in xrange(r_bins):
+        for j in xrange(points.shape[0]):
+            sph_points[num,0] = r_values[i]*points[j,0]
+            sph_points[num,1] = r_values[i]*points[j,1]
+            sph_points[num,2] = r_values[i]*points[j,2]
+            num += 1
+
+    # find the total number of particles
+    particles     = pos.shape[0]
+    dims          = density.shape[0]
+    inv_cell_size = dims*1.0/BoxSize
+
+    # do a loop over all particles
+    for i in xrange(particles):
+        X = pos[i,0]*inv_cell_size;  Y = pos[i,1]*inv_cell_size;  
+        Z = pos[i,2]*inv_cell_size;  R = radius[i]*inv_cell_size
+
+        for j in xrange(points_sph_sphere):
+            index_x = <int>(0.5 + (X + R*sph_points[j,0]))
+            index_y = <int>(0.5 + (Y + R*sph_points[j,1]))
+            index_z = <int>(0.5 + (Z + R*sph_points[j,2]))
+            index_x = (index_x+dims)%dims
+            index_y = (index_y+dims)%dims
+            index_z = (index_z+dims)%dims
+
+            density[index_x, index_y, index_z] += 1.0
+
+
+# This routine computes the density field of a set of particles taking into
+# account their physical extent given by its SPH radius. The contribution
+# of each particle is weighted by W
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+cpdef void SPH_NGPW(float[:,:,::1] density, float[:,::1] pos,
+                    float[::1] radius, float[::1] W, int r_bins,
+                    int part_in_shell, float BoxSize, verbose=True):
+
+    cdef int dims, index_x, index_y, index_z
+    cdef long i, j, num, particles, points_sph_sphere
+    cdef float R, inv_cell_size, X, Y, Z
+    cdef float[::1] r_values
+    cdef float[:,::1] points, sph_points
+
+    if verbose:  print 'Findind density field using SPH radii of particles...'
+
+    # determine the mean radii of the radial shells
+    radial_bins = np.linspace(0, 1, r_bins+1)
+    u_array  = np.linspace(0, 1, 1000)
+    V_array  = vsph_kernel_volume(u_array)
+    r_values = (np.interp(radial_bins, V_array, u_array)).astype(np.float32)
+    for i in xrange(r_bins):
+        r_values[i] = 0.5*(r_values[i]+r_values[i+1])
+
+    # generate points uniformly distributed in a sphere
+    points = sphere_points(part_in_shell)
+
+    # define the array containing the points in the SPH sphere
+    points_sph_sphere = r_bins*points.shape[0]
+    sph_points = np.empty((points_sph_sphere, 3), dtype=np.float32)
+
+    # find the position of all particles in the normalized SPH sphere
+    num = 0
+    for i in xrange(r_bins):
+        for j in xrange(points.shape[0]):
+            sph_points[num,0] = r_values[i]*points[j,0]
+            sph_points[num,1] = r_values[i]*points[j,1]
+            sph_points[num,2] = r_values[i]*points[j,2]
+            num += 1
+
+    # find the total number of particles
+    particles     = pos.shape[0]
+    dims          = density.shape[0]
+    inv_cell_size = dims*1.0/BoxSize
+
+    # do a loop over all particles
+    for i in xrange(particles):
+        X = pos[i,0]*inv_cell_size;  Y = pos[i,1]*inv_cell_size;  
+        Z = pos[i,2]*inv_cell_size;  R = radius[i]*inv_cell_size
+        weight = W[i]
+
+        for j in xrange(points_sph_sphere):
+            index_x = <int>(0.5 + (X + R*sph_points[j,0]))
+            index_y = <int>(0.5 + (Y + R*sph_points[j,1]))
+            index_z = <int>(0.5 + (Z + R*sph_points[j,2]))
+            index_x = (index_x+dims)%dims
+            index_y = (index_y+dims)%dims
+            index_z = (index_z+dims)%dims
+
+            density[index_x, index_y, index_z] += W[i]
+
+

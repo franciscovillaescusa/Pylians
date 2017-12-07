@@ -42,7 +42,8 @@ import CIC_library as CIC
 import readsnap
 import numpy as np
 import scipy.fftpack
-import scipy.weave as wv
+import weave as wv
+#import scipy.weave as wv
 import mass_function_library as MFL
 import redshift_space_library as RSL
 import sys
@@ -277,7 +278,7 @@ def lin_histogram(bins,minimum,maximum,array,weights=None):
     histo(bins-1)+=histo(bins); 
     """
     
-    if weights==None:
+    if weights is None:
         wv.inline(code1,['length','minimum','maximum','bins','histo','array'],
                   type_converters = wv.converters.blitz,
                   support_code = support,libraries = ['m'],

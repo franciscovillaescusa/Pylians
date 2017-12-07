@@ -147,7 +147,7 @@ def CIC_serial(positions,dims,BoxSize,cic_densities,weights=None):
     """
 
     #check that the sizes of the positions and the weights are the same
-    if weights!=None:
+    if weights is not None:
         if total_siz!=weights.shape[0]:
             print 'the sizes of the positions and weights are not the same'
             print total_siz,weights.shape[0]
@@ -166,7 +166,7 @@ def CIC_serial(positions,dims,BoxSize,cic_densities,weights=None):
         pos=positions[start:end]
         siz=pos.shape[0]
 
-        if weights==None:
+        if weights is None:
             wv.inline(code,['pos','units','siz','dims','cic_densities'],
                       type_converters = wv.converters.blitz,
                       verbose=2,support_code = support,libraries = ['m'],
@@ -259,7 +259,7 @@ def CIC_serial_2D(positions,dims,BoxSize,cic_densities,weights=None):
     """
 
     #check that the sizes of the positions and the weights are the same
-    if weights!=None:
+    if weights is not None:
         if total_siz!=weights.shape[0]:
             print 'the sizes of the positions and weights are not the same'
             print total_siz,weights.shape[0]
@@ -278,7 +278,7 @@ def CIC_serial_2D(positions,dims,BoxSize,cic_densities,weights=None):
         pos=positions[start:end]
         siz=pos.shape[0]
 
-        if weights==None:
+        if weights is None:
             wv.inline(code,['pos','units','siz','dims','cic_densities'],
                       type_converters = wv.converters.blitz,
                       verbose=2,support_code = support,libraries = ['m'],
@@ -527,7 +527,7 @@ def NGP_serial(positions,dims,BoxSize,ngp_densities,weights=None):
     """
 
     #check that the sizes of the positions and the weights are the same
-    if weights!=None:
+    if weights is not None:
         if total_siz!=weights.shape[0]:
             print 'the sizes of the positions and weights are not the same'
             print total_siz,weights.shape[0]
@@ -546,7 +546,7 @@ def NGP_serial(positions,dims,BoxSize,ngp_densities,weights=None):
         pos=positions[start:end]
         siz=pos.shape[0]
 
-        if weights==None:
+        if weights is None:
             wv.inline(code,['pos','units','siz','dims','ngp_densities'],
                       type_converters = wv.converters.blitz,
                       verbose=2,support_code = support,libraries = ['m'],
@@ -662,7 +662,7 @@ def TSC_serial(positions,dims,BoxSize,cic_densities,weights=None):
     """
 
     #check that the sizes of the positions and the weights are the same
-    if weights!=None:
+    if weights is not None:
         if total_siz!=weights.shape[0]:
             print 'the sizes of the positions and weights are not the same'
             print total_siz,weights.shape[0]
@@ -681,7 +681,7 @@ def TSC_serial(positions,dims,BoxSize,cic_densities,weights=None):
         pos=positions[start:end]
         siz=pos.shape[0]
 
-        if weights==None:
+        if weights is None:
             wv.inline(code,['pos','units','siz','dims','cic_densities'],
                       type_converters = wv.converters.blitz,
                       verbose=2,support_code = support,libraries = ['m'],
@@ -821,7 +821,7 @@ def SPH_gas(positions,radii,divisions,dims,BoxSize,threads,
     """
 
     #check that the sizes of the positions and the weights are the same
-    if weights!=None:
+    if weights is not None:
         if total_siz!=weights.shape[0]:
             print 'the sizes of the positions and weights are not the same'
             print total_siz,weights.shape[0]; sys.exit()
@@ -838,7 +838,7 @@ def SPH_gas(positions,radii,divisions,dims,BoxSize,threads,
         print start,'--',end
         pos=positions[start:end]; R=radii[start:end]; siz=pos.shape[0]
 
-        if weights==None:
+        if weights is None:
             wv.inline(code,['pos','R','sphere_pos','units','siz','threads',
                             'sphere_points','dims','densities'],
                       extra_compile_args=['-O3 -fopenmp'],
