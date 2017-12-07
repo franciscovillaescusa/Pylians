@@ -6,28 +6,28 @@ import numpy
 
 ext_modules = [
     Extension("MAS_library", ["MAS_library.pyx"],
-            extra_compile_args=['-Ofast','-march=native']),
+        extra_compile_args=['-O3','-ffast-math','-march=native']),
 
-    Extension("density_field_library",["density_field_library.pyx"]),
+    Extension("density_field_library", ["density_field_library.pyx"]),
 
-    Extension("HI_clusters_library",["HI_clusters_library.pyx"]),
+    Extension("HI_clusters_library", ["HI_clusters_library.pyx"]),
 
     Extension("Pk_library.Pk_library", ["Pk_library/Pk_library.pyx"],
-    	    extra_compile_args = ["-Ofast", "-march=native", "-fopenmp"]),
+    	extra_compile_args = ['-O3','-ffast-math','-march=native','-fopenmp']),
 
     Extension("Pk_library.bispectrum_library", 
               ["Pk_library/bispectrum_library.pyx"]),
 
-    Extension("redshift_space_library",["redshift_space_library.pyx"]),
+    Extension("redshift_space_library", ["redshift_space_library.pyx"]),
 
     Extension("HI_library",["HI_library.pyx"]),
 
-    Extension("sorting_library",["sorting_library.pyx"],
-            extra_compile_args=['-Ofast','-march=native']),
+    Extension("sorting_library", ["sorting_library.pyx"],
+        extra_compile_args=['-O3','-ffast-math','-march=native']),
 
     Extension("void_library.void_library", ["void_library/void_library.pyx"],
-            libraries=["m"],
-            extra_compile_args = ["-Ofast", "-march=native", "-fopenmp" ])
+        extra_compile_args = ['-O3','-ffast-math','-march=native','-fopenmp'],
+        libraries=["m"])
 
     #Extension("nearest_point_library",["nearest_point_library.pyx"]),
     #extra_link_args=['-O3']),
