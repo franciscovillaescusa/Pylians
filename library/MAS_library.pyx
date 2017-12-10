@@ -1,12 +1,14 @@
 import numpy as np 
 import time,sys,os
 cimport numpy as np
+import scipy.integrate as SI
 cimport cython
 from libc.math cimport sqrt,pow,sin,cos,floor,fabs
 
 
 ################################################################################
 ################################# ROUTINES #####################################
+#### from particle positions, with optional weights, to 3D density fields ####
 # MA(pos,number,BoxSize,MAS='CIC',W=None) ---> main routine
 # NGP(pos,number,BoxSize)
 # CIC(pos,number,BoxSize)
@@ -16,13 +18,19 @@ from libc.math cimport sqrt,pow,sin,cos,floor,fabs
 # CICW(pos,number,BoxSize,W)
 # TSCW(pos,number,BoxSize,W)
 # PCSW(pos,number,BoxSize,W)
-# CIC_interp(pos,density,BoxSize,dens)
-# voronoi_NGP_2D(density,pos,mass,volume,x_min,y_min,BoxSize,
-#                          particles_per_cell,r_divisions)
-# voronoi_RT_2D_periodic(density,pos,mass,radius,x_min,y_min,BoxSize)
-# voronoi_RT_2D_no_periodic(density,pos,mass,radius,x_min,y_min,BoxSize)
 # SPH_NGP(density,pos,radius,r_bins,part_in_shell,BoxSize,verbose)
 # SPH_NGPW(density,pos,radius,W,r_bins,part_in_shell,BoxSize,verbose)
+
+#### given a 3D density field, find value of it at particle positions ####
+# CIC_interp(pos,density,BoxSize,dens)
+
+#### from particle positions (2D or 3D) with radii to 2D density field ####
+# voronoi_NGP_2D(density,pos,mass,volume,x_min,y_min,BoxSize,
+#                          particles_per_cell,r_divisions)
+# voronoi_RT_2D(density,pos,mass,radius,x_min,y_min,BoxSize, periodic,verbose)
+# SPH_RT_2D(density,pos,mass,radius,x_min,y_min,axis_x,axis_y,
+#           BoxSize,periodic,verbose)
+
 # TO-DO: 2D computations are suboptimal for CIC,TSC and PCS as particles along
 # the axis 2 are repeated 2,3 and 4 times, respectively
 ################################################################################
@@ -586,21 +594,34 @@ cpdef void voronoi_NGP_2D(np.ndarray[np.float64_t,ndim=2] density,
 # This routine computes the 2D density field from a set of voronoi cells that
 # have masses and radii assuming they represent uniform spheres. A cell that
 # intersects with a cell will increase its value by the column density of the 
-# cell along the sphere. This routine assumes periodic conditions
+# cell along the sphere. It works with and without boundary conditions.
+# The density array contains the column densities in units of Msun/(Mpc/h)^2 
+# if positions are in Mpc/h and masses in Msun/h
+# density ----------------> array hosting the column density field
+# pos --------------------> array with positions of the particles 3D or 2D
+# mass -------------------> array with the masses of the particles
+# radius -----------------> array with the SPH radii of the particles
+# x_min ------------------> minimum coordinate along first axis 
+# y_min ------------------> minimum coordinate along second axis 
+# axis_x -----------------> which component put along axis x (0-x, 1-y 2-z)
+# axis_y -----------------> which component put along axis y (0-x, 1-y 2-z)
+# BoxSize ----------------> size of the region
+# periodic ---------------> whether there are boundary conditions (True/False)
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cpdef void voronoi_RT_2D_periodic(np.ndarray[np.float64_t,ndim=2] density, 
-                                  np.ndarray[np.float32_t,ndim=2] pos,
-                                  np.ndarray[np.float32_t,ndim=1] mass,
-                                  np.ndarray[np.float32_t,ndim=1] radius,
-                                  float x_min, float y_min, float BoxSize):
+cpdef void voronoi_RT_2D(double[:,::1] density, float[:,::1] pos,
+                         float[::1] mass, float[::1] radius,
+                         float x_min, float y_min, int axis_x, int axis_y,
+                         float BoxSize, periodic, verbose=True):
 
     start = time.time()
     cdef long particles, i
     cdef int dims, index_x, index_y, index_R, ii, jj, i_cell, j_cell
     cdef float x, y, rho, pi, cell_size, inv_cell_size, radius2
     cdef float dist2, dist2_x
+
+    if verbose:  print 'Computing column densities of the particles...'
 
     # find the number of particles and the dimensions of the grid
     particles = pos.shape[0]
@@ -611,96 +632,68 @@ cpdef void voronoi_RT_2D_periodic(np.ndarray[np.float64_t,ndim=2] density,
     cell_size     = BoxSize*1.0/dims
     inv_cell_size = dims*1.0/BoxSize
 
-    for i in xrange(particles):
+    # if boundary conditions
+    if periodic:
+        for i in xrange(particles):
 
-        # find the density of the particle and the square of its radius
-        rho     = 3.0*mass[i]/(4.0*pi*radius[i]**3) #h^2 Msun/Mpc^3
-        radius2 = radius[i]**2                      #(Mpc/h)^2
+            # find the density of the particle and the square of its radius
+            rho     = 3.0*mass[i]/(4.0*pi*radius[i]**3) #h^2 Msun/Mpc^3
+            radius2 = radius[i]**2                      #(Mpc/h)^2
 
-        # find cell where the particle center is and its radius in cell units
-        index_x = <int>((pos[i,0]-x_min)*inv_cell_size)
-        index_y = <int>((pos[i,1]-y_min)*inv_cell_size)
-        index_R = <int>(radius[i]*inv_cell_size) + 1
+            # find cell where the particle center is and its radius in cell units
+            index_x = <int>((pos[i,axis_x]-x_min)*inv_cell_size)
+            index_y = <int>((pos[i,axis_y]-y_min)*inv_cell_size)
+            index_R = <int>(radius[i]*inv_cell_size) + 1
 
-        # do a loop over the cells that contribute in the x-direction
-        for ii in xrange(-index_R, index_R+1):
-            x       = (index_x + ii)*cell_size + x_min
-            i_cell  = ((index_x + ii + dims)%dims)
-            dist2_x = (x-pos[i,0])**2 
+            # do a loop over the cells that contribute in the x-direction
+            for ii in xrange(-index_R, index_R+1):
+                x       = (index_x + ii)*cell_size + x_min
+                i_cell  = ((index_x + ii + dims)%dims)
+                dist2_x = (x-pos[i,axis_x])**2 
 
-            # do a loop over the cells that contribute in the y-direction
-            for jj in xrange(-index_R, index_R+1):
-                y      = (index_y + jj)*cell_size + y_min
-                j_cell = ((index_y + jj + dims)%dims)
+                # do a loop over the cells that contribute in the y-direction
+                for jj in xrange(-index_R, index_R+1):
+                    y      = (index_y + jj)*cell_size + y_min
+                    j_cell = ((index_y + jj + dims)%dims)
 
-                dist2 = dist2_x + (y-pos[i,1])**2
+                    dist2 = dist2_x + (y-pos[i,axis_y])**2
 
-                if dist2<radius2:
-                    density[i_cell,j_cell] += 2.0*rho*sqrt(radius2 - dist2)
+                    if dist2<radius2:
+                        density[i_cell,j_cell] += 2.0*rho*sqrt(radius2 - dist2)
+    
+    # if no periodic boundary conditions
+    else:
+        for i in xrange(particles):
+
+            # find the density of the particle and the square of its radius
+            rho     = 3.0*mass[i]/(4.0*pi*radius[i]**3) #h^2 Msun/Mpc^3
+            radius2 = radius[i]**2                      #(Mpc/h)^2
+
+            # find cell where the particle center is and its radius in cell units
+            index_x = <int>((pos[i,axis_x]-x_min)*inv_cell_size)
+            index_y = <int>((pos[i,axis_y]-y_min)*inv_cell_size)
+            index_R = <int>(radius[i]*inv_cell_size) + 1
+
+            # do a loop over the cells that contribute in the x-direction
+            for ii in xrange(-index_R, index_R+1):
+                i_cell = index_x + ii
+                if i_cell>=0 and i_cell<dims:
+                    x = i_cell*cell_size + x_min
+                    dist2_x = (x-pos[i,axis_x])**2 
+                else:  continue
                     
-    print 'Time taken = %.2f seconds'%(time.time()-start)
-                    
-############################################################################### 
-# This routine computes the 2D density field from a set of voronoi cells that
-# have masses and radii assuming they represent uniform spheres. A cell that
-# intersects with a cell will increase its value by the column density of the 
-# cell along the sphere. This routine assumes periodic conditions
-@cython.boundscheck(False)
-@cython.wraparound(False)
-@cython.cdivision(True)
-cpdef void voronoi_RT_2D_no_periodic(np.ndarray[np.float64_t,ndim=2] density, 
-                                     np.ndarray[np.float32_t,ndim=2] pos,
-                                     np.ndarray[np.float32_t,ndim=1] mass,
-                                     np.ndarray[np.float32_t,ndim=1] radius,
-                                     float x_min, float y_min, float BoxSize,
-                                     verbose=True):
+                # do a loop over the cells that contribute in the y-direction
+                for jj in xrange(-index_R, index_R+1):
+                    j_cell = index_y + jj
+                    if j_cell>=0 and j_cell<dims:
+                        y = j_cell*cell_size + y_min
+                    else: continue
 
-    start = time.time()
-    cdef long particles, i
-    cdef int dims, index_x, index_y, index_R, ii, jj, i_cell, j_cell
-    cdef float x, y, rho, pi, cell_size, inv_cell_size, radius2
-    cdef float dist2, dist2_x
+                    dist2 = dist2_x + (y-pos[i,axis_y])**2
 
-    # find the number of particles and the dimensions of the grid
-    particles = pos.shape[0]
-    dims      = density.shape[0]
-    pi        = np.pi
+                    if dist2<radius2:
+                        density[i_cell,j_cell] += 2.0*rho*sqrt(radius2 - dist2)
 
-    # define cell size and the inverse of the cell size
-    cell_size     = BoxSize*1.0/dims
-    inv_cell_size = dims*1.0/BoxSize
-
-    for i in xrange(particles):
-
-        # find the density of the particle and the square of its radius
-        rho     = 3.0*mass[i]/(4.0*pi*radius[i]**3) #h^2 Msun/Mpc^3
-        radius2 = radius[i]**2                      #(Mpc/h)^2
-
-        # find cell where the particle center is and its radius in cell units
-        index_x = <int>((pos[i,0]-x_min)*inv_cell_size)
-        index_y = <int>((pos[i,1]-y_min)*inv_cell_size)
-        index_R = <int>(radius[i]*inv_cell_size) + 1
-
-        # do a loop over the cells that contribute in the x-direction
-        for ii in xrange(-index_R, index_R+1):
-            i_cell = index_x + ii
-            if i_cell>=0 and i_cell<dims:
-                x = i_cell*cell_size + x_min
-                dist2_x = (x-pos[i,0])**2 
-            else:  continue
-                
-            # do a loop over the cells that contribute in the y-direction
-            for jj in xrange(-index_R, index_R+1):
-                j_cell = index_y + jj
-                if j_cell>=0 and j_cell<dims:
-                    y = j_cell*cell_size + y_min
-                else: continue
-
-                dist2 = dist2_x + (y-pos[i,1])**2
-
-                if dist2<radius2:
-                    density[i_cell,j_cell] += 2.0*rho*sqrt(radius2 - dist2)
-                    
     if verbose:  print 'Time taken = %.2f seconds'%(time.time()-start)
 
 
@@ -861,5 +854,152 @@ cpdef void SPH_NGPW(float[:,:,::1] density, float[:,::1] pos,
             index_z = (index_z+dims)%dims
 
             density[index_x, index_y, index_z] += W[i]
+################################################################################
+
+################################################################################
+# This is the SPH kernel we are using 
+def kernel_SPH(r,R):
+
+    u = r/R
+    prefact = 8.0/(np.pi*R**3)
+    if u<0.5:     return prefact*(1.0 - 6.0*u*u + 6.0*u*u*u)
+    elif u<=1.0:  return prefact*2.0*(1.0 - u)**3
+    else:  return 0.0
+
+def integrand(x,b2):
+    r = sqrt(b2 + x*x)
+    return kernel_SPH(r,1.0)
+
+# This function computes the integral of the SPH kernel
+# int_0^lmax W(r) dl, where b^2 + l^2 = r^2. b is the impact parameter
+def NHI_table(bins):
+
+    # arrays with impact parameter^2 and the column densities
+    b2s = np.linspace(0, 1, bins, dtype=np.float64)
+    NHI = np.zeros(bins,          dtype=np.float64)
+
+    for i,b2 in enumerate(b2s):
+        if b2==1.0:  continue
+
+        lmax = sqrt(1.0 - b2)
+        I,dI = SI.quad(integrand, 0.0, lmax, 
+            args=(b2,), epsabs=1e-12, epsrel=1e-12)
+        NHI[i] = 2.0*I
+
+    return b2s, NHI
+
+# This routine computes the 2D density field from a set of particles with 
+# radii (e.g. SPH) and masses. A cell that intersects with a particle will 
+# increase its value by the column density of the cell along the sphere. 
+# The density array contains the column densities in units of Msun/(Mpc/h)^2 
+# if positions are in Mpc/h and masses in Msun/h
+# density ----------------> array hosting the column density field
+# pos --------------------> array with positions of the particles 3D or 2D
+# mass -------------------> array with the masses of the particles
+# radius -----------------> array with the SPH radii of the particles
+# x_min ------------------> minimum coordinate along first axis 
+# y_min ------------------> minimum coordinate along second axis 
+# axis_x -----------------> which component put along axis x (0-x, 1-y 2-z)
+# axis_y -----------------> which component put along axis y (0-x, 1-y 2-z)
+# BoxSize ----------------> size of the region
+# periodic ---------------> whether there are boundary conditions (True/False)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+cpdef void SPH_RT_2D(double[:,::1] density, float[:,::1] pos,
+                     float[::1] mass, float[::1] radius,
+                     float x_min, float y_min, int axis_x, int axis_y,
+                     float BoxSize, periodic, verbose=True):
+
+    start = time.time()
+    cdef long particles, i, num, bins = 1000
+    cdef int dims, index_x, index_y, index_R, ii, jj, i_cell, j_cell
+    cdef float x, y, pi, cell_size, inv_cell_size, radius2
+    cdef float dist2, dist2_x, mass_part
+    cdef double[::1] b2, NHI
+
+    if verbose:  print 'Computing column densities of the particles'
+
+    # find the number of particles and the dimensions of the grid
+    particles = pos.shape[0]
+    dims      = density.shape[0]
+    pi        = np.pi
+
+    # define cell size and the inverse of the cell size
+    cell_size     = BoxSize*1.0/dims
+    inv_cell_size = dims*1.0/BoxSize
+
+    # compute the normalized column density for normalized radii^2
+    b2, NHI = NHI_table(bins)
+
+    # periodic boundary conditions
+    if periodic:
+        for i in xrange(particles):
+
+            # find the particle mass and the square of its radius
+            radius2   = radius[i]**2 #(Mpc/h)^2
+            mass_part = mass[i]
+
+            # find cell where the particle center is and its radius in cell units
+            index_x = <int>((pos[i,axis_x]-x_min)*inv_cell_size)
+            index_y = <int>((pos[i,axis_y]-y_min)*inv_cell_size)
+            index_R = <int>(radius[i]*inv_cell_size) + 1
+
+            # do a loop over the cells that contribute in the x-direction
+            for ii in xrange(-index_R, index_R+1):
+                x       = (index_x + ii)*cell_size + x_min
+                i_cell  = ((index_x + ii + dims)%dims)
+                dist2_x = (x-pos[i,axis_x])**2 
+
+                # do a loop over the cells that contribute in the y-direction
+                for jj in xrange(-index_R, index_R+1):
+                    y      = (index_y + jj)*cell_size + y_min
+                    j_cell = ((index_y + jj + dims)%dims)
+
+                    dist2 = dist2_x + (y-pos[i,axis_y])**2
+
+                    if dist2<radius2:
+                        num = <int>(dist2/radius2)*bins
+                        density[i_cell,j_cell] += (mass_part*NHI[num])
+
+    # no periodic boundary conditions
+    else:
+        for i in xrange(particles):
+
+            # find the particle mass and the square of its radius
+            radius2   = radius[i]**2 #(Mpc/h)^2
+            mass_part = mass[i]
+
+            # find cell where the particle center is and its radius in cell units
+            index_x = <int>((pos[i,axis_x]-x_min)*inv_cell_size)
+            index_y = <int>((pos[i,axis_y]-y_min)*inv_cell_size)
+            index_R = <int>(radius[i]*inv_cell_size) + 1
+
+            # do a loop over the cells that contribute in the x-direction
+            for ii in xrange(-index_R, index_R+1):
+
+                i_cell = index_x + ii
+                if i_cell>=0 and i_cell<dims:
+                    x = i_cell*cell_size + x_min
+                else:  continue
+                dist2_x = (x-pos[i,axis_x])**2 
+
+                # do a loop over the cells that contribute in the y-direction
+                for jj in xrange(-index_R, index_R+1):
+                    
+                    j_cell = index_y + jj
+                    if j_cell>=0 and j_cell<dims:
+                        y = j_cell*cell_size + y_min
+                    else: continue
+
+                    dist2 = dist2_x + (y-pos[i,axis_y])**2
+
+                    if dist2<radius2:
+                        num = <int>(dist2/radius2)*bins
+                        density[i_cell,j_cell] += (mass_part*NHI[num])
+            
+    if verbose:  print 'Time taken = %.2f seconds'%(time.time()-start)
+
+
 
 
