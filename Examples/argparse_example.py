@@ -6,8 +6,12 @@ import sys,os
 
 parser = argparse.ArgumentParser()
 
+# non-optional arguments
 parser.add_argument("snapdir", help="folder where the groups_XXX folder is")
 
+# optional arguments
+parser.add_argument("-cx1", type=int, default=0, 
+                    help="column x in file 1, default 0")
 parser.add_argument("-snapnums", nargs='+', type=int, help="groups number")
 
 parser.add_argument("--swap", dest="swap", action="store_true", default=False, 
