@@ -23,13 +23,16 @@ from libc.stdlib cimport malloc, free
 #axis -------------------> axis along which perform the RSD
 #The routines just uses: s = r + (1+z)/H(z)*v
 #@cython.cdivision(True) never set this as % in python is different to c
-def pos_redshift_space(np.float32_t[:,:] pos, np.float32_t[:,:] vel,
-                       float BoxSize, Hubble, redshift, int axis):
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True) 
+cpdef void pos_redshift_space(float[:,::1] pos, float[:,::1] vel,
+                       float BoxSize, float Hubble, float redshift, int axis):
 
     cdef long particles,i
     cdef float factor
 
-    particles = len(pos)
+    particles = pos.shape[0]
     factor    = (1.0 + redshift)/Hubble
 
     for i in xrange(particles):
@@ -37,7 +40,7 @@ def pos_redshift_space(np.float32_t[:,:] pos, np.float32_t[:,:] vel,
 
         #neutrinos can cross the box multiple times. Use % for the boundary
         if pos[i,axis]>BoxSize or pos[i,axis]<0.0:
-            pos[i,axis] = pos[i,axis]%BoxSize 
+            pos[i,axis] = (pos[i,axis]+BoxSize)%BoxSize 
 ###############################################################################
 
 ################################ old routine ##################################
