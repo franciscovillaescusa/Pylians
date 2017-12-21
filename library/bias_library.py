@@ -6,7 +6,6 @@
 import numpy as np
 import scipy.integrate as si
 import sys
-import Power_spectrum_library as PSL
 import mass_function_library as MFL
 
 ############################ CONSTANTS ############################

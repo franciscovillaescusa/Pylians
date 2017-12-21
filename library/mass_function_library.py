@@ -50,7 +50,7 @@ def dSdM(k,Pk,OmegaM,M):
 def ST_mass_function(k,Pk,OmegaM,M1,M2,bins,Masses=None):
     rhoM=rho_crit*OmegaM
 
-    if Masses==None:
+    if Masses is None:
         dndM=np.empty(bins,dtype=np.float64)
         Masses=np.logspace(np.log10(M1),np.log10(M2),bins)
     else:
@@ -104,7 +104,7 @@ def Tinker_mass_function(k,Pk,OmegaM,z,M1,M2,bins,delta=200.0,Masses=None):
     
     rhoM=rho_crit*OmegaM
 
-    if Masses==None:
+    if Masses is None:
         dndM=np.empty(bins,dtype=np.float64)
         Masses=np.logspace(np.log10(M1),np.log10(M2),bins)
     else:
@@ -138,7 +138,7 @@ def Tinker_2010_mass_function(k,Pk,OmegaM,z,M1,M2,bins,delta=200.0,Masses=None):
     
     rhoM = rho_crit*OmegaM
 
-    if Masses==None:
+    if Masses is None:
         dndM   = np.empty(bins,dtype=np.float64)
         Masses = np.logspace(np.log10(M1),np.log10(M2),bins)
     else:
@@ -175,7 +175,7 @@ def Crocce_mass_function(k,Pk,OmegaM,z,M1,M2,bins,Masses=None):
     
     rhoM=rho_crit*OmegaM
 
-    if Masses==None:
+    if Masses is None:
         dndM=np.empty(bins,dtype=np.float64)
         Masses=np.logspace(np.log10(M1),np.log10(M2),bins)
     else:
@@ -207,7 +207,7 @@ def Jenkins_mass_function(k,Pk,OmegaM,M1,M2,bins,Masses=None):
     
     rhoM=rho_crit*OmegaM
 
-    if Masses==None:
+    if Masses is None:
         dndM=np.empty(bins,dtype=np.float64)
         Masses=np.logspace(np.log10(M1),np.log10(M2),bins)
     else:
@@ -239,7 +239,7 @@ def Warren_mass_function(k,Pk,OmegaM,M1,M2,bins,Masses=None):
     
     rhoM=rho_crit*OmegaM
 
-    if Masses==None:
+    if Masses is None:
         dndM=np.empty(bins,dtype=np.float64)
         Masses=np.logspace(np.log10(M1),np.log10(M2),bins)
     else:
@@ -271,7 +271,7 @@ def Watson_mass_function_FoF(k,Pk,OmegaM,M1,M2,bins,Masses=None):
     
     rhoM=rho_crit*OmegaM
 
-    if Masses==None:
+    if Masses is None:
         dndM=np.empty(bins,dtype=np.float64)
         Masses=np.logspace(np.log10(M1),np.log10(M2),bins)
     else:
@@ -305,7 +305,7 @@ def Watson_mass_function(k,Pk,OmegaM,M1,M2,bins,Masses=None):
 
     rhoM=rho_crit*OmegaM
 
-    if Masses==None:
+    if Masses is None:
         dndM=np.empty(bins,dtype=np.float64)
         Masses=np.logspace(np.log10(M1),np.log10(M2),bins)
     else:
@@ -338,7 +338,7 @@ def Angulo_subhalos_mass_function(k,Pk,OmegaM,M1,M2,bins,Masses=None):
     
     rhoM=rho_crit*OmegaM
 
-    if Masses==None:
+    if Masses is None:
         dndM=np.empty(bins,dtype=np.float64)
         Masses=np.logspace(np.log10(M1),np.log10(M2),bins)
     else:

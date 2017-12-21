@@ -4,7 +4,7 @@ import argparse
 import numpy as np
 import sys,os
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(description="description of routine")
 
 # non-optional arguments
 parser.add_argument("snapdir", help="folder where the groups_XXX folder is")
