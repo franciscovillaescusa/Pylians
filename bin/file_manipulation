@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+
+import numpy as np
+import sys,os,argparse
+
+
+# set input arguments
+parser = argparse.ArgumentParser(description="This script reads\
+	the x- and y- components of two different files, f1 and f2\
+	and computes the ratio y2/y1 by interpolating by finding\
+	the values of y1=f(x1) at the positions x2. The interpolation can \
+	be linear or in log")
+parser.add_argument("f1",   help="input file 1")
+parser.add_argument("f2",   help="input file 2")
+parser.add_argument("fout", help="output file")
+parser.add_argument("O",    help="operation, e.g. (Y1 + Y2)/2.0")
+parser.add_argument("-cx1", type=int, default=0, 
+	help="column x in file 1, default 0")
+parser.add_argument("-cy1", type=int, default=1, 
+	help="column y in file 1, default 1")
+parser.add_argument("-cx2", type=int, default=0, 
+    help="column x in file 2, default 0")
+parser.add_argument("-cy2", type=int, default=1, 
+    help="column y in file 2, default 1")
+parser.add_argument("--log", action="store_true", default=False, 
+	help="interpolate in log10 scale")
+args = parser.parse_args()
+
+
+# read data
+data = np.loadtxt(args.f1);  X1 = data[:,args.cx1];  Y1 = data[:,args.cy1]
+data = np.loadtxt(args.f2);  X2 = data[:,args.cx2];  Y2 = data[:,args.cy2]
+del data
+
+# check if arrays are the same. If not, interpolate X2-Y2 into X1
+if np.any(X1!=X2):
+    print 'x-columns are different...'
+    if args.log:
+        print 'Interpolating in log-log...'    	
+        Y2 = 10**(np.interp(np.log10(X1), np.log10(X2), np.log10(Y2)))
+    else:
+    	print 'Interpolating linearly...'
+        Y2 = np.interp(X1, X2, Y2)
+
+# evaluate the expression and save results to file
+np.savetxt(args.fout, np.transpose([X1, eval(args.O)]))
