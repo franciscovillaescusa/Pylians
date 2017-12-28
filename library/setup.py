@@ -5,8 +5,9 @@ from distutils.extension import Extension
 import numpy
 
 ext_modules = [
-    Extension("MAS_library.MAS_library", ["MAS_library/MAS_library.pyx"],
-        extra_compile_args=['-O3','-ffast-math','-march=native']),
+    Extension("MAS_library.MAS_library", ["MAS_library/MAS_library.pyx",
+                                          "MAS_library/MAS_c.c"],
+              extra_compile_args=['-O3','-ffast-math','-march=native','-fopenmp']),
 
     Extension("density_field_library", ["density_field_library.pyx"]),
 
