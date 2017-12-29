@@ -118,7 +118,7 @@ cpdef void MA(pos, number, BoxSize, MAS='CIC', W=None, verbose=False,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True) 
-cdef void CIC(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
+cpdef void CIC(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
         
     cdef int axis,dims,coord
     cdef long i,particles
@@ -1013,67 +1013,89 @@ cpdef void SPH_RT_2D(double[:,::1] density, float[:,::1] pos,
 ##################### MAS_c (openmp) functions ########################
 
 ############## NGP #################
-cpdef void NGPc3D(MASC.FLOAT[:,::1] pos, MASC.FLOAT[:,:,::1] number, float BoxSize,
+cpdef void NGPc3D(FLOAT[:,::1] pos, FLOAT[:,:,::1] number, FLOAT BoxSize,
                   long threads):
-    MASC.NGP3D(&pos[0,0], &number[0,0,0], pos.shape[0], number.shape[0], BoxSize, threads)
-
+    MASC.NGP(&pos[0,0], &number[0,0,0], NULL, pos.shape[0], number.shape[0],
+             pos.shape[1], BoxSize, threads)
     
-cpdef void NGPWc3D(MASC.FLOAT[:,::1] pos, MASC.FLOAT[:,:,::1] number, MASC.FLOAT[::1] W,
-                   float BoxSize, long threads):
-    MASC.NGPW3D(&pos[0,0], &number[0,0,0], &W[0], pos.shape[0], number.shape[0], 
-                BoxSize, threads)
+cpdef void NGPWc3D(FLOAT[:,::1] pos, FLOAT[:,:,::1] number, FLOAT[::1] W,
+                   FLOAT BoxSize, long threads):
+    MASC.NGP(&pos[0,0], &number[0,0,0], &W[0], pos.shape[0], number.shape[0], 
+             pos.shape[1], BoxSize, threads)
 
-
-cpdef void NGPc2D(MASC.FLOAT[:,::1] pos, MASC.FLOAT[:,::1] number, float BoxSize,
+cpdef void NGPc2D(FLOAT[:,::1] pos, FLOAT[:,::1] number, FLOAT BoxSize,
                   long threads):
-    MASC.NGP2D(&pos[0,0], &number[0,0], pos.shape[0], number.shape[0], BoxSize, threads)
+    MASC.NGP(&pos[0,0], &number[0,0], NULL, pos.shape[0], number.shape[0],
+             pos.shape[1], BoxSize, threads)
 
-
-cpdef void NGPWc2D(MASC.FLOAT[:,::1] pos, MASC.FLOAT[:,::1] number, MASC.FLOAT[::1] W,
-                   float BoxSize, long threads):
-    MASC.NGPW2D(&pos[0,0], &number[0,0], &W[0], pos.shape[0], number.shape[0],
-                BoxSize, threads)
+cpdef void NGPWc2D(FLOAT[:,::1] pos, FLOAT[:,::1] number, FLOAT[::1] W,
+                   FLOAT BoxSize, long threads):
+    MASC.NGP(&pos[0,0], &number[0,0], &W[0], pos.shape[0], number.shape[0],
+             pos.shape[1], BoxSize, threads)
 ####################################
 
 ############## CIC #################
-cpdef void CICc3D(MASC.FLOAT[:,::1] pos, MASC.FLOAT[:,:,::1] number, float BoxSize,
+cpdef void CICc3D(FLOAT[:,::1] pos, FLOAT[:,:,::1] number, FLOAT BoxSize,
                   long threads):
-    MASC.CIC3D(&pos[0,0], &number[0,0,0], pos.shape[0], number.shape[0], BoxSize, threads)
-
+    MASC.CIC(&pos[0,0], &number[0,0,0], NULL, pos.shape[0], number.shape[0],
+             pos.shape[1], BoxSize, threads)
     
-cpdef void CICWc3D(MASC.FLOAT[:,::1] pos, MASC.FLOAT[:,:,::1] number, MASC.FLOAT[::1] W,
-                   float BoxSize, long threads):
-    MASC.CICW3D(&pos[0,0], &number[0,0,0], &W[0], pos.shape[0], number.shape[0], 
-                BoxSize, threads)
+cpdef void CICWc3D(FLOAT[:,::1] pos, FLOAT[:,:,::1] number, FLOAT[::1] W,
+                   FLOAT BoxSize, long threads):
+    MASC.CIC(&pos[0,0], &number[0,0,0], &W[0], pos.shape[0], number.shape[0],
+             pos.shape[1], BoxSize, threads)
 
-
-cpdef void CICc2D(MASC.FLOAT[:,::1] pos, MASC.FLOAT[:,::1] number, float BoxSize,
+cpdef void CICc2D(FLOAT[:,::1] pos, FLOAT[:,::1] number, FLOAT BoxSize,
                   long threads):
-    MASC.CIC2D(&pos[0,0], &number[0,0], pos.shape[0], number.shape[0], BoxSize, threads)
+    MASC.CIC(&pos[0,0], &number[0,0], NULL, pos.shape[0], number.shape[0],
+             pos.shape[1], BoxSize, threads)
 
-
-cpdef void CICWc2D(MASC.FLOAT[:,::1] pos, MASC.FLOAT[:,::1] number, MASC.FLOAT[::1] W,
-                   float BoxSize, long threads):
-    MASC.CICW2D(&pos[0,0], &number[0,0], &W[0], pos.shape[0], number.shape[0],
-                BoxSize, threads)
+cpdef void CICWc2D(FLOAT[:,::1] pos, FLOAT[:,::1] number, FLOAT[::1] W,
+                   FLOAT BoxSize, long threads):
+    MASC.CIC(&pos[0,0], &number[0,0], &W[0], pos.shape[0], number.shape[0],
+             pos.shape[1], BoxSize, threads)
 ####################################
 
 ############## TSC #################
-cpdef void TSCc3D(MASC.FLOAT[:,::1] pos, MASC.FLOAT[:,:,::1] number, float BoxSize,
+cpdef void TSCc3D(FLOAT[:,::1] pos, FLOAT[:,:,::1] number, FLOAT BoxSize,
                   long threads):
-    MASC.TSC3D(&pos[0,0], &number[0,0,0], pos.shape[0], number.shape[0], BoxSize, threads)
+    MASC.TSC(&pos[0,0], &number[0,0,0], NULL, pos.shape[0], number.shape[0],
+             pos.shape[1], BoxSize, threads)
 
-cpdef void TSCWc3D(MASC.FLOAT[:,::1] pos, MASC.FLOAT[:,:,::1] number, MASC.FLOAT[::1] W,
-                   float BoxSize, long threads):
-    MASC.TSCW3D(&pos[0,0], &number[0,0,0], &W[0], pos.shape[0], number.shape[0],
-                BoxSize, threads)
+cpdef void TSCWc3D(FLOAT[:,::1] pos, FLOAT[:,:,::1] number, FLOAT[::1] W,
+                   FLOAT BoxSize, long threads):
+    MASC.TSC(&pos[0,0], &number[0,0,0], &W[0], pos.shape[0], number.shape[0],
+             pos.shape[1], BoxSize, threads)
 
-cpdef void TSCc2D(MASC.FLOAT[:,::1] pos, MASC.FLOAT[:,::1] number, float BoxSize,
+cpdef void TSCc2D(FLOAT[:,::1] pos, FLOAT[:,::1] number, FLOAT BoxSize,
                   long threads):
-    MASC.TSC2D(&pos[0,0], &number[0,0], pos.shape[0], number.shape[0], BoxSize, threads)
+    MASC.TSC(&pos[0,0], &number[0,0], NULL, pos.shape[0], number.shape[0],
+             pos.shape[1], BoxSize, threads)
 
-cpdef void TSCWc2D(MASC.FLOAT[:,::1] pos, MASC.FLOAT[:,::1] number, FLOAT[::1] W,
-                   float BoxSize, long threads):
-    MASC.TSCW2D(&pos[0,0], &number[0,0], &W[0], pos.shape[0], number.shape[0], BoxSize,
-                threads)
+cpdef void TSCWc2D(FLOAT[:,::1] pos, FLOAT[:,::1] number, FLOAT[::1] W,
+                   FLOAT BoxSize, long threads):
+    MASC.TSC(&pos[0,0], &number[0,0], &W[0], pos.shape[0], number.shape[0],
+             pos.shape[1], BoxSize, threads)
+####################################
+
+############## PCS #################
+cpdef void PCSc3D(FLOAT[:,::1] pos, FLOAT[:,:,::1] number,
+                  FLOAT BoxSize, long threads):
+    MASC.PCS(&pos[0,0], &number[0,0,0], NULL, pos.shape[0], number.shape[0],
+             pos.shape[1], BoxSize, threads)
+
+cpdef void PCSWc3D(FLOAT[:,::1] pos, FLOAT[:,:,::1] number, FLOAT[::1] W,
+                   FLOAT BoxSize, long threads):
+    MASC.PCS(&pos[0,0], &number[0,0,0], &W[0], pos.shape[0], number.shape[0],
+              pos.shape[1], BoxSize, threads)
+
+cpdef void PCSc2D(FLOAT[:,::1] pos, FLOAT[:,::1] number,
+                   FLOAT BoxSize, long threads):
+    MASC.PCS(&pos[0,0], &number[0,0], NULL, pos.shape[0], number.shape[0],
+              pos.shape[1], BoxSize, threads)
+    
+cpdef void PCSWc2D(FLOAT[:,::1] pos, FLOAT[:,::1] number, FLOAT[::1] W,
+                   FLOAT BoxSize, long threads):
+    MASC.PCS(&pos[0,0], &number[0,0], &W[0], pos.shape[0], number.shape[0],
+             pos.shape[1], BoxSize, threads)
 ####################################

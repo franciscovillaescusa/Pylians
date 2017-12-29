@@ -128,7 +128,7 @@ class TestMASL(unittest.TestCase):
         np.random.seed(seed)
         pos = np.random.random((particles,3)).astype(FLOAT)
         delta = np.zeros((dims,dims,dims), dtype=FLOAT)
-        MASL.CICc3D(pos, delta, BoxSize, 2)
+        MASL.CICc3D(pos, delta, BoxSize, 1)
         suma = np.sum(delta, dtype=np.float64)
         self.assertAlmostEqual(suma/particles, 1.0, places=8)
 
@@ -176,7 +176,7 @@ class TestMASL(unittest.TestCase):
         pos = np.random.random((particles,3)).astype(FLOAT)
         delta = np.zeros((dims,dims,dims), dtype=FLOAT)
         W = np.ones(particles, dtype=FLOAT)*3.0
-        MASL.TSCWc3D(pos, delta, W, BoxSize, 2)
+        MASL.TSCWc3D(pos, delta, W, BoxSize, 3)
         suma = np.sum(delta, dtype=np.float64)
         self.assertAlmostEqual(suma/(3.0*particles), 1.0, places=8)
 
@@ -198,6 +198,46 @@ class TestMASL(unittest.TestCase):
         MASL.TSCWc2D(pos, delta, W, BoxSize, 2)
         suma = np.sum(delta, dtype=np.float64)
         self.assertAlmostEqual(suma/(3.0*particles), 1.0, places=8)
+
+    def test_PCSc3D(self):
+        particles, BoxSize, dims, seed = 1000, 1.0, 64, 1
+        np.random.seed(seed)
+        pos = np.random.random((particles,3)).astype(FLOAT)
+        delta = np.zeros((dims,dims,dims), dtype=FLOAT)
+        MASL.PCSc3D(pos, delta, BoxSize, 2)
+        suma = np.sum(delta, dtype=np.float64)
+        self.assertAlmostEqual(suma/particles, 1.0, places=8)
+
+    def test_PCSWc3D(self):
+        particles, BoxSize, dims, seed = 1000, 1.0, 64, 1
+        np.random.seed(seed)
+        pos = np.random.random((particles,3)).astype(FLOAT)
+        delta = np.zeros((dims,dims,dims), dtype=FLOAT)
+        W = np.ones(particles, dtype=FLOAT)*3.0
+        MASL.PCSWc3D(pos, delta, W, BoxSize, 2)
+        suma = np.sum(delta, dtype=np.float64)
+        self.assertAlmostEqual(suma/(3.0*particles), 1.0, places=8)
+
+    def test_PCSc2D(self):
+        particles, BoxSize, dims, seed = 1000, 1.0, 64, 1
+        np.random.seed(seed)
+        pos = np.random.random((particles,2)).astype(FLOAT)
+        delta = np.zeros((dims,dims), dtype=FLOAT)
+        MASL.PCSc2D(pos, delta, BoxSize, 2)
+        suma = np.sum(delta, dtype=np.float64)
+        self.assertAlmostEqual(suma/particles, 1.0, places=8)
+        
+    def test_PCSWc2D(self):
+        particles, BoxSize, dims, seed = 1000, 1.0, 64, 1
+        np.random.seed(seed)
+        pos = np.random.random((particles,2)).astype(FLOAT)
+        delta = np.zeros((dims,dims), dtype=FLOAT)
+        W = np.ones(particles, dtype=FLOAT)*3.0
+        MASL.PCSWc2D(pos, delta, W, BoxSize, 2)
+        suma = np.sum(delta, dtype=np.float64)
+        self.assertAlmostEqual(suma/(3.0*particles), 1.0, places=8)
+
+        
         
 if __name__== '__main__':
     unittest.main()

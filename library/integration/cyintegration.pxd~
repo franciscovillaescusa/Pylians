@@ -1,0 +1,1 @@
+cdef extern from "MAS_c.h":

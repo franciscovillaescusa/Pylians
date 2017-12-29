@@ -29,7 +29,7 @@ ext_modules = [
 
     Extension("void_library.void_library", ["void_library/void_library.pyx"],
         extra_compile_args = ['-O3','-ffast-math','-march=native','-fopenmp'],
-        libraries=["m"])
+        extra_link_args=['-fopenmp'], libraries=['m'])
 
     #Extension("nearest_point_library",["nearest_point_library.pyx"]),
     #extra_link_args=['-O3']),
