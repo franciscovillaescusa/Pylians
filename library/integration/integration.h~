@@ -1,2 +1,0 @@
-double func(double x, double *a, double *b, int elements, double a_min,
-	    double a_max)
