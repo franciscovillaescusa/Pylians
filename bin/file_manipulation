@@ -32,8 +32,13 @@ data = np.loadtxt(args.f1);  X1 = data[:,args.cx1];  Y1 = data[:,args.cy1]
 data = np.loadtxt(args.f2);  X2 = data[:,args.cx2];  Y2 = data[:,args.cy2]
 del data
 
+
 # check if arrays are the same. If not, interpolate X2-Y2 into X1
 if np.any(X1!=X2):
+
+    # sort the data of the second file
+    indexes = np.argsort(X2);  X2 = X2[indexes];  Y2 = Y2[indexes]
+    
     print 'x-columns are different...'
     if args.log:
         print 'Interpolating in log-log...'    	
