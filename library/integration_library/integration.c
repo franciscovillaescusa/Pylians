@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include "integration.h"
 
@@ -8,7 +9,7 @@ inline double func(double x, double *a, double *b, int elements,
 {
   int index;
   
-  index = (int)((x-a_min)/(a_max-a_min)*elements);
+  index = (int)((x-a_min)/(a_max-a_min)*(elements-1));
   if (index>=elements-1)
     return b[elements-1];
 
@@ -64,3 +65,11 @@ double simpson(double x_min, double x_max, double *x, double *y,
 
   
 }
+
+
+
+
+
+
+
+

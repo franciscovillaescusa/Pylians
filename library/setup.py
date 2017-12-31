@@ -33,7 +33,8 @@ ext_modules = [
 
     Extension("integration_library.integration_library", 
 	      ["integration_library/integration_library.pyx",
-               "integration_library/integration.c"],
+               "integration_library/integration.c",
+               "integration_library/runge_kutta.c"],
 	      include_dirs=[numpy.get_include()],
 	      extra_compile_args=["-O3","-ffast-math","-march=native"]),
 
