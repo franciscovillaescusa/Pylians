@@ -59,3 +59,37 @@ cpdef RK4_example2(double[::1] yinit, double x1, double x2, long nstep,
     return np.asarray(<double[:yinit.shape[0]]> result)
 
     
+# RK5 with adaptive step example1
+cpdef odeint_example1(double[::1] yinit, double x1, double x2, double eps,
+                      double h1, double hmin, verbose=True):
+
+    cdef long nok, nbad
+    nok = nbad = 0
+    
+    CI.odeint(&yinit[0], yinit.shape[0], x1, x2, eps, h1, hmin, &nok, &nbad,
+              NULL, NULL, 0, example)
+
+    if verbose:
+        print 'Total steps = %ld'%(nok+nbad)
+        print 'OK    steps = %ld'%nok
+        print 'BAD   steps = %ld'%nbad
+
+    return np.asarray(yinit)
+
+# RK5 with adaptive step example2
+cpdef odeint_example2(double[::1] yinit, double x1, double x2, double eps,
+                      double h1, double hmin, double[::1] a, double[::1] b,
+                      verbose=True):
+
+    cdef long nok, nbad
+    nok = nbad = 0
+    
+    CI.odeint(&yinit[0], yinit.shape[0], x1, x2, eps, h1, hmin, &nok, &nbad,
+              &a[0], &b[0], a.shape[0], example2)
+
+    if verbose:
+        print 'Total steps = %ld'%(nok+nbad)
+        print 'OK    steps = %ld'%nok
+        print 'BAD   steps = %ld'%nbad
+
+    return np.asarray(yinit)
