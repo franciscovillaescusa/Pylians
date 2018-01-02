@@ -1,18 +1,61 @@
 import numpy as np
-import scipy.integrate as si
-import readfof
-import readsubf
-import sys
+#import scipy.integrate as si
+import integration_library as IL
+import readfof, readsubf
+import os, sys
+import units_library as UL
 
 
 ############################ CONSTANTS ############################
-pi=np.pi
-rho_crit=2.77536627e11 #h^2 Msun/Mpc^3
-deltac=1.686
+pi       = np.pi
+rho_crit = (UL.units()).rho_crit #h^2 Msun/Mpc^3
+deltac   = 1.686
 ###################################################################
 
 
+# This is the main driver routine to compute the halo mass function from several
+# fitting formulae.
+# k_in ---------> input k
+# Pk_in --------> input Pk
+# OmegaM -------> value of Omega_m
+# Masses -------> array with the masses where to compute the HMF
+# author -------> 'ST','Tinker','Tinker10','Crocce','Jenkins','Warren',
+#                 'Watson','Watson_FoF','Angulo'
+# bins ---------> In order to carry out the integral, we need a k-array sorted and
+#                 equally spaced in log10. This sets the number of bins in that array
+# z ------------> for 'Tinker', 'Tinker10' and Crocce
+# delta --------> for 'Tinker' and 'Tinker10'
+def MF_theory(k_in, Pk_in, OmegaM, Masses, author, bins=10000, z=0, delta=200.0):
 
+    rhoM = rho_crit*OmegaM
+
+    # sort the input k-array
+    indexes = np.argsort(k_in)
+    k_in = k_in[indexes];  Pk_in = Pk_in[indexes]
+    
+    # interpolate the input k-array into bins points
+    k  = np.logspace(np.log10(k_in[0]), np.log10(k_in[-1]), bins)
+    Pk = np.interp(np.log(k), np.log(k_in), Pk_in)
+    
+    if author=='ST':            MF = ST_mass_function(k, Pk, rhoM, Masses)
+    elif author=="Tinker":      MF = Tinker_mass_function(k, Pk, rhoM, Masses,
+                                                          z, delta)
+    elif author=="Tinker10":    MF = Tinker_2010_mass_function(k, Pk, rhoM, Masses,
+                                                               z, delta)
+    elif author=="Crocce":      MF = Crocce_mass_function(k, Pk, rhoM, Masses, z)
+    elif author=="Jenkins":     MF = Jenkins_mass_function(k, Pk, rhoM, Masses)
+    elif author=="Warren":      MF = Warren_mass_function(k, Pk, rhoM, Masses)
+    elif author=="Watson":      MF = Watson_mass_function(k, Pk, rhoM, Masses)
+    elif author=="Watson_FOF":  MF = Watson_mass_function_FoF(k, Pk, rhoM, Masses)
+    elif author=="Angulo":      MF = Angulo_subhalos_mass_function(k, Pk, rhoM, Masses)
+    else:  raise Exception("%s model not implemented!!!"%author)
+
+    return MF
+
+    
+
+"""
+###### old method to compute integrals ######
 #derivative function for integrating sigma(R)
 def deriv_sigma(y,x,k,Pk,R):
     Pkp=np.interp(np.log10(x),np.log10(k),np.log10(Pk)); Pkp=10**Pkp
@@ -29,10 +72,23 @@ def sigma(k,Pk,R):
                 mxstep=10000000)[1][0]/(2.0*pi**2)
 
     return np.sqrt(I)
+"""
+
+def sigma(k,Pk,R):
+    yinit = np.array([0.0], dtype=np.float64)
+    eps   = 1e-9  #change this for higher/lower accuracy
+    h1    = 1e-12
+    hmin  = 0.0
+    
+    W   = 3.0*(np.sin(k*R) - k*R*np.cos(k*R))/(k*R)**3
+    Pk1 = Pk*W**2*k**2/(2.0*pi**2)
+    
+    return np.sqrt(IL.odeint(yinit, k[0], k[-1], eps,
+                             h1, hmin, np.log10(k), np.log10(Pk1),
+                             'sigma', verbose=False)[0])
 
 #this function computes the derivate of sigma(M) wrt M
-def dSdM(k,Pk,OmegaM,M):
-    rhoM=rho_crit*OmegaM
+def dSdM(k, Pk, rhoM, M):
 
     R1=(3.0*M/(4.0*pi*rhoM))**(1.0/3.0)
     s1=sigma(k,Pk,R1)
@@ -44,38 +100,27 @@ def dSdM(k,Pk,OmegaM,M):
     return (s2-s1)/(M2-M)
 
 ##############################################################################
-
 #This function computes the Sheth-Tormen mass function. Returns dn/dM
 #If the mass function wants to be computed in a given mass bins, use Masses
-def ST_mass_function(k,Pk,OmegaM,M1,M2,bins,Masses=None):
-    rhoM=rho_crit*OmegaM
+def ST_mass_function(k, Pk, rhoM, Masses):
 
-    if Masses is None:
-        dndM=np.empty(bins,dtype=np.float64)
-        Masses=np.logspace(np.log10(M1),np.log10(M2),bins)
-    else:
-        length=len(Masses); dndM=np.empty(length,dtype=np.float64)
+    dndM = np.zeros(Masses.shape[0], dtype=np.float64)
         
-    i=0
-    for M in Masses:
-        R=(3.0*M/(4.0*pi*rhoM))**(1.0/3.0)
-        nu=(1.686/sigma(k,Pk,R))**2
-        nup=0.707*nu
+    for i,M in enumerate(Masses):
+        R   = (3.0*M/(4.0*pi*rhoM))**(1.0/3.0)
+        nu  = (1.686/sigma(k,Pk,R))**2
+        nup = 0.707*nu
 
-        dndM[i]=-2.0*(rhoM/M)*dSdM(k,Pk,OmegaM,M)/sigma(k,Pk,R)
+        dndM[i]=-2.0*(rhoM/M)*dSdM(k,Pk,rhoM,M)/sigma(k,Pk,R)
         dndM[i]*=0.3222*(1.0+1.0/nup**0.3)*np.sqrt(0.5*nup)
         dndM[i]*=np.exp(-0.5*nup)/np.sqrt(pi)
 
-        i+=1
-
-    return [Masses,dndM]
+    return dndM
 
 ##############################################################################
-
 #This function computes the Tinker mass function. Returns dn/dM
 #If the mass function wants to be computed in a given mass bins, use Masses
-def Tinker_mass_function(k,Pk,OmegaM,z,M1,M2,bins,delta=200.0,Masses=None):
-
+def Tinker_mass_function(k, Pk, rhoM, Masses, z, delta=200.0):
 
     alpha=10**(-(0.75/np.log10(delta/75.0))**1.2)
 
@@ -91,7 +136,7 @@ def Tinker_mass_function(k,Pk,OmegaM,z,M1,M2,bins,delta=200.0,Masses=None):
     b=np.interp(delta,D,b)
     c=np.interp(delta,D,c)
 
-    #this is for R200_critical with OmegaM=0.2708
+    # this is for R200_critical with OmegaM=0.2708
     A*=(1.0+z)**(-0.14)
     a*=(1.0+z)**(-0.06)
     b*=(1.0+z)**(-alpha)
@@ -102,33 +147,22 @@ def Tinker_mass_function(k,Pk,OmegaM,z,M1,M2,bins,delta=200.0,Masses=None):
     print 'b=',b
     print 'c=',c
     
-    rhoM=rho_crit*OmegaM
-
-    if Masses is None:
-        dndM=np.empty(bins,dtype=np.float64)
-        Masses=np.logspace(np.log10(M1),np.log10(M2),bins)
-    else:
-        length=len(Masses)
-        dndM=np.empty(length,dtype=np.float64)
+    dndM = np.zeros(Masses.shape[0], dtype=np.float64)
         
-    i=0
-    for M in Masses:
-        R=(3.0*M/(4.0*pi*rhoM))**(1.0/3.0)
-        s=sigma(k,Pk,R)
-        f_s=A*((b/s)**(a)+1.0)*np.exp(-c/s**2)
+    for i,M in enumerate(Masses):
+        R   =(3.0*M/(4.0*pi*rhoM))**(1.0/3.0)
+        s   = sigma(k,Pk,R)
+        f_s = A*((b/s)**(a)+1.0)*np.exp(-c/s**2)
 
-        dndM[i]=-(rhoM/M)*dSdM(k,Pk,OmegaM,M)*f_s/s
+        dndM[i] = -(rhoM/M)*dSdM(k,Pk,rhoM,M)*f_s/s
 
-        i+=1
-
-    return [Masses,dndM]
+    return dndM
 
 ##############################################################################
-
-def Tinker_2010_mass_function(k,Pk,OmegaM,z,M1,M2,bins,delta=200.0,Masses=None):
+def Tinker_2010_mass_function(k, Pk, rhoM, Masses, z, delta=200.0):
 
     if delta!=200.0:
-        print 'only implemented delta=200, please update library';  sys.exit()
+        raise Exception("only implemented delta=200, please update library")
 
     alpha  = 0.368
     beta0  = 0.589;       beta  = beta0*(1.0+z)**0.20
@@ -136,13 +170,7 @@ def Tinker_2010_mass_function(k,Pk,OmegaM,z,M1,M2,bins,delta=200.0,Masses=None):
     phi0   = -0.729;      phi   = phi0*(1.0+z)**(-0.08)
     eta0   = -0.243;      eta   = eta0*(1.0+z)**0.27
     
-    rhoM = rho_crit*OmegaM
-
-    if Masses is None:
-        dndM   = np.empty(bins,dtype=np.float64)
-        Masses = np.logspace(np.log10(M1),np.log10(M2),bins)
-    else:
-        dndM   = np.empty(len(Masses),dtype=np.float64)
+    dndM = np.empty(Masses.shape[0], dtype=np.float64)
         
     for i,M in enumerate(Masses):
         R = (3.0*M/(4.0*pi*rhoM))**(1.0/3.0)
@@ -156,167 +184,112 @@ def Tinker_2010_mass_function(k,Pk,OmegaM,z,M1,M2,bins,delta=200.0,Masses=None):
 
         dndM[i] = -(rhoM/M**2)*(nu*fnu)*dlnnu_dlnM
 
-    return [Masses,dndM]
+    return dndM
     
-    
-
 
 
 ##############################################################################
-
 #This function computes the Crocce mass function. Returns dn/dM
 #If the mass function wants to be computed in a given mass bins, use Masses
-def Crocce_mass_function(k,Pk,OmegaM,z,M1,M2,bins,Masses=None):
+def Crocce_mass_function(k, Pk, rhoM, Masses, z):
 
     A=0.58*(1.0+z)**(-0.13) 
     a=1.37*(1.0+z)**(-0.15)
     b=0.3*(1.0+z)**(-0.084)
     c=1.036*(1.0+z)**(-0.024)
     
-    rhoM=rho_crit*OmegaM
-
-    if Masses is None:
-        dndM=np.empty(bins,dtype=np.float64)
-        Masses=np.logspace(np.log10(M1),np.log10(M2),bins)
-    else:
-        length=len(Masses)
-        dndM=np.empty(length,dtype=np.float64)
+    dndM = np.zeros(Masses.shape[0], dtype=np.float64)
         
-    i=0
-    for M in Masses:
-        R=(3.0*M/(4.0*pi*rhoM))**(1.0/3.0)
-        s=sigma(k,Pk,R)
-        f_s=A*(s**(-a)+b)*np.exp(-c/s**2)
+    for i,M in enumerate(Masses):
+        R   = (3.0*M/(4.0*pi*rhoM))**(1.0/3.0)
+        s   = sigma(k,Pk,R)
+        f_s = A*(s**(-a)+b)*np.exp(-c/s**2)
 
-        dndM[i]=-(rhoM/M)*dSdM(k,Pk,OmegaM,M)*f_s/s
+        dndM[i]=-(rhoM/M)*dSdM(k,Pk,rhoM,M)*f_s/s
 
-        i+=1
-
-    return [Masses,dndM]
+    return dndM
 
 ##############################################################################
-
 #This function computes the Jenkins mass function. Returns dn/dM
 #If the mass function wants to be computed in a given mass bins, use Masses
-def Jenkins_mass_function(k,Pk,OmegaM,M1,M2,bins,Masses=None):
+def Jenkins_mass_function(k, Pk, rhoM, Masses):
 
     A=0.315
     b=0.61
     c=3.8
-
     
-    rhoM=rho_crit*OmegaM
-
-    if Masses is None:
-        dndM=np.empty(bins,dtype=np.float64)
-        Masses=np.logspace(np.log10(M1),np.log10(M2),bins)
-    else:
-        length=len(Masses)
-        dndM=np.empty(length,dtype=np.float64)
+    dndM = np.zeros(Masses.shape[0], dtype=np.float64)
         
-    i=0
-    for M in Masses:
-        R=(3.0*M/(4.0*pi*rhoM))**(1.0/3.0)
-        s=sigma(k,Pk,R)
-        f_s=A*np.exp(-np.absolute(np.log(1.0/s)+b)**c)
+    for i,M in enumerate(Masses):
+        R   = (3.0*M/(4.0*pi*rhoM))**(1.0/3.0)
+        s   = sigma(k,Pk,R)
+        f_s = A*np.exp(-np.absolute(np.log(1.0/s)+b)**c)
 
-        dndM[i]=-(rhoM/M)*dSdM(k,Pk,OmegaM,M)*f_s/s
+        dndM[i] = -(rhoM/M)*dSdM(k,Pk,rhoM,M)*f_s/s
 
-        i+=1
-
-    return [Masses,dndM]
+    return dndM
 
 ##############################################################################
-
 #This function computes the Warren mass function. Returns dn/dM
 #If the mass function wants to be computed in a given mass bins, use Masses
-def Warren_mass_function(k,Pk,OmegaM,M1,M2,bins,Masses=None):
+def Warren_mass_function(k, Pk, rhoM, Masses):
 
     A=0.7234
     a=1.625
     b=0.2538
     c=1.1982
     
-    rhoM=rho_crit*OmegaM
-
-    if Masses is None:
-        dndM=np.empty(bins,dtype=np.float64)
-        Masses=np.logspace(np.log10(M1),np.log10(M2),bins)
-    else:
-        length=len(Masses)
-        dndM=np.empty(length,dtype=np.float64)
+    dndM = np.zeros(Masses.shape[0], dtype=np.float64)
         
-    i=0
-    for M in Masses:
-        R=(3.0*M/(4.0*pi*rhoM))**(1.0/3.0)
-        s=sigma(k,Pk,R)
-        f_s=A*(s**(-a)+b)*np.exp(-c/s**2)
+    for i,M in enumerate(Masses):
+        R   = (3.0*M/(4.0*pi*rhoM))**(1.0/3.0)
+        s   = sigma(k,Pk,R)
+        f_s = A*(s**(-a)+b)*np.exp(-c/s**2)
 
-        dndM[i]=-(rhoM/M)*dSdM(k,Pk,OmegaM,M)*f_s/s
+        dndM[i] = -(rhoM/M)*dSdM(k,Pk,rhoM,M)*f_s/s
 
-        i+=1
-
-    return [Masses,dndM]
+    return dndM
 
 ##############################################################################
-
 #This function computes the Warren mass function for FoF halos. Returns dn/dM
 #If the mass function wants to be computed in a given mass bins, use Masses
-def Watson_mass_function_FoF(k,Pk,OmegaM,M1,M2,bins,Masses=None):
+def Watson_mass_function_FoF(k, Pk, rhoM, Masses):
 
     A=0.282
     a=2.163
     b=1.406
     c=1.210
     
-    rhoM=rho_crit*OmegaM
-
-    if Masses is None:
-        dndM=np.empty(bins,dtype=np.float64)
-        Masses=np.logspace(np.log10(M1),np.log10(M2),bins)
-    else:
-        length=len(Masses)
-        dndM=np.empty(length,dtype=np.float64)
+    dndM = np.zeros(Masses.shape[0], dtype=np.float64)
         
-    i=0
-    for M in Masses:
-        R=(3.0*M/(4.0*pi*rhoM))**(1.0/3.0)
-        s=sigma(k,Pk,R)
-        f_s=A*((b/s)**a+1.0)*np.exp(-c/s**2)
+    for i,M in enumerate(Masses):
+        R   = (3.0*M/(4.0*pi*rhoM))**(1.0/3.0)
+        s   = sigma(k,Pk,R)
+        f_s = A*((b/s)**a+1.0)*np.exp(-c/s**2)
 
-        dndM[i]=-(rhoM/M)*dSdM(k,Pk,OmegaM,M)*f_s/s
+        dndM[i] = -(rhoM/M)*dSdM(k,Pk,rhoM,M)*f_s/s
 
-        i+=1
-
-    return [Masses,dndM]
+    return dndM
 
 ##############################################################################
-
 #This function computes the Warren mass function. Returns dn/dM
 #If the mass function wants to be computed in a given mass bins, use Masses
-def Watson_mass_function(k,Pk,OmegaM,M1,M2,bins,Masses=None):
+def Watson_mass_function(k, Pk, rhoM, Masses):
 
     delta=200.0
+    OmegaM =rhoM/rho_crit
 
     A=0.194
     a=1.805
     b=2.267
     c=1.287
 
-    rhoM=rho_crit*OmegaM
-
-    if Masses is None:
-        dndM=np.empty(bins,dtype=np.float64)
-        Masses=np.logspace(np.log10(M1),np.log10(M2),bins)
-    else:
-        length=len(Masses)
-        dndM=np.empty(length,dtype=np.float64)
+    dndM = np.zeros(Masses.shape[0], dtype=np.float64)
         
-    i=0
-    for M in Masses:
-        R=(3.0*M/(4.0*pi*rhoM))**(1.0/3.0)
-        s=sigma(k,Pk,R)
-        f_s=A*(s**(-a)+b)*np.exp(-c/s**2)
+    for i,M in enumerate(Masses):
+        R   = (3.0*M/(4.0*pi*rhoM))**(1.0/3.0)
+        s   = sigma(k,Pk,R)
+        f_s = A*(s**(-a)+b)*np.exp(-c/s**2)
 
         factor=np.exp(0.023*(delta/178.0-1.0))
         factor*=(delta/178.0)**(-0.456*OmegaM-0.139)
@@ -324,41 +297,28 @@ def Watson_mass_function(k,Pk,OmegaM,M1,M2,bins,Masses=None):
 
         f_s*=factor
 
-        dndM[i]=-(rhoM/M)*dSdM(k,Pk,OmegaM,M)*f_s/s
+        dndM[i] = -(rhoM/M)*dSdM(k,Pk,rhoM,M)*f_s/s
 
-        i+=1
-
-    return [Masses,dndM]
+    return dndM
 
 #############################################################################
-
 #This function computes the Warren mass function. Returns dn/dM
 #If the mass function wants to be computed in a given mass bins, use Masses
-def Angulo_subhalos_mass_function(k,Pk,OmegaM,M1,M2,bins,Masses=None):
+def Angulo_subhalos_mass_function(k, Pk, rhoM, Masses):
     
-    rhoM=rho_crit*OmegaM
-
-    if Masses is None:
-        dndM=np.empty(bins,dtype=np.float64)
-        Masses=np.logspace(np.log10(M1),np.log10(M2),bins)
-    else:
-        length=len(Masses)
-        dndM=np.empty(length,dtype=np.float64)
+    dndM = np.zeros(Masses.shape[0], dtype=np.float64)
         
-    i=0
-    for M in Masses:
-        R=(3.0*M/(4.0*pi*rhoM))**(1.0/3.0)
-        s=sigma(k,Pk,R)
-        f_s=0.265*(1.675/s+1.0)**1.9*np.exp(-1.4/s**2)
+    for i,M in enumerate(Masses):
+        R   = (3.0*M/(4.0*pi*rhoM))**(1.0/3.0)
+        s   = sigma(k,Pk,R)
+        f_s = 0.265*(1.675/s+1.0)**1.9*np.exp(-1.4/s**2)
 
-        dndM[i]=-(rhoM/M)*dSdM(k,Pk,OmegaM,M)*f_s/s
+        dndM[i] = -(rhoM/M)*dSdM(k,Pk,rhoM,M)*f_s/s
 
-        i+=1
+    return dndM
 
-    return [Masses,dndM]
 
 #############################################################################
-
 #This functions computes the halo mass function (dn/dM (M)) of a given object
 #and write the results to a file. The arguments are:
 #groups_fname ---> folder containing the halos/subhalos files
@@ -630,119 +590,3 @@ def mass_function_fsigma(groups_fname,groups_number,f_out,min_mass,max_mass,
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-################################## USAGE #####################################
-"""
-OmegaM=0.2708
-z=0
-
-M_min=1e10
-M_max=1e16
-
-bins=100
-
-M=np.logspace(np.log10(M_min),np.log10(M_max),bins+1)
-
-f_Pk_DM='/home/cosmos/users/mv249/RUNSG2/Paco/simulations/Clusters/CDM/CAMB_TABLES/ics_matterpow_0.dat'
-
-f=open(f_Pk_DM,'r'); k,Pk=[],[]
-for line in f.readlines():
-    a=line.split()
-    k.append(float(a[0])); Pk.append(float(a[1]))
-f.close(); k=np.array(k); Pk=np.array(Pk)
-
-dndM_ST=ST_mass_function(k,Pk,OmegaM,None,None,None,M)[1]
-#dndM_Tinker=Tinker_mass_function(k,Pk,OmegaM,z,None,None,None,200,M)[1]
-#dndM_Crocce=Crocce_mass_function(k,Pk,OmegaM,z,None,None,None,M)[1]
-#dndM_Jenkins=Jenkins_mass_function(k,Pk,OmegaM,None,None,None,M)[1]
-
-
-f=open('borrar5.dat','w')
-for i in range(len(M)):
-    f.write(str(M[i])+' '+str(dndM_ST[i])+'\n')
-f.close()
-
-f=open('borrar1.dat','w')
-for i in range(len(M)):
-    f.write(str(M[i])+' '+str(dndM_Tinker[i])+'\n')
-f.close()
-
-f=open('borrar2.dat','w')
-for i in range(len(M)):
-    f.write(str(M[i])+' '+str(dndM_Crocce[i])+'\n')
-f.close()
-
-f=open('borrar3.dat','w')
-for i in range(len(M)):
-    f.write(str(M[i])+' '+str(dndM_Jenkins[i])+'\n')
-f.close()
-"""
-
-##### mass function #####
-"""
-groups_fname='/home/villa/disksom2/ICTP/CDM/1/Mass_function'
-groups_number=3
-
-#min_mass=2.0e13
-#max_mass=2.0e15
-bins=25
-
-BoxSize=1000.0 #Mpc/h
-
-obj='FoF' #choose between 'FoF' or 'halos_m200'
-
-f_out='mass_function_FoF_corrected_z=0.dat'
-
-mass_function(groups_fname,groups_number,obj,BoxSize,bins,f_out,
-              min_mass=None,max_mass=None,
-              long_ids_flag=True,SFR_flag=False)
-"""
-
-##### mass function f(sigma) #####
-"""
-groups_fname='/home/villa/disksom2/ICTP/CDM/1/Mass_function'
-groups_number=3
-
-min_mass=2.0e13
-max_mass=2.0e15
-bins=25
-
-BoxSize=1000.0 #Mpc/h
-
-Omega_CDM=0.2208
-Omega_B=0.05
-Omega_M=Omega_CDM+Omega_B
-
-obj='FoF' #choose between 'FoF' or 'halos_m200'
-
-f_out='f_sigma_FoF_corrected_z=0.dat'
-
-f_Pk_DM='/home/villa/disksom2/ICTP/CDM/CAMB_TABLES/ics_matterpow_0.dat'
-f_transfer='/home/villa/disksom2/ICTP/CDM/CAMB_TABLES/ics_transfer_0.dat'
-
-#[k,Pk]=BL.DM_Pk(f_Pk_DM)
-[k,Pk]=BL.CDM_Pk(f_Pk_DM,f_transfer,Omega_CDM,Omega_B)
-
-mass_function_fsigma(groups_fname,groups_number,f_out,min_mass,max_mass,
-                         bins,BoxSize,obj,Omega_M,k,Pk)
-"""
