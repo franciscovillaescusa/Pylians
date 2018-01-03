@@ -1,0 +1,18 @@
+#!/usr/bin/env python
+
+import argparse
+import numpy as np
+import mass_function_library as MFL
+
+parser = argparse.ArgumentParser()
+parser.add_argument("Pk_file",
+            help="computes sigma(R) value from file. R=8 Mpc/h by default")
+parser.add_argument("-R", type=float, default=8.0,
+            help="Value of R (optional)")
+args = parser.parse_args()
+
+# read input file
+k,Pk = np.loadtxt(args.Pk_file,unpack=True)
+
+# compute value of sigma(R)
+print 'Value of sigma(%.2f) = %.5e'%(args.R, MFL.sigma(k,Pk,args.R))

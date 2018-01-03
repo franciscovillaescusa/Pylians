@@ -64,7 +64,7 @@ def deriv_sigma(y,x,k,Pk,R):
     return [x**2*Pkp*W**2]
 
 #this function computes sigma(R)
-def sigma(k,Pk,R):
+def sigma_old(k,Pk,R):
     k_limits=[k[0],k[-1]]; yinit=[0.0]
 
     I=si.odeint(deriv_sigma,yinit,k_limits,args=(k,Pk,R),
