@@ -33,7 +33,9 @@ def density_field_gadget(snapshot_fname, ptypes, dims, MAS='CIC',
 	for i in xrange(filenum):
 
 		# find the name of the sub-snapshot
-		snapshot = snapshot_fname+'.%d'%i
+                if filenum==1:  snapshot = snapshot_fname
+                else:           snapshot = snapshot_fname+'.%d'%i
+
 
 		# find the local particles in the sub-snapshot
 		head  = readsnap.snapshot_header(snapshot)
