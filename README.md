@@ -118,6 +118,6 @@ Nmodes = Pk.Nmodes3D
 
 ## Contact
 
-For comments, problems, bugs ... etc you can reach me [fvillaescusa@flatironinstitute.org](mailto:fvillaescusa@flatironinstitute.org).
+For comments, problems, bugs ... etc you can reach me at [fvillaescusa@flatironinstitute.org](mailto:fvillaescusa@flatironinstitute.org).
 
 
