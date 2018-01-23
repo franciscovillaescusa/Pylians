@@ -1,6 +1,6 @@
-# Fcodes
+# Pylians
 
-The Fcodes are a set of python/cython/c libraries and scripts that can be used to analyze the output of numerical simulations (both N-body and hydro). They can be used to:
+Pylians stands for **Py**thon **li**braries for the **a**nalysis of **n**umerical **s**imulations. They are a set of python libraries, written in python, cython and C, whose purposes is to facilitate the analysis of numerical simulations (both N-body and hydro). Among other things, they can be used to:
 
 - Compute density fields
 - Compute power spectra
@@ -13,11 +13,14 @@ The Fcodes are a set of python/cython/c libraries and scripts that can be used t
 - Compute DLAs column density distribution functions
 - Plot density fields and make movies
 
+[Pylians](https://en.wikipedia.org/wiki/Nestor_(mythology)) were the native or inhabitant of the Homeric town of Pylos. 
+
 ## Requisites
 
 - numpy
 - scipy
 - pyfftw
+- mpi4py
 - cython
 - openmp
  
@@ -43,7 +46,7 @@ We provide some examples on how to use the library for different purposes.
 
 #### Density field
 
-Example on how to compute the density field of CDM from a Gadget snapshot
+Example on how to compute the density field of CDM from a Gadget snapshot using the cloud-in-cell (CIC) mass assignment scheme
 
 ```python
 import MAS_library as MASL
@@ -115,9 +118,55 @@ Pk4    = Pk.Pk[:,2] #hexadecapole
 Nmodes = Pk.Nmodes3D
 ```
 
+If the density field has not been computed using NGP, CIC, TSC or PCS set ```MAS='None'```.
+
+#### Cross-power spectrum
+For multiple overdensity fields, the auto- and cross-power spectra can be computed as
+
+```python
+import Pk_library as PKL
+
+Pk = PKL.XPk([delta1,delta2], BoxSize=1000, axis=0, MAS=['CIC','CIC'], threads=16)
+```
+
+where ```delta1``` and ```delta2``` are the two overdensity fields. The ```Pk``` variable is a class that contains all the following information
+
+```python
+# 1D P(k)
+k1D      = Pk.k1D
+Pk1D_1   = Pk.Pk1D[:,0] #field 1
+Pk1D_2   = Pk.Pk1D[:,1] #field 2
+Pk1D_X   = Pk.PkX1D[:,0] #field 1 - field 2 cross 1D P(k)
+Nmodes1D = Pk.Nmodes1D
+
+# 2D P(k)
+kpar     = Pk.kpar
+kper     = Pk.kper
+Pk2D_1   = Pk.Pk2D[:,0]  #2D P(k) of field 1
+Pk2D_2   = Pk.Pk2D[:,1]  #2D P(k) of field 2
+Pk2D_X   = Pk.PkX2D[:,0] #2D cross-P(k) of fields 1 and 2
+Nmodes2D = Pk.Nmodes2D
+
+# 3D P(k)
+k      = Pk.k3D
+Pk0_1  = Pk.Pk[:,0,0]  #monopole of field 1
+Pk0_2  = Pk.Pk[:,0,1]  #monopole of field 2
+Pk2_1  = Pk.Pk[:,1,0]  #quadrupole of field 1
+Pk2_2  = Pk.Pk[:,1,1]  #quadrupole of field 2
+Pk4_1  = Pk.Pk[:,2,0]  #hexadecapole of field 1
+Pk4_2  = Pk.Pk[:,2,1]  #hexadecapole of field 2
+Pk0_X  = Pk.XPk[:,0,0] #monopole of 1-2 cross P(k)
+Pk2_X  = Pk.XPk[:,1,0] #quadrupole of 1-2 cross P(k)
+Pk4_X  = Pk.XPk[:,2,0] #hexadecapole of 1-2 cross P(k)
+Nmodes = Pk.Nmodes3D
+```
+
+The ```XPk``` function can be used for more than two fields, e.g.
+```python
+Pk = PKL.XPk([delta1,delta2,delta3,delta4], BoxSize=1000, axis=0, MAS=['CIC','NGP','TSC','None'], threads=16)
+```
+
 
 ## Contact
 
 For comments, problems, bugs ... etc you can reach me at [fvillaescusa@flatironinstitute.org](mailto:fvillaescusa@flatironinstitute.org).
-
-
