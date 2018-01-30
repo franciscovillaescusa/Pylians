@@ -49,6 +49,7 @@ We provide some examples on how to use the library for different purposes.
 Example on how to compute the density field of CDM from a Gadget snapshot using the cloud-in-cell (CIC) mass assignment scheme
 
 ```python
+import numpy as np
 import MAS_library as MASL
 
 # input parameters
