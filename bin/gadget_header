@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import sys,os,readsnap,argparse
+import sys,os,readsnap,argparse,readgadget
 
 # read parameters
 parser = argparse.ArgumentParser(description="read the header of a Gadget file and prints its content")
@@ -16,7 +16,8 @@ rhocrit = 2.77536627e2 #h**2 M_sun/kpc**3
 pname = {0:'GAS  ', 1:'CDM  ', 2:'NU   ', 3:'type3', 4:'Stars', 5:'BH   '}
 
 # read header
-head  = readsnap.snapshot_header(curfilename)
+head = readgadget.header(filename)
+#head  = readsnap.snapshot_header(curfilename)
 npart = head.npart;  nall = head.nall;  masses = head.massarr*1e10  
 Omega = head.nall*masses/(head.boxsize**3*rhocrit)
 

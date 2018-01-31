@@ -55,7 +55,7 @@ setup(
                 'mass_function_library','readfof','readsnap','readsnap2',
                 'readsnapHDF5','readsnap_mpi','readsubf','routines',
                 'units_library','HI/HI_image_library', 
-                'plotting_library']
+                'plotting_library','readgadget']
 )
 
 
