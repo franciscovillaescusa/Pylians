@@ -19,6 +19,7 @@ Pylians stands for **Py**thon **li**braries for the **a**nalysis of **n**umerica
 
 - numpy
 - scipy
+- h5py
 - pyfftw
 - mpi4py
 - cython
@@ -67,8 +68,10 @@ At this point the array ```delta``` contains the number density field of CDM. To
 delta /= np.mean(delta, dtype=np.float64)  #compute the mean on a double to increase accuracy
 delta -= 1.0
 ```
+The ```density_field_gadget``` routine supports Gadget formats 1, 2 and hdf5.
 
-If you are computing the density field from a set of particles:
+
+To compute the density field from a set of particles:
 
 ```python
 import numpy as np
