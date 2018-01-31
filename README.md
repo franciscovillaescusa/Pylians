@@ -68,7 +68,7 @@ At this point the array ```delta``` contains the number density field of CDM. To
 delta /= np.mean(delta, dtype=np.float64)  #compute the mean on a double to increase accuracy
 delta -= 1.0
 ```
-The ```density_field_gadget``` routine supports Gadget format 1, format 2 and hdf5 formats and deals with them internally.
+The ```density_field_gadget``` routine supports Gadget formats 1, 2 and hdf5.
 
 
 To compute the density field from a set of particles:
