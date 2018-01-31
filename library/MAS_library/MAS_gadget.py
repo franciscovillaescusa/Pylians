@@ -22,7 +22,7 @@ def density_field_gadget(snapshot_fname, ptypes, dims, MAS='CIC',
 	Omega_m  = head.omega_m
 	Omega_l  = head.omega_l
 	redshift = head.redshift
-        fformat  = head.fformat
+        fformat  = head.format
 	Hubble   = head.Hubble
 
 
