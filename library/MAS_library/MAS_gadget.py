@@ -56,18 +56,19 @@ def density_field_gadget(snapshot_fname, ptypes, dims, MAS='CIC',
 				del vel
 
 			# compute density field. If multicomponent, read/find masses
-			if single_component:  
-				MASL.MA(pos, density, BoxSize, MAS) 
-				num += pos.shape[0]
-			else:
-				# read of compute masses in Msun/h
-				if Masses[ptype]!=0.0:
+                        if Masses[ptype]!=0:
+                                if single_component:
+                                        MASL.MA(pos, density, BoxSize, MAS) 
+                                        num += pos.shape[0]
+                                else:
 					mass = np.ones(npart[ptype], dtype=np.float32)*Masses[ptype]
-				else:
-					mass = readsnap.read_block(snapshot,"MASS",
-						parttype=ptype)*1e10 #Msun/h
-				MASL.MA(pos, density, BoxSize, MAS, W=mass) 
-				num += np.sum(mass, dtype=np.float64)
+                                        MASL.MA(pos, density, BoxSize, MAS, W=mass) 
+                                        num += np.sum(mass, dtype=np.float64)
+                        else:
+                                mass = readsnap.read_block(snapshot,"MASS",
+                                        parttype=ptype)*1e10 #Msun/h
+                                MASL.MA(pos, density, BoxSize, MAS, W=mass) 
+                                num += np.sum(mass, dtype=np.float64)
 
 	if verbose:
 		print '%.8e should be equal to\n%.8e'\
