@@ -29,6 +29,23 @@ cdef void example2(double x, double y[], double dydx[],
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True) 
+cdef void linear(double x, double y[], double dydx[],
+                 double a[], double b[], long elements):
+
+    cdef int index
+    cdef double b_interp
+
+    if x<=a[0]:             b_interp = b[0]
+    elif x>=a[elements-1]:  b_interp = b[elements-1]
+    else:
+        index = <int>((x-a[0])/(a[elements-1]-a[0])*(elements-1))
+        b_interp = (b[index+1] - b[index])/(a[index+1]-a[index])*(x-a[index]) + b[index]
+    dydx[0] = b_interp
+
+    
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True) 
 cdef void sigma(double x, double y[], double dydx[],
                 double a[], double b[], long elements):
 
@@ -124,9 +141,16 @@ cpdef odeint(double[::1] yinit, double x1, double x2, double eps,
     cdef long nok, nbad
     nok = nbad = 0
 
-    if function=='sigma':
+    if function=='log' or function=='sigma':
         CI.odeint(&yinit[0], yinit.shape[0], x1, x2, eps, h1, hmin, &nok, &nbad,
                   &a[0], &b[0], b.shape[0], sigma)
+
+    elif function=='linear':
+        CI.odeint(&yinit[0], yinit.shape[0], x1, x2, eps, h1, hmin, &nok, &nbad,
+                  &a[0], &b[0], b.shape[0], linear)
+
+    else:  raise Exception('Incorrect function!')
+        
 
     if verbose:
         print 'Total steps = %ld'%(nok+nbad)

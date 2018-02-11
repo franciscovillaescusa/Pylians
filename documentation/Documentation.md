@@ -1,0 +1,277 @@
+* # [Pylians](#Pylians)
+    - ### [Requisites](#Requisites)
+    - ### [Installation](#Installation)
+* # [Density field](#density_field)
+* # [Power spectrum](#auto_Pk)
+    - ### [Auto-power spectrum](#auto_Pk)
+    - ### [Cross-power spectrum](#cross_Pk)
+* # [Integrals](#Integrals)
+* # [Contact](#Contact)
+
+
+
+
+# <a id="Pylians"></a> Pylians
+
+Pylians stands for **Py**thon **li**braries for the **a**nalysis of **n**umerical **s**imulations. They are a set of python libraries, written in python, cython and C, whose purposes is to facilitate the analysis of numerical simulations (both N-body and hydro). Among other things, they can be used to:
+
+- Compute density fields
+- Compute power spectra
+- Compute bispectra
+- Compute correlation functions
+- Identify voids
+- Populate halos with galaxies using an HOD
+- Apply HI+H2 corrections to the output of hydrodynamic simulations
+- Make 21cm maps
+- Compute DLAs column density distribution functions
+- Plot density fields and make movies
+
+[Pylians](https://en.wikipedia.org/wiki/Nestor_(mythology)) were the native or inhabitant of the Homeric town of Pylos. 
+
+## <a id="Requisites"></a> Requisites
+- numpy
+- scipy
+- h5py
+- pyfftw
+- mpi4py
+- cython
+- openmp
+ 
+We recommend installing the first packages with [anaconda](https://www.anaconda.com/download/?lang=en-us). 
+
+## <a id="Installation"></a> Installation
+
+```python
+cd library
+python setup.py build
+```
+
+The compiled libraries and scripts are in build/lib.XXX, where XXX depends on your machine. E.g. build/lib.linux-x86_64-2.7 or build/lib.macosx-10.7-x86_64-2.7
+
+Add that folder to your PYTHONPATH in ~/.bashrc, e.g.
+
+```sh
+export PYTHONPATH=$PYTHONPATH:$HOME/Pylians/library/build/lib.linux-x86_64-2.7
+```
+
+## Usage
+We provide some examples on how to use the library for different purposes.
+
+#### <a id="density_field"></a> Density field
+
+Pylians provide routines to compute density fields from gadget snapshots. The ingredients needed are:
+
+- ```snapshot```. This is the name of the gadget snapshot. Pylians supports formats 1, 2 and hdf5. Set it as ```'snap_001'```, even if the files are ```'snap_001.0'```, ```'snap_001.1'```, ... or ```'snap_001.0.hdf5'```, ```'snap_001.1.hdf5'```.
+- ```grid```. The constructed density field will be a 3D float numpy array with ```grid**3``` cells. The larger this number the higher the resolution, but more memory will be used.
+- ```ptypes```. Particle type over which compute the density field. It can be individual types, `[0]` (gas), `[1]` (cold dark matter), `[2]` (neutrinos), `[3]` (particle type 3), `[4]` (stars), `[5]` (black holes), or combinations. E.g. ```[0,1]``` (gas+cold dark matter), ```[0,4]``` (gas+stars), ```[0,1,2,4]``` (gas+CDM+neutrinos+stars). For all components (total matter) use ```[0,1,2,3,4,5]``` or ```[-1]```.
+- ```MAS```. Mass-assignment scheme used to deposit particles mass to the grid. Options are: ```'NGP'``` (nearest grid point), ```'CIC'``` (cloud-in-cell), ```'TSC'``` (triangular-shape cloud), ```'PCS'``` (piecewise cubic spline). For most applications ```'CIC'``` is enough.
+- ```do_RSD```. If ```True```, particles positions will be moved to redshift-space along the ```axis``` axis. 
+- ```axis```. Axis along which redshift-space distortions will be implemented (only needed if ```do_RSD=True```): 0, 1 or 2 for x-axis, y-axis or z-axis, respectively. 
+
+An example is as follows
+```python
+import numpy as np
+import MAS_library as MASL
+
+snapshot = 'snapdir_010/snap_010'
+grid     = 512  
+ptypes   = [1] 
+MAS      = 'CIC' 
+do_RSD   = False
+axis     = 0 
+
+delta = MASL.density_field_gadget(snapshot, ptypes, grid, MAS, do_RSD, axis)
+```
+```delta``` contains the number density field of CDM. To compute its overdensity do
+```python
+delta /= np.mean(delta, dtype=np.float64);  delta -= 1.0
+```
+
+Pylians can also be used to compute the power spectrum of a set of particles that are not in gadget format. An example is this
+
+```python
+import numpy as np
+import MAS_library as MASL
+
+# input parameters
+grid    = 512  
+BoxSize = 1000 #Mpc/h
+MAS     = 'CIC'
+
+# define the array hosting the density field
+delta = np.zeros((grid,grid,grid), dtype=np.float32)
+
+# read the particle positions
+pos = np.loadtxt('myfile.txt') #Mpc/h 
+pos = pos.astype(np.float32)   #pos should be a numpy float array
+
+# compute density field
+MASL.MA(pos,delta,BoxSize,MAS)
+
+# compute overdensity field
+delta /= np.mean(delta, dtype=np.float64);  delta -= 1.0 
+```
+
+#### <a id="auto_Pk"></a> Power spectrum
+The ingredients needed to compute the power spectrum are:
+
+- ```delta```. This is the density or overdensity field. It should be a 3 dimensional float numpy array such ```delta = np.zeros((grid, grid, grid), dtype=np.float32)```. See [density field](#density_field) on how to compute  density fields using Pylians.
+- ```BoxSize```. Size of the periodic box. The units of the output power spectrum depend on this.
+- ```axis```. Axis along which compute the quadrupole, hexadecapole and the 2D power spectrum. If the field is in real-space set ```axis=0```. If the field is in redshift-space set ```axis=0```, ```axis=1``` or ```axis=2``` if the redshift-space distortions have been placed along the x-axis, y-axis or z-axis, respectively. 
+- ```MAS```. Mass-assignment scheme used to generate the density field, if any. Possible options are ```'NGP'```, ```'CIC'```, ```'TSC'```, ```'PCS'```.  If the density field has not been generated with any of these set it ```'None'```.
+- ```threads```. Number of openmp threads to be used.
+
+
+The power spectrum can be computed as:
+
+```python
+import Pk_library as PKL
+
+Pk = PKL.Pk(delta, BoxSize, axis, MAS, threads)
+```
+```Pk``` is a python class containing the 1D, 2D and 3D power spectra, that can be retrieved with
+```python
+# 1D P(k)
+k1D      = Pk.k1D      
+Pk1D     = Pk.Pk1D     
+Nmodes1D = Pk.Nmodes1D  
+
+# 2D P(k)
+kpar     = Pk.kpar    
+kper     = Pk.kper
+Pk2D     = Pk.Pk2D
+Nmodes2D = Pk.Nmodes2D
+
+# 3D P(k)
+k      = Pk.k3D
+Pk0    = Pk.Pk[:,0] #monopole
+Pk2    = Pk.Pk[:,1] #quadrupole
+Pk4    = Pk.Pk[:,2] #hexadecapole
+Nmodes = Pk.Nmodes3D
+```
+
+#### <a id="cross_Pk"></a> Cross-power spectrum
+
+Pylians can be used to compute the auto- and cross-power spectrum of multiple fields. For instance, to compute the auto- and cross-power spectra of two overdensity fields, ```delta1``` and ```delta2```:
+
+```python
+import Pk_library as PKL
+
+Pk = PKL.XPk([delta1,delta2], BoxSize, axis, MAS=['CIC','CIC'], threads)
+```
+
+A description of the variables ```BoxSize```, ```axis```, ```MAS``` and ```threads``` can be found in the [power spectrum](#auto_Pk) section. As with the auto-power spectrum, ```delta1``` and ```delta2``` need to be 3D float numpy arrays. ```Pk``` is a python class that contains all the following information
+
+```python
+# 1D P(k)
+k1D      = Pk.k1D
+Pk1D_1   = Pk.Pk1D[:,0]  #field 1
+Pk1D_2   = Pk.Pk1D[:,1]  #field 2
+Pk1D_X   = Pk.PkX1D[:,0] #field 1 - field 2 cross 1D P(k)
+Nmodes1D = Pk.Nmodes1D
+
+# 2D P(k)
+kpar     = Pk.kpar
+kper     = Pk.kper
+Pk2D_1   = Pk.Pk2D[:,0]  #2D P(k) of field 1
+Pk2D_2   = Pk.Pk2D[:,1]  #2D P(k) of field 2
+Pk2D_X   = Pk.PkX2D[:,0] #2D cross-P(k) of fields 1 and 2
+Nmodes2D = Pk.Nmodes2D
+
+# 3D P(k)
+k      = Pk.k3D
+Pk0_1  = Pk.Pk[:,0,0]  #monopole of field 1
+Pk0_2  = Pk.Pk[:,0,1]  #monopole of field 2
+Pk2_1  = Pk.Pk[:,1,0]  #quadrupole of field 1
+Pk2_2  = Pk.Pk[:,1,1]  #quadrupole of field 2
+Pk4_1  = Pk.Pk[:,2,0]  #hexadecapole of field 1
+Pk4_2  = Pk.Pk[:,2,1]  #hexadecapole of field 2
+Pk0_X  = Pk.XPk[:,0,0] #monopole of 1-2 cross P(k)
+Pk2_X  = Pk.XPk[:,1,0] #quadrupole of 1-2 cross P(k)
+Pk4_X  = Pk.XPk[:,2,0] #hexadecapole of 1-2 cross P(k)
+Nmodes = Pk.Nmodes3D
+```
+
+The ```XPk``` function can be used for more than two fields, e.g.
+```python
+BoxSize = 1000.0 #Mpc/h
+axis    = 0
+MAS     = ['CIC','NGP','TSC','None']
+threads = 16
+
+Pk = PKL.XPk([delta1,delta2,delta3,delta4], BoxSize, axis, MAS, threads)
+```
+
+#### <a id="Integrals"></a> Integrals
+            
+Pylians provide routines to carry out numerical integrals in a more efficient way than scipy integrate. The most powerful is the FORTRAN odeint routine. For instance, to compute $\int_0^5 (3x^3+2x+5) dx$
+
+```python
+import numpy as np
+import integration_library as IL
+
+# integral value, its limits and precision parameters
+yinit = np.zeros(1, dtype=np.float64) 
+x1    = 0.0
+x2    = 5.0
+eps   = 1e-8 
+h1    = 1e-10 
+hmin  = 0.0   
+
+# integral method and integrand function
+function = 'linear'
+bins     = 1000
+x        = np.linspace(x1, x2, bins)
+y        = 3*x**2 + 2*x + 5
+
+I = IL.odeint(yinit, x1, x2, eps, h1, hmin, x, y, function, verbose=True)[0]
+```
+
+The value of integral is stored in ```I```. The ```odeint``` routine needs the following ingredients:
+
+- ```yinit```. The value of the integral is stored in this variable. Should be a 1D double numpy array with one single element equal to 0. If several integrals are being computed sequentially this variable need to be declared for each integral.
+- ```x1```. Lower limit of the integral.
+- ```x2```. Upper limit of the integral.
+- ```eps```. Maximum local relative error tolerated. Typically set its value to be 1e8-1e10 lower than the value of the integral.
+- ```h1```. Initial guess for the first time step (can not be 0).
+- ```hmin```. Minimum allower time step (can be 0).
+- ```verbose```. Set it to ```True``` to print some information on the integral computation.
+
+There are two main methods to carry out the integral, depending on how the interpolation is performed. 
+
+- ```function = 'linear'```. The function is evaluated by interpolating linearly the input values of x and y=f(x).
+    - ```x```. 1D double numpy array containing the input, equally spaced, values of x. 
+    - ```y```. 1D double numpy array containing the values of y=f(x) at the ```x``` array positions.
+ - ```function = 'log'```. The function is evaluated by interpolating logaritmically the input values of x and y=f(x).
+    - ```x```. 1D double numpy array containing the input, equally spaced in log, values of log10(x). 
+    - ```y```. 1D double numpy array containing the values of log10(y=f(x)) at the ```x``` array positions.
+
+An example of using the log-interpolation to compute the integral $\int_1^2 e^x dx$ is this
+
+```python
+import numpy as np
+import integration_library as IL
+
+# integral value, its limits and precision parameters
+yinit = np.zeros(1, dtype=np.float64) 
+x1    = 1.0
+x2    = 2.0
+eps   = 1e-10 
+h1    = 1e-12 
+hmin  = 0.0   
+
+# integral method and integrand function
+function = 'log'
+bins     = 1000
+x        = np.logspace(np.log10(x1), np.log10(x2), bins)
+y        = np.exp(x)
+
+I = IL.odeint(yinit, x1, x2, eps, h1, hmin, np.log10(x), np.log10(y),
+              function, verbose=True)[0]
+```
+
+Be careful when using the log-interpolation since the code will crash if a zero or negative value is encounter. 
+
+## <a id="Contact"></a>Contact
+
+For comments, problems, bugs... etc you can reach me at [fvillaescusa@flatironinstitute.org](mailto:fvillaescusa@flatironinstitute.org).
