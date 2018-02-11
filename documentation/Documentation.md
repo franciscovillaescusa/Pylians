@@ -204,7 +204,9 @@ Pk = PKL.XPk([delta1,delta2,delta3,delta4], BoxSize, axis, MAS, threads)
 
 #### <a id="Integrals"></a> Integrals
             
-Pylians provide routines to carry out numerical integrals in a more efficient way than scipy integrate. The most powerful is the FORTRAN odeint routine. For instance, to compute $\int_0^5 (3x^3+2x+5) dx$
+Pylians provide routines to carry out numerical integrals in a more efficient way than scipy integrate. The philosophy is that to compute the integral $\int_a^b f(x)dx$ the user passes the integrator two arrays, one with some values of x between a and b and another with the values of f(x) at those positions. The integrator will interpolate internally the input data to evaluate the function at an arbitrary position x. Pylians implements in c the fortran odeint function and wrap in python through cython.
+
+For instance, to compute $\int_0^5 (3x^3+2x+5) dx$ one would do
 
 ```python
 import numpy as np
@@ -232,7 +234,7 @@ The value of integral is stored in ```I```. The ```odeint``` routine needs the f
 - ```yinit```. The value of the integral is stored in this variable. Should be a 1D double numpy array with one single element equal to 0. If several integrals are being computed sequentially this variable need to be declared for each integral.
 - ```x1```. Lower limit of the integral.
 - ```x2```. Upper limit of the integral.
-- ```eps```. Maximum local relative error tolerated. Typically set its value to be 1e8-1e10 lower than the value of the integral.
+- ```eps```. Maximum local relative error tolerated. Typically set its value to be 1e8-1e10 lower than the value of the integral. Verify the convergence of the results by studying the dependence of the integral on this number.
 - ```h1```. Initial guess for the first time step (can not be 0).
 - ```hmin```. Minimum allower time step (can be 0).
 - ```verbose```. Set it to ```True``` to print some information on the integral computation.
@@ -271,6 +273,8 @@ I = IL.odeint(yinit, x1, x2, eps, h1, hmin, np.log10(x), np.log10(y),
 ```
 
 Be careful when using the log-interpolation since the code will crash if a zero or negative value is encounter. 
+
+The user can create its own function if he/she does not want to evaluate the integrand through interpolations. This function has to be placed in the file library/integration_library/integration_library.pyx (see linear and sigma functions as examples). After that, a new function call has to be created in the function odeint of that file (see linear and log as examples).
 
 ## <a id="Contact"></a>Contact
 
