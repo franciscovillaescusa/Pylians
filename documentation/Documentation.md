@@ -5,6 +5,7 @@
 * # [Power spectrum](#auto_Pk)
     - ### [Auto-power spectrum](#auto_Pk)
     - ### [Cross-power spectrum](#cross_Pk)
+* # [Cosmology](#cosmology)
 * # [Integrals](#Integrals)
 * # [Contact](#Contact)
 
@@ -69,6 +70,7 @@ Pylians provide routines to compute density fields from gadget snapshots. The in
 - ```axis```. Axis along which redshift-space distortions will be implemented (only needed if ```do_RSD=True```): 0, 1 or 2 for x-axis, y-axis or z-axis, respectively. 
 
 An example is as follows
+
 ```python
 import numpy as np
 import MAS_library as MASL
@@ -83,6 +85,7 @@ axis     = 0
 delta = MASL.density_field_gadget(snapshot, ptypes, grid, MAS, do_RSD, axis)
 ```
 ```delta``` contains the number density field of CDM. To compute its overdensity do
+
 ```python
 delta /= np.mean(delta, dtype=np.float64);  delta -= 1.0
 ```
@@ -129,7 +132,9 @@ import Pk_library as PKL
 
 Pk = PKL.Pk(delta, BoxSize, axis, MAS, threads)
 ```
+
 ```Pk``` is a python class containing the 1D, 2D and 3D power spectra, that can be retrieved with
+
 ```python
 # 1D P(k)
 k1D      = Pk.k1D      
@@ -193,6 +198,7 @@ Nmodes = Pk.Nmodes3D
 ```
 
 The ```XPk``` function can be used for more than two fields, e.g.
+
 ```python
 BoxSize = 1000.0 #Mpc/h
 axis    = 0
@@ -201,6 +207,39 @@ threads = 16
 
 Pk = PKL.XPk([delta1,delta2,delta3,delta4], BoxSize, axis, MAS, threads)
 ```
+
+#### <a id="Cosmology"></a> Cosmology
+
+Pylians provide a set of routines to carry out simple cosmological calculations.
+
+The comoving distance and the linear growth factor to redshift ```z``` can be computed as
+
+```python
+import cosmology_library as CL
+
+z       = 1.0
+Omega_m = 0.3175
+Omega_l = 0.6825
+
+r = CL.comoving_distance(z, Omega_m, Omega_l)  #Mpc/h
+D = CL.linear_growth_factor(z, Omega_m, Omega_l) 
+```
+
+From a linear power spectrum at z=0, Pylians can find the non-linear matter power spectrum halofit by Takahashi 2012 as
+
+```python
+import numpy as np
+import cosmology_library as CL
+
+z       = 1.0
+Omega_m = 0.3175
+Omega_l = 0.6825
+
+k_lin, Pk_lin = np.loadtxt('my_Pk_file_z=0.txt', unpack=True)
+
+Pk_nl = CL.Halofit_12(Omega_m, Omega_l, z, k_lin, Pk_lin) 
+```
+
 
 #### <a id="Integrals"></a> Integrals
             
@@ -244,7 +283,8 @@ There are two main methods to carry out the integral, depending on how the inter
 - ```function = 'linear'```. The function is evaluated by interpolating linearly the input values of x and y=f(x).
     - ```x```. 1D double numpy array containing the input, equally spaced, values of x. 
     - ```y```. 1D double numpy array containing the values of y=f(x) at the ```x``` array positions.
- - ```function = 'log'```. The function is evaluated by interpolating logaritmically the input values of x and y=f(x).
+ 
+- ```function = 'log'```. The function is evaluated by interpolating logaritmically the input values of x and y=f(x).
     - ```x```. 1D double numpy array containing the input, equally spaced in log, values of log10(x). 
     - ```y```. 1D double numpy array containing the values of log10(y=f(x)) at the ```x``` array positions.
 
