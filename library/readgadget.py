@@ -79,4 +79,8 @@ def read_field(snapshot, field, ptype):
 
         array = f[prefix+suffix][:];  f.close()
         if field=="VEL ":  array *= np.sqrt(head.time)
+
+        if field=="POS " and array.dtype==np.float64:
+            array = array.astype(np.float32)
+
         return array
