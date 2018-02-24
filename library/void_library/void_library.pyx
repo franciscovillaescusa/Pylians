@@ -4,10 +4,13 @@ import Pk_library as PKL
 import units_library as UL
 cimport numpy as np
 cimport cython
-from cython.parallel import prange
+from cython.parallel import prange,parallel
 from libc.math cimport sqrt,pow,sin,cos,log,log10,fabs,round
 from libc.stdlib cimport malloc, free
+from libc.stdio cimport printf
+cimport void_openmp_library as VOL
 
+DEF PI=3.141592653589793
 
 ############################### ROUTINES ####################################
 # V = void_finder(delta, BoxSize, threshold, Rmax, Rmin, bins, Omega_m, 
@@ -51,7 +54,7 @@ def gaussian_smoothing(delta, float BoxSize, float R, int threads=1):
     delta_k = PKL.FFT3Dr_f(delta,threads) 
 
     # do a loop over the independent modes.
-    prefact = R*2.0*np.pi/BoxSize
+    prefact = R*2.0*PI/BoxSize
     for kxx in prange(dims, nogil=True):
         kx  = (kxx-dims if (kxx>middle) else kxx)
         kx2 = kx*kx
@@ -87,21 +90,27 @@ class void_finder:
         float threshold, float Rmax, float Rmin, int bins, 
         float Omega_m, int threads, void_field=False):
 
-        cdef float R, dist2, R_grid, R_grid2, rho_crit, mean_rho, pi
-        cdef long voids_found, total_voids_found
+        cdef float R, dist2, R_grid, R_grid2, rho_crit, mean_rho
+        cdef float dx, dy, dz, middle
+        cdef long voids_found, total_voids_found,num
         cdef long max_num_voids,local_voids,ID,dims3
-        cdef int i,j,k,p,q,Ncells,l,m,n,i1,j1,k1
-        cdef int dims, dims2, cells_in_other_void
+        cdef int i,j,k,p,q,Ncells,l,m,n,i1,j1,k1, nearby_voids
+        cdef int dims, dims2, cells_in_other_void, mode
         cdef int[:,:,::1] in_void
-        cdef np.ndarray[np.float32_t, ndim=1] delta_v
-        cdef np.ndarray[np.int64_t, ndim=1] indexes, IDs
+        #cdef np.ndarray[np.float32_t, ndim=1] delta_v
+        #cdef np.ndarray[np.int64_t, ndim=1] indexes, IDs
+        cdef float[::1] delta_v, delta_v_temp
+        cdef long[::1] IDs, indexes, IDs_temp
         cdef float[:] Radii,mf
-        cdef int[:] Nvoids
+        cdef int[::1] Nvoids
         cdef float[:,:,::1] delta_sm
-        cdef list void_pos, void_mass, void_radius
+        cdef float[:,::1] void_pos
+        cdef float[::1] void_mass
+        cdef float[::1] void_radius
+        # cdef list void_pos, void_mass, void_radius
 
-        dims = delta.shape[0]
-        dims2 = dims**2;  dims3 = dims**3;  pi = np.pi
+        dims = delta.shape[0];  middle = dims/2
+        dims2 = dims**2;  dims3 = dims**3
 
         # check that Rmin is larger than the grid resolution
         if Rmin<BoxSize*1.0/dims:
@@ -112,12 +121,14 @@ class void_finder:
         rho_crit = (UL.units()).rho_crit #h^2 Msun/Mpc^3
         mean_rho = rho_crit*Omega_m
 
-        # define list containing void positions, radii and masses
-        void_pos = [];  void_mass = [];  void_radius = []
-
         # find the maximum possible number of voids
-        max_num_voids = int(BoxSize**3/(4.0*pi/3.0*Rmin**3))
+        max_num_voids = int(BoxSize**3/(4.0*PI/3.0*Rmin**3))
         print 'maximum number of voids = %d\n'%max_num_voids
+
+        # define list containing void positions, radii and masses
+        void_pos    = np.zeros((max_num_voids, 3), dtype=np.float32)
+        void_mass   = np.zeros(max_num_voids,      dtype=np.float32)
+        void_radius = np.zeros(max_num_voids,      dtype=np.float32)
         
         # define the in_void and delta_v array
         in_void = np.zeros((dims,dims,dims), dtype=np.int32)
@@ -139,10 +150,6 @@ class void_finder:
             start = time.time()
             print 'Smoothing field with top-hat filter of radius %.2f'%R
             delta_sm = gaussian_smoothing(delta, BoxSize, R, threads)
-            print '%.3f < delta < %.3f  :  <delta> = %.3f'\
-                %(np.min(delta_sm), np.max(delta_sm), np.mean(delta))
-            print '<delta_sm^2> =%.3e  :  <delta^2>=%.3e'\
-                %(np.std(delta_sm),np.std(delta))
             print 'Density smoothing took %.3f seconds'%(time.time()-start)
             if np.min(delta_sm)>threshold:
                 print 'No cells with delta < %.2f\n'%threshold
@@ -162,11 +169,28 @@ class void_finder:
             print 'Searching underdense cells took %.3f seconds'%(time.time()-start)
             print 'Found %08d cells below threshold'%(local_voids)
 
+
             # sort the cell underdensities
             start = time.time()
             indexes = np.argsort(delta_v[:local_voids])
-            delta_v[:local_voids] = delta_v[:local_voids][indexes]
-            IDs[:local_voids] = IDs[:local_voids][indexes]
+
+
+            delta_v_temp = np.empty(local_voids, dtype=np.float32)
+            for i in xrange(local_voids):
+                delta_v_temp[i] = delta_v[indexes[i]]
+            for i in xrange(local_voids):
+                delta_v[i] = delta_v_temp[i]
+            del delta_v_temp
+
+            IDs_temp = np.empty(local_voids, dtype=np.int64)
+            for i in xrange(local_voids):
+                IDs_temp[i] = IDs[indexes[i]]
+            for i in xrange(local_voids):
+                IDs[i] = IDs_temp[i]
+            del IDs_temp
+
+            #delta_v[:local_voids] = delta_v[:local_voids][indexes]
+            #IDs[:local_voids] = IDs[:local_voids][indexes]
             print 'Sorting took %.3f seconds'%(time.time()-start)
 
             # do a loop over all underdense cells and identify voids
@@ -174,6 +198,9 @@ class void_finder:
             R_grid  = (R/BoxSize)*1.0*dims;  Ncells = <int>R_grid + 1
             R_grid2 = R_grid*R_grid
             voids_found = 0
+
+            if total_voids_found<(2*Ncells+1)**3:  mode = 0
+            else:                                  mode = 1
             for p in xrange(local_voids):
 
                 # find the grid coordinates of the underdense cell
@@ -182,29 +209,78 @@ class void_finder:
 
                 # if cell belong to a void continue
                 if in_void[i,j,k] == 1:  continue
-                    
+
+                # find if there are voids overlapping with this void candidate either
+                # by computing distances to other voids (mode=0) or searching for
+                # in_void=1 in cells belonging to void canditate (mode=1)
+                if mode==0:
+                    nearby_voids = VOL.num_voids_around(total_voids_found, &IDs[0], 
+                                                        dims, middle, i, j, k, 
+                                                        &void_radius[0], 
+                                                        &void_pos[0,0], R_grid, 
+                                                        threads)
+                else:
+                    nearby_voids = VOL.num_voids_around2(Ncells, i, j, k, dims,
+                                                         R_grid2, &in_void[0,0,0], 
+                                                         threads)
+
+                """ #old num_voids_around routine
+                nearby_voids = 0
+                for l in prange(total_voids_found, nogil=True):
+
+                    dx = i-void_pos[l,0]
+                    if dx>middle:   dx = dx - dims
+                    if dx<-middle:  dx = dx + dims
+
+                    dy = j-void_pos[l,1]
+                    if dy>middle:   dy = dy - dims
+                    if dy<-middle:  dy = dy + dims
+
+                    dz = k-void_pos[l,2]
+                    if dz>middle:   dz = dz - dims
+                    if dz<-middle:  dz = dz + dims
+
+                    dist2 = dx*dx + dy*dy + dz*dz
+
+                    if dist2<(void_radius[l]+R_grid)*(void_radius[l]+R_grid):
+                        nearby_voids += 1
+                        break
+                """
+                
+                """ #old num_voids_around2 routine
                 # check that all cells in the void are not in other void
                 cells_in_other_void = 0
                 for l in prange(-Ncells,Ncells+1, nogil=True):
-                    i1 = (i+l+dims)%dims
-                    for m in xrange(-Ncells,Ncells+1):
-                        j1 = (j+m+dims)%dims
-                        for n in xrange(-Ncells,Ncells+1):
-                            k1 = (k+n+dims)%dims
+                     i1 = (i+l+dims)%dims
+
+                     for m in xrange(-Ncells,Ncells+1):
+                         j1 = (j+m+dims)%dims
+                        
+                         for n in xrange(-Ncells,Ncells+1):
+                             k1 = (k+n+dims)%dims
                                 
-                            dist2 = l*l + m*m + n*n
-                            if dist2<R_grid2 and in_void[i1,j1,k1]==1:
-                                cells_in_other_void += 1
-                                                 
-                # a void is found
-                if cells_in_other_void==0:
+                             dist2 = l*l + m*m + n*n
+                             if dist2<R_grid2 and in_void[i1,j1,k1]==1:
+                                 cells_in_other_void += 1
+                                 break
+                """
 
-                    voids_found += 1;  total_voids_found += 1
-                    void_pos.append([i*BoxSize/dims, j*BoxSize/dims, k*BoxSize/dims])
-                    void_radius.append(R)
-                    void_mass.append(4.0/3.0*pi*R**3*(1.0+threshold)*mean_rho)
+                # we have found a new void
+                if nearby_voids==0:
 
-                    in_void[i,j,k] = 1                        
+                    void_pos[total_voids_found, 0] = i
+                    void_pos[total_voids_found, 1] = j
+                    void_pos[total_voids_found, 2] = k
+                    void_radius[total_voids_found] = R_grid
+                    void_mass[total_voids_found]   = 4.0/3.0*PI*R**3*(1.0+threshold)*mean_rho
+                    voids_found += 1;  total_voids_found += 1 
+                    in_void[i,j,k] = 1
+                    
+                    # put in_void[i,j,k]=1 to the cells belonging to the void
+                    VOL.mark_void_region(&in_void[0,0,0], Ncells, dims, R_grid2,
+                                         i, j, k, threads)
+                    
+                    """
                     for l in prange(-Ncells, Ncells+1, nogil=True):
                         i1 = (i+l+dims)%dims
                         for m in xrange(-Ncells, Ncells+1):
@@ -214,7 +290,8 @@ class void_finder:
                                 
                                 dist2 = l*l + m*m + n*n
                                 if dist2<R_grid2:  in_void[i1,j1,k1] = 1
-            
+                    """
+
             print 'Found %06d voids with radius R=%.3f Mpc/h'%(voids_found, R)
             print 'void finding took %.3f seconds\n'%(time.time()-start)  
             Nvoids[q] = voids_found   
@@ -227,11 +304,10 @@ class void_finder:
         for i in xrange(bins-1):
             mf[i] = Nvoids[i]/(BoxSize**3*log(Radii[i+1]-Radii[i]))
 
-        if void_field:
-            self.in_void = np.asarray(in_void)
-        self.void_pos    = np.asarray(void_pos,       dtype=np.float32)
-        self.void_mass   = np.asarray(void_mass,      dtype=np.float32)
-        self.void_radius = np.asarray(void_radius,    dtype=np.float32)
+        if void_field:   self.in_void = np.asarray(in_void)
+        self.void_pos    = np.asarray(void_pos[:total_voids_found])
+        self.void_mass   = np.asarray(void_mass[:total_voids_found])
+        self.void_radius = np.asarray(void_radius[:total_voids_found])
         self.Rbins       = np.asarray(Radii[:bins-1], dtype=np.float32)
         self.void_mf     = mf
 
@@ -247,7 +323,7 @@ class void_safety_check:
 
         cdef long number_of_voids, p
         cdef int dims, i, j, k, Nshells, ii, jj, kk, i1, j1, k1
-        cdef float dist, R_void, prefact, ratio, pi, V_cell, mean_rho
+        cdef float dist, R_void, prefact, ratio, V_cell, mean_rho
         cdef double[:] mean_overdensity, mean_mass, mean_radius
         cdef long[:] cells
 
@@ -264,7 +340,6 @@ class void_safety_check:
         # compute the mean matter density
         mean_rho = Omega_m*(UL.units()).rho_crit #h^2 Msun/Mpc^3
 
-        pi      = np.pi
         prefact = dims*1.0/BoxSize
         V_cell  = (BoxSize*1.0/dims)**3
 
@@ -297,7 +372,7 @@ class void_safety_check:
             mean_overdensity[p] = mean_overdensity[p]*1.0/cells[p]
 
             # compute volume occupied by cells in void and effective radius
-            mean_radius[p] = (3.0*cells[p]*V_cell/(4.0*pi))**(1.0/3.0)
+            mean_radius[p] = (3.0*cells[p]*V_cell/(4.0*PI))**(1.0/3.0)
 
             # compute the mean mass of the void
             mean_mass[p] = (1.0+mean_overdensity[p])*cells[p]*V_cell*mean_rho

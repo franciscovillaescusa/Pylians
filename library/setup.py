@@ -27,7 +27,9 @@ ext_modules = [
     Extension("sorting_library", ["sorting_library.pyx"],
         extra_compile_args=['-O3','-ffast-math','-march=native']),
 
-    Extension("void_library.void_library", ["void_library/void_library.pyx"],
+    Extension("void_library.void_library", 
+              ["void_library/void_library.pyx",
+               "void_library/void_openmp_library.c"],
         extra_compile_args = ['-O3','-ffast-math','-march=native','-fopenmp'],
         extra_link_args=['-fopenmp'], libraries=['m']),
 
