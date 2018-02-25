@@ -309,7 +309,7 @@ class void_finder:
         self.void_mass   = np.asarray(void_mass[:total_voids_found])
         self.void_radius = np.asarray(void_radius[:total_voids_found])
         self.Rbins       = np.asarray(Radii[:bins-1], dtype=np.float32)
-        self.void_mf     = mf
+        self.void_mf     = np.asarray(mf)
 
 # This routine takes the density field, the void positions and radii
 # and finds the cells inside each void. From those cells it computes
