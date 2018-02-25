@@ -300,9 +300,9 @@ class void_finder:
             %(np.sum(in_void, dtype=np.int64)*1.0/dims3)
         print 'Found a total of %d voids\n'%total_voids_found
 
-        # compute the void mass function (voids/Volume/log(R))
+        # compute the void mass function (voids/Volume/dR)
         for i in xrange(bins-1):
-            mf[i] = Nvoids[i]/(BoxSize**3*log(Radii[i]-Radii[i+1]))
+            mf[i] = Nvoids[i]/(BoxSize**3*(Radii[i]-Radii[i+1]))
 
         if void_field:   self.in_void = np.asarray(in_void)
         self.void_pos    = np.asarray(void_pos[:total_voids_found])
