@@ -293,6 +293,8 @@ class void_finder:
                     """
 
             print 'Found %06d voids with radius R=%.3f Mpc/h'%(voids_found, R)
+            print 'Void volume filling fraction = %.3e'\
+                %(np.sum(in_void, dtype=np.int64)*1.0/dims3)
             print 'void finding took %.3f seconds\n'%(time.time()-start)  
             Nvoids[q] = voids_found   
 
