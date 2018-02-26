@@ -11,7 +11,7 @@ void mark_void_region(int *in_void, int Ncells, int dims, float R_grid2,
   long number;
   float dist2;
 
-#pragma omp parallel for num_threads(threads) private(l,m,n,i1,j1,k1,dist2,number) shared(in_void,i,j,k,Ncells,R_grid2,dims)
+#pragma omp parallel for num_threads(threads) private(l,m,n,i1,j1,k1,dist2,number) firstprivate(i,j,k,Ncells,R_grid2,dims) shared(in_void)
   for (l=-Ncells; l<=Ncells; l++)
     {
       i1 = (i+l+dims)%dims;
@@ -44,7 +44,7 @@ int num_voids_around(long total_voids_found, long *IDs, int dims, float middle,
   int l, nearby_voids=0;
   float dx, dy, dz, dist2;
 
-#pragma omp parallel for num_threads(threads) private(l,dx,dy,dz,dist2) shared(void_pos,void_radius,nearby_voids,R_grid,i,j,k,dims,middle)
+#pragma omp parallel for num_threads(threads) private(l,dx,dy,dz,dist2) firstprivate(R_grid,i,j,k,dims,middle) shared(void_pos,void_radius,nearby_voids)
   for (l=0; l<total_voids_found; l++)
     {
       if (nearby_voids>0)  continue;
@@ -83,7 +83,7 @@ int num_voids_around2(int Ncells, int i, int j, int k, int dims,
   long num;
   float dist2;
 
-#pragma omp parallel for num_threads(threads) private(l, m, n, i1, j1, k1, num, dist2) shared(Ncells, i, j, k, dims, nearby_voids, R_grid2, in_void)
+#pragma omp parallel for num_threads(threads) private(l, m, n, i1, j1, k1, num, dist2) firstprivate(Ncells,i,j,k,dims,R_grid2) shared(nearby_voids, in_void)
   for (l=-Ncells; l<=Ncells; l++)
     {
       if (nearby_voids>0)  continue;
