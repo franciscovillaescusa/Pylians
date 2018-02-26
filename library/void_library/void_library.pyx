@@ -219,11 +219,11 @@ class void_finder:
                                                         dims, middle, i, j, k, 
                                                         &void_radius[0], 
                                                         &void_pos[0,0], R_grid, 
-                                                        threads)
+                                                        threads=1)
                 else:
                     nearby_voids = VOL.num_voids_around2(Ncells, i, j, k, dims,
                                                          R_grid2, &in_void[0,0,0], 
-                                                         threads)
+                                                         threads=1)
 
                 """ #old num_voids_around routine
                 nearby_voids = 0
@@ -279,7 +279,7 @@ class void_finder:
                     
                     # put in_void[i,j,k]=1 to the cells belonging to the void
                     VOL.mark_void_region(&in_void[0,0,0], Ncells, dims, R_grid2,
-                                         i, j, k, threads)
+                                         i, j, k, threads=1)
                     
                     """
                     for l in prange(-Ncells, Ncells+1, nogil=True):
