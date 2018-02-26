@@ -107,6 +107,7 @@ class void_finder:
         cdef float[:,::1] void_pos
         cdef float[::1] void_mass
         cdef float[::1] void_radius
+        cdef double expected_filling_factor=0.0
         # cdef list void_pos, void_mass, void_radius
 
         dims = delta.shape[0];  middle = dims/2
@@ -295,6 +296,8 @@ class void_finder:
             print 'Found %06d voids with radius R=%.3f Mpc/h'%(voids_found, R)
             print 'Void volume filling fraction = %.3e'\
                 %(np.sum(in_void, dtype=np.int64)*1.0/dims3)
+            expected_filling_factor += voids_found*4.0*np.pi/3.0*R**3/BoxSize**3
+            print 'Expected    filling fraction = %.3e'%(expected_filling_factor)
             print 'void finding took %.3f seconds\n'%(time.time()-start)  
             Nvoids[q] = voids_found   
 
