@@ -11,7 +11,7 @@ void mark_void_region(int *in_void, int Ncells, int dims, float R_grid2,
   long number;
   float dist2;
 
-#pragma omp parallel for num_threads(threads) private(l,m,n,dist2,number) firstprivate(i,j,k,Ncells,R_grid2) shared(in_void)
+#pragma omp parallel for num_threads(threads) private(l,m,n,i1,j1,k1,dist2,number) shared(in_void,i,j,k,Ncells,R_grid2,dims)
   for (l=-Ncells; l<=Ncells; l++)
     {
       i1 = (i+l+dims)%dims;
