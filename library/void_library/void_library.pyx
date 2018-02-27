@@ -88,15 +88,15 @@ def gaussian_smoothing(delta, float BoxSize, float R, int threads=1):
 class void_finder:
     def __init__(self, np.ndarray[np.float32_t, ndim=3] delta, float BoxSize, 
         float threshold, float Rmax, float Rmin, int bins, 
-        float Omega_m, int threads, void_field=False):
+        float Omega_m, int threads, int threads2, void_field=False):
 
         cdef float R, dist2, R_grid, R_grid2, rho_crit, mean_rho
         cdef float dx, dy, dz, middle
         cdef long voids_found, total_voids_found,num
         cdef long max_num_voids,local_voids,ID,dims3
         cdef int i,j,k,p,q,Ncells,l,m,n,i1,j1,k1, nearby_voids
-        cdef int dims, dims2, cells_in_other_void, mode
-        cdef int[:,:,::1] in_void
+        cdef int dims, dims2, mode
+        cdef char[:,:,::1] in_void
         #cdef np.ndarray[np.float32_t, ndim=1] delta_v
         #cdef np.ndarray[np.int64_t, ndim=1] indexes, IDs
         cdef float[::1] delta_v, delta_v_temp
@@ -104,11 +104,11 @@ class void_finder:
         cdef float[:] Radii,mf
         cdef int[::1] Nvoids
         cdef float[:,:,::1] delta_sm
-        cdef float[:,::1] void_pos
+        cdef int[:,::1] void_pos
         cdef float[::1] void_mass
         cdef float[::1] void_radius
         cdef double expected_filling_factor=0.0
-        # cdef list void_pos, void_mass, void_radius
+        cdef double time1,time2,dt
 
         dims = delta.shape[0];  middle = dims/2
         dims2 = dims**2;  dims3 = dims**3
@@ -127,12 +127,12 @@ class void_finder:
         print 'maximum number of voids = %d\n'%max_num_voids
 
         # define list containing void positions, radii and masses
-        void_pos    = np.zeros((max_num_voids, 3), dtype=np.float32)
+        void_pos    = np.zeros((max_num_voids, 3), dtype=np.int32)
         void_mass   = np.zeros(max_num_voids,      dtype=np.float32)
         void_radius = np.zeros(max_num_voids,      dtype=np.float32)
         
         # define the in_void and delta_v array
-        in_void = np.zeros((dims,dims,dims), dtype=np.int32)
+        in_void = np.zeros((dims,dims,dims), dtype=np.int8)
         delta_v = np.zeros(dims3,            dtype=np.float32)
         IDs     = np.zeros(dims3,            dtype=np.int64)
 
@@ -202,6 +202,10 @@ class void_finder:
 
             if total_voids_found<(2*Ncells+1)**3:  mode = 0
             else:                                  mode = 1
+            time1 = 0.0
+            time2 = 0.0
+            if Ncells<12:  threads2 = 1 #empirically this is the best
+            print 'Mode = %d    :   Ncells = %d   :   threads = %d'%(mode,Ncells,threads2)
             for p in xrange(local_voids):
 
                 # find the grid coordinates of the underdense cell
@@ -214,17 +218,18 @@ class void_finder:
                 # find if there are voids overlapping with this void candidate either
                 # by computing distances to other voids (mode=0) or searching for
                 # in_void=1 in cells belonging to void canditate (mode=1)
+                dt = time.time()
                 if mode==0:
-                    nearby_voids = VOL.num_voids_around(total_voids_found, &IDs[0], 
-                                                        dims, middle, i, j, k, 
+                    nearby_voids = VOL.num_voids_around(total_voids_found, dims, 
+                                                        middle, i, j, k, 
                                                         &void_radius[0], 
                                                         &void_pos[0,0], R_grid, 
-                                                        threads=1)
+                                                        threads2)
                 else:
                     nearby_voids = VOL.num_voids_around2(Ncells, i, j, k, dims,
                                                          R_grid2, &in_void[0,0,0], 
-                                                         threads=1)
-
+                                                         threads2)
+                time1 += (time.time()-dt)
                 """ #old num_voids_around routine
                 nearby_voids = 0
                 for l in prange(total_voids_found, nogil=True):
@@ -278,9 +283,12 @@ class void_finder:
                     in_void[i,j,k] = 1
                     
                     # put in_void[i,j,k]=1 to the cells belonging to the void
+                    # it seems that with 1 thread is more than enough
+                    dt = time.time()
                     VOL.mark_void_region(&in_void[0,0,0], Ncells, dims, R_grid2,
                                          i, j, k, threads=1)
-                    
+                    time2 += (time.time()-dt)
+
                     """
                     for l in prange(-Ncells, Ncells+1, nogil=True):
                         i1 = (i+l+dims)%dims
@@ -298,6 +306,8 @@ class void_finder:
                 %(np.sum(in_void, dtype=np.int64)*1.0/dims3)
             expected_filling_factor += voids_found*4.0*np.pi/3.0*R**3/BoxSize**3
             print 'Expected    filling fraction = %.3e'%(expected_filling_factor)
+            print 'Time1 = %.3f seconds'%time1
+            print 'Time2 = %.3f seconds'%time2
             print 'void finding took %.3f seconds\n'%(time.time()-start)  
             Nvoids[q] = voids_found   
 
