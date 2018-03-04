@@ -40,6 +40,11 @@ ext_modules = [
 	      include_dirs=[numpy.get_include()],
 	      extra_compile_args=["-O3","-ffast-math","-march=native"]),
 
+    Extension("smoothing_library.smoothing_library", 
+              ["smoothing_library/smoothing_library.pyx"],
+        extra_compile_args = ['-O3','-ffast-math','-march=native','-fopenmp'],
+        extra_link_args=['-fopenmp'], libraries=['m']),
+
     #Extension("nearest_point_library",["nearest_point_library.pyx"]),
     #extra_link_args=['-O3']),
     #extra_compile_args=['-O3', '-fopenmp'],
