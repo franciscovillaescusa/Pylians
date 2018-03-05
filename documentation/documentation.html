@@ -64,7 +64,9 @@ code > span. { color: #1f1c1b; } /* Normal */
 <li><h3 id="auto-power-spectrum"><a href="#auto_Pk">Auto-power spectrum</a></h3></li>
 <li><h3 id="cross-power-spectrum"><a href="#cross_Pk">Cross-power spectrum</a></h3></li>
 </ul></li>
+<li><h1 id="cosmology"><a href="#cosmology">Cosmology</a></h1></li>
 <li><h1 id="integrals"><a href="#Integrals">Integrals</a></h1></li>
+<li><h1 id="smooth-fields"><a href="#smooth">Smooth fields</a></h1></li>
 <li><h1 id="contact"><a href="#Contact">Contact</a></h1></li>
 </ul>
 <h1 id="pylians-1"><a id="Pylians"></a> Pylians</h1>
@@ -217,6 +219,28 @@ MAS     <span class="op">=</span> [<span class="st">'CIC'</span>,<span class="st
 threads <span class="op">=</span> <span class="dv">16</span>
 
 Pk <span class="op">=</span> PKL.XPk([delta1,delta2,delta3,delta4], BoxSize, axis, MAS, threads)</code></pre></div>
+<h4 id="cosmology-1"><a id="Cosmology"></a> Cosmology</h4>
+<p>Pylians provide a set of routines to carry out simple cosmological calculations.</p>
+<p>The comoving distance and the linear growth factor to redshift <code>z</code> can be computed as</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> cosmology_library <span class="im">as</span> CL
+
+z       <span class="op">=</span> <span class="fl">1.0</span>
+Omega_m <span class="op">=</span> <span class="fl">0.3175</span>
+Omega_l <span class="op">=</span> <span class="fl">0.6825</span>
+
+r <span class="op">=</span> CL.comoving_distance(z, Omega_m, Omega_l)  <span class="co">#Mpc/h</span>
+D <span class="op">=</span> CL.linear_growth_factor(z, Omega_m, Omega_l) </code></pre></div>
+<p>From a linear power spectrum at z=0, Pylians can find the non-linear matter power spectrum halofit by Takahashi 2012 as</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> numpy <span class="im">as</span> np
+<span class="im">import</span> cosmology_library <span class="im">as</span> CL
+
+z       <span class="op">=</span> <span class="fl">1.0</span>
+Omega_m <span class="op">=</span> <span class="fl">0.3175</span>
+Omega_l <span class="op">=</span> <span class="fl">0.6825</span>
+
+k_lin, Pk_lin <span class="op">=</span> np.loadtxt(<span class="st">'my_Pk_file_z=0.txt'</span>, unpack<span class="op">=</span><span class="va">True</span>)
+
+Pk_nl <span class="op">=</span> CL.Halofit_12(Omega_m, Omega_l, z, k_lin, Pk_lin) </code></pre></div>
 <h4 id="integrals-1"><a id="Integrals"></a> Integrals</h4>
 <p>Pylians provide routines to carry out numerical integrals in a more efficient way than scipy integrate. The philosophy is that to compute the integral <span class="math inline">∫<sub><em>a</em></sub><sup><em>b</em></sup><em>f</em>(<em>x</em>)<em>d</em><em>x</em></span> the user passes the integrator two arrays, one with some values of x between a and b and another with the values of f(x) at those positions. The integrator will interpolate internally the input data to evaluate the function at an arbitrary position x. Pylians implements in c the fortran odeint function and wrap in python through cython.</p>
 <p>For instance, to compute <span class="math inline">∫<sub>0</sub><sup>5</sup>(3<em>x</em><sup>3</sup> + 2<em>x</em> + 5)<em>d</em><em>x</em></span> one would do</p>
@@ -283,6 +307,28 @@ I <span class="op">=</span> IL.odeint(yinit, x1, x2, eps, h1, hmin, np.log10(x),
               function, verbose<span class="op">=</span><span class="va">True</span>)[<span class="dv">0</span>]</code></pre></div>
 <p>Be careful when using the log-interpolation since the code will crash if a zero or negative value is encounter.</p>
 <p>The user can create its own function if he/she does not want to evaluate the integrand through interpolations. This function has to be placed in the file library/integration_library/integration_library.pyx (see linear and sigma functions as examples). After that, a new function call has to be created in the function odeint of that file (see linear and log as examples).</p>
+<h2 id="smooth-fields-1"><a id="smooth"></a>Smooth Fields</h2>
+<p>Pylians provide routines to smooth fields with several filters. The ingredients needed are:</p>
+<ul>
+<li><code>field</code>. This is a 3D float numpy array that contains the input field to be smoothed.</li>
+<li><code>BoxSize</code>. This is the size of the box with the input density field.</li>
+<li><code>R</code>. This is the smoothing scale.</li>
+<li><code>grid</code>. This is the grid size of the input field, i.e. <code>field.shape[0]</code>.</li>
+<li><code>threads</code>. Number of openmp threads to be used.</li>
+<li><code>Filter</code>. Filter to use. <code>'Top-Hat'</code> or <code>'Gaussian'</code>.</li>
+<li><code>W_k</code>. This is a 3D complex64 numpy array containing the Fourier-transform of the filter. Notice that when smoothing a discrete field, like the one stored on a regular grid, the Fourier-transform of the filter need to be computed in the same way as the for the field, i.e. through DFT instead of FT.</li>
+</ul>
+<p>An example is this</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> smoothing_library <span class="im">as</span> SL
+
+BoxSize <span class="op">=</span> <span class="fl">75.0</span> <span class="co">#Mpc/h</span>
+R       <span class="op">=</span> <span class="fl">5.0</span>  <span class="co">#Mpc.h</span>
+grid    <span class="op">=</span> field.shape[<span class="dv">0</span>]
+Filter  <span class="op">=</span> <span class="st">'Top-Hat'</span>
+threads <span class="op">=</span> <span class="dv">28</span>
+
+W_k <span class="op">=</span> SL.FT_filter(BoxSize, R, grid, Filter, threads)
+field_smoothed <span class="op">=</span> SL.field_smoothing(field, W_k, threads)</code></pre></div>
 <h2 id="contact-1"><a id="Contact"></a>Contact</h2>
 <p>For comments, problems, bugs… etc you can reach me at <a href="mailto:fvillaescusa@flatironinstitute.org">fvillaescusa@flatironinstitute.org</a>.</p>
 </body>
