@@ -12,44 +12,68 @@ import Pk_library as PKL
 
 DEF PI=3.141592653589793
 
-# This routine places the Top-Hat filter in a grid and returns its FT
+############################################################################
+# This routine places the filter on a grid and returns its FT
 @cython.boundscheck(False)
 @cython.cdivision(True)
 @cython.wraparound(False)
-cpdef FT_top_hat(float BoxSize, float R, int dims, int threads):
+cpdef FT_filter(float BoxSize, float R, int dims, Filter, int threads):
 
     cdef int i,j,k,i1,j1,k1,middle,d2
-    cdef float R2, R_grid
+    cdef float R2, R_grid, factor
     cdef double normalization
     cdef float[:,:,::1] field
     cdef np.complex64_t[:,:,::1] field_k
 
+    if Filter not in ['Top-Hat','Gaussian']:
+        raise Exception('Filter %s not implemented!'%Filter)
+
     middle = dims/2
+    normalization = 0.0
     R_grid = (R*dims/BoxSize)
-    
-    # find R2 in grid units
     R2 = R_grid**2
 
     # define the field array
     field = np.zeros((dims,dims,dims), dtype=np.float32)
 
-    normalization = 0.0
-    for i in prange(dims, nogil=True):
-        i1 = i
-        if i1>middle:  i1 = i1 - dims
+    ###### Top-Hat ######
+    if Filter=='Top-Hat':
+        for i in prange(dims, nogil=True):
+            i1 = i
+            if i1>middle:  i1 = i1 - dims
 
-        for j in xrange(dims):
-            j1 = j
-            if j1>middle:  j1 = j1 - dims
+            for j in xrange(dims):
+                j1 = j
+                if j1>middle:  j1 = j1 - dims
 
-            for k in xrange(dims):
-                k1 = k
-                if k1>middle:  k1 = k1 - dims
+                for k in xrange(dims):
+                    k1 = k
+                    if k1>middle:  k1 = k1 - dims
 
-                d2 = i1*i1 + j1*j1 + k1*k1
-                if d2<=R2:  
-                    field[i,j,k] = 1.0
-                    normalization += 1.0
+                    d2 = i1*i1 + j1*j1 + k1*k1
+                    if d2<=R2:  
+                        field[i,j,k] = 1.0
+                        normalization += 1.0
+
+    ###### Gaussian ######
+    if Filter=='Gaussian':
+        for i in prange(dims, nogil=True):
+            i1 = i
+            if i1>middle:  i1 = i1 - dims
+
+            for j in xrange(dims):
+                j1 = j
+                if j1>middle:  j1 = j1 - dims
+
+                for k in xrange(dims):
+                    k1 = k
+                    if k1>middle:  k1 = k1 - dims
+
+                    d2 = i1*i1 + j1*j1 + k1*k1
+                
+                    factor = exp(-d2/(2.0*R2))
+                    field[i,j,k] = factor
+                    normalization += factor
 
     # normalize the field
     for i in prange(dims, nogil=True):
@@ -61,56 +85,7 @@ cpdef FT_top_hat(float BoxSize, float R, int dims, int threads):
     field_k = PKL.FFT3Dr_f(np.asarray(field), threads)
     return np.asarray(field_k)
 
-
-# This routine places a Gaussian filter in a grid and returns its FT
-@cython.boundscheck(False)
-@cython.cdivision(True)
-@cython.wraparound(False)
-cpdef FT_Gaussian(float BoxSize, float R, int dims, int threads):
-
-    cdef int i,j,k,i1,j1,k1,middle,d2
-    cdef float R_grid, R2, factor
-    cdef double normalization
-    cdef float[:,:,::1] field
-    cdef np.complex64_t[:,:,::1] field_k
-
-    middle = dims/2
-    R_grid = (R*dims/BoxSize)
-    R2     = R_grid*R_grid
-
-    # define the field array
-    field = np.zeros((dims,dims,dims), dtype=np.float32)
-
-    Normalization = 0.0
-    for i in prange(dims, nogil=True):
-        i1 = i
-        if i1>middle:  i1 = i1 - dims
-
-        for j in xrange(dims):
-            j1 = j
-            if j1>middle:  j1 = j1 - dims
-
-            for k in xrange(dims):
-                k1 = k
-                if k1>middle:  k1 = k1 - dims
-
-                d2 = i1*i1 + j1*j1 + k1*k1
-                
-                factor = exp(-d2/(2.0*R2))
-                field[i,j,k] = factor
-                normalization += factor
-    
-    # normalize the field
-    for i in prange(dims, nogil=True):
-        for j in xrange(dims):
-            for k in xrange(dims):
-                field[i,j,k] = field[i,j,k]/normalization                
-    
-    # FT the field
-    field_k = PKL.FFT3Dr_f(np.asarray(field), threads)
-    return np.asarray(field_k)
-
-
+############################################################################
 # This routine smooths a field with a given filter and returns the smoothed 
 # field. Inputs are the field, the FT of the filter and the number of threads
 @cython.boundscheck(False)
