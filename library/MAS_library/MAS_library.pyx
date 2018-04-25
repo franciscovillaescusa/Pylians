@@ -523,9 +523,10 @@ cpdef void CIC_interp(np.ndarray[np.float32_t,ndim=3] density, float BoxSize,
 cpdef void voronoi_NGP_2D(np.ndarray[np.float64_t,ndim=2] density, 
                           np.ndarray[np.float32_t,ndim=2] pos,
                           np.ndarray[np.float32_t,ndim=1] mass,
-                          np.ndarray[np.float32_t,ndim=1] volume,
+                          np.ndarray[np.float32_t,ndim=1] radii,
                           float x_min, float y_min, float BoxSize,
-                          long particles_per_cell, int r_divisions):
+                          long particles_per_cell, int r_divisions,
+                          periodic):
 
     cdef float pi = np.pi
     cdef long i, j, k, particles, particles_shell, dims
@@ -567,31 +568,65 @@ cpdef void voronoi_NGP_2D(np.ndarray[np.float64_t,ndim=2] density,
         angle += dtheta
         
         
+    if periodic:
         
-    # do a loop over all particles
-    for i in xrange(particles):
+        # do a loop over all particles
+        for i in xrange(particles):
         
-        # compute the weight of each voronoi-cell tracer
-        W = mass[i]*1.0/(particles_shell*r_divisions)
+            # compute the weight of each voronoi-cell tracer
+            W = mass[i]*1.0/(particles_shell*r_divisions)
         
-        # compute the "radius" of the voronoi cell
-        radius_voronoi_cell = (3.0*volume[i]/(4.0*pi))**(1.0/3.0)
+            # compute the "radius" of the voronoi cell
+            radius_voronoi_cell = radii[i]
 
-        # do a loop over the different shells of the sphere
-        for j in xrange(r_divisions):
+            # do a loop over the different shells of the sphere
+            for j in xrange(r_divisions):
 
-            radius = R[j]*radius_voronoi_cell
+                radius = R[j]*radius_voronoi_cell
             
-            # do a loop over all particles in the shell
-            for k in xrange(particles_shell):
+                # do a loop over all particles in the shell
+                for k in xrange(particles_shell):
                 
-                x = pos[i,0] + radius*pos_tracer[k,0]
-                y = pos[i,1] + radius*pos_tracer[k,1]
+                    x = pos[i,0] + radius*pos_tracer[k,0]
+                    y = pos[i,1] + radius*pos_tracer[k,1]
             
-                index_x = <int>((x-x_min)*inv_cell_size + 0.5)
-                index_y = <int>((y-y_min)*inv_cell_size + 0.5)
+                    index_x = <int>((x-x_min)*inv_cell_size + 0.5)
+                    index_y = <int>((y-y_min)*inv_cell_size + 0.5)
+                    index_x = (index_x + dims)%dims
+                    index_y = (index_y + dims)%dims
                 
-                density[index_x, index_y] += W
+                    density[index_x, index_y] += W
+
+    else:
+
+        # do a loop over all particles
+        for i in xrange(particles):
+        
+            # compute the weight of each voronoi-cell tracer
+            W = mass[i]*1.0/(particles_shell*r_divisions)
+        
+            # compute the "radius" of the voronoi cell
+            radius_voronoi_cell = radii[i]
+
+            # do a loop over the different shells of the sphere
+            for j in xrange(r_divisions):
+
+                radius = R[j]*radius_voronoi_cell
+            
+                # do a loop over all particles in the shell
+                for k in xrange(particles_shell):
+                
+                    x = pos[i,0] + radius*pos_tracer[k,0]
+                    y = pos[i,1] + radius*pos_tracer[k,1]
+            
+                    index_x = <int>((x-x_min)*inv_cell_size + 0.5)
+                    index_y = <int>((y-y_min)*inv_cell_size + 0.5)
+
+                    if (index_x<0) or (index_x>=dims):  continue
+                    if (index_y<0) or (index_y>=dims):  continue
+                
+                    density[index_x, index_y] += W
+
 
     print 'Time taken = %.3f s'%(time.time()-start)
 

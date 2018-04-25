@@ -146,6 +146,48 @@ def Rahmati_HI_Illustris(np.float32_t[:] rho, np.float32_t[:] SPH,
     return np.asarray(nH0)
 
 #########################################################################    
+# This routine reads a single Illustris snapshot subfile and returns 
+# particle positions and HI masses
+cpdef HI_mass_from_Illustris_snap(snapshot, TREECOOL_file):
+
+    f = h5py.File(snapshot, 'r')
+
+    # read redshift and h
+    redshift = f['Header'].attrs[u'Redshift']
+    h        = f['Header'].attrs[u'HubbleParam']
+
+    # read pos, radii, densities, HI/H and masses of gas particles 
+    pos  = (f['PartType0/Coordinates'][:]/1e3).astype(np.float32)
+    MHI  = f['PartType0/NeutralHydrogenAbundance'][:]
+    mass = f['PartType0/Masses'][:]*1e10  #Msun/h
+    rho  = f['PartType0/Density'][:]*1e19 #(Msun/h)/(Mpc/h)^3
+    SFR  = f['PartType0/StarFormationRate'][:]
+    indexes = np.where(SFR>0.0)[0];  del SFR
+            
+    # find the metallicity of star-forming particles
+    metals = f['PartType0/GFM_Metallicity'][:]
+    metals = metals[indexes]/0.0127
+
+    # find densities of star-forming particles: units of h^2 Msun/Mpc^3
+    Volume = mass/rho                            #(Mpc/h)^3
+    radii  = (Volume/(4.0*np.pi/3.0))**(1.0/3.0) #Mpc/h 
+    rho    = rho[indexes]                        #h^2 Msun/Mpc^3
+    Volume = Volume[indexes]                     #(Mpc/h)^3
+
+    # find volume and radius of star-forming particles
+    radii_SFR  = (Volume/(4.0*np.pi/3.0))**(1.0/3.0) #Mpc/h 
+        
+    # find HI/H fraction for star-forming particles
+    MHI[indexes] = Rahmati_HI_Illustris(rho, radii_SFR, metals, 
+                                        redshift, h, TREECOOL_file, 
+                                        Gamma=None, fac=1, 
+                                        correct_H2=True) #HI/H
+    MHI *= (0.76*mass)
+    f.close()
+    
+    return pos, MHI
+
+#########################################################################    
 # This routine identifies the offsets for halos and galaxies
 # and perform several checks
 @cython.boundscheck(False)
@@ -354,7 +396,216 @@ cpdef M_HI_halos_galaxies(np.int64_t[:] pars, done,
     pars[7]                            = gal_in_halo_local
 
     return done
+
+#######################################################################
+# This routine computes the HI mass within halos and the HI mass within
+# halos that it is in galaxies
+@cython.boundscheck(False)
+@cython.cdivision(True)
+@cython.wraparound(False)
+cpdef M_HI_halos_gal_cen_sat(np.int64_t[:] pars, done,
+                             np.int32_t[:] halo_len, np.int32_t[:] gal_len,
+                             np.int32_t[:] gal_in_halo,
+                             np.float32_t[:] mass_ratio, np.float32_t[:] MHI,
+                             np.float64_t[:] M_HI, 
+                             np.float64_t[:] M_HI_gal,
+                             np.float64_t[:] M_HI_cen, 
+                             np.float64_t[:] M_HI_sat):
+
+    cdef long Number            = pars[0]
+    cdef long start_h           = pars[1]
+    cdef long end_h             = pars[2]
+    cdef long start_g           = pars[3]
+    cdef long end_g             = pars[4]
+    cdef long halo_num          = pars[5]
+    cdef long gal_num           = pars[6]
+    cdef long gal_in_halo_local = pars[7]
+    cdef long i, particles, num_halos, num_galaxies
     
+    # find the number of particles to iterate over
+    particles    = MHI.shape[0]
+    num_halos    = M_HI.shape[0]
+    num_galaxies = gal_len.shape[0]
+
+    # do a loop over all particles
+    for i in xrange(particles):
+
+        # if particle belongs to new halo change variables
+        if Number>=end_h:
+
+            # accout for missing galaxies (should be galaxies with 0 particles)
+            if Number>=end_g and gal_in_halo_local<gal_in_halo[halo_num]-1:
+                gal_num += 1
+                gal_in_halo_local += 1
+                while gal_len[gal_num]==0 and \
+                        gal_in_halo_local<gal_in_halo[halo_num]-1:
+                    gal_num += 1
+                    gal_in_halo_local += 1
+            
+            #if gal_num!=np.sum(gal_in_halo[:halo_num+1], dtype=np.int64)-1:
+            #    print 'Numbers differ!!!!'
+            #    print halo_num
+            #    print gal_num
+            #    print np.sum(gal_in_halo[:halo_num+1], dtype=np.int64)
+                
+            # update halo variables
+            halo_num += 1
+
+            if halo_num>=num_halos:
+                # check that all galaxies have been counted
+                if gal_num!=np.sum(gal_in_halo, dtype=np.int64)-1:
+                    print 'gal_num  = %ld'%gal_num
+                    print 'galaxies = %ld'%(np.sum(gal_in_halo, dtype=np.int64)-1)
+                    raise Exception("Finished without counting all galaxies")
+                done = True;  break
+
+            #if halo_num<num_halos:
+                #start_h = end_h
+                #end_h   = end_h + halo_len[halo_num]
+            while halo_len[halo_num]==0 and halo_num<num_halos:
+                gal_num  += gal_in_halo[halo_num]
+                halo_num += 1
+            start_h = end_h
+            end_h   = end_h + halo_len[halo_num]
+
+            # restart galaxy variables
+            if gal_num<num_galaxies and gal_in_halo[halo_num]>0:
+                gal_in_halo_local = 0
+                gal_num += 1
+                start_g = start_h
+                end_g   = start_h + gal_len[gal_num]
+
+        # if particle belongs to new galaxy change variables
+        if Number>=end_g and gal_in_halo_local<gal_in_halo[halo_num]-1:
+            gal_num += 1
+            gal_in_halo_local += 1
+            while gal_len[gal_num]==0 and \
+                    gal_in_halo_local<gal_in_halo[halo_num]-1:
+                gal_num += 1
+                gal_in_halo_local += 1
+            start_g = end_g
+            end_g   = end_g + gal_len[gal_num]
+
+        # if particle is inside galaxy add it to M_HI_gal
+        if Number>=start_g and Number<end_g and mass_ratio[gal_num]>0.1:
+            M_HI_gal[halo_num] += MHI[i]
+            if gal_in_halo_local==0:  M_HI_cen[halo_num] += MHI[i]
+            else:                     M_HI_sat[halo_num] += MHI[i]
+
+        # for halos always add the HI mass
+        M_HI[halo_num] += MHI[i]
+        Number += 1
+
+    pars[0], pars[1], pars[2]          = Number, start_h, end_h 
+    pars[3], pars[4], pars[5], pars[6] = start_g, end_g, halo_num, gal_num
+    pars[7]                            = gal_in_halo_local
+
+    return done
+
+#######################################################################
+# This routine computes the peculiar velocity of HI within halos
+@cython.boundscheck(False)
+@cython.cdivision(True)
+@cython.wraparound(False)
+cpdef V_HI_halos(long[:] pars, done, int[:] halo_len, float[:,:] halo_vel,
+                 float[:] MHI, float[:,:] vel,
+                 double[:,::1] V_HI, double[:] M_HI):
+
+    cdef long Number            = pars[0]
+    cdef long start_h           = pars[1]
+    cdef long end_h             = pars[2]
+    cdef long halo_num          = pars[3]
+    cdef long i, particles, num_halos
+    cdef float dVx, dVy, dVz
+    
+    # find the number of particles to iterate over
+    particles    = MHI.shape[0]
+    num_halos    = M_HI.shape[0]
+
+    # do a loop over all particles
+    for i in xrange(particles):
+
+        # if particle belongs to new halo change variables
+        if Number>=end_h:
+                
+            # update halo variables
+            halo_num += 1
+
+            if halo_num>=num_halos:
+                done = True;  break
+
+            while halo_len[halo_num]==0 and halo_num<num_halos:
+                halo_num += 1
+            start_h = end_h
+            end_h   = end_h + halo_len[halo_num]
+
+        # for halos always add the HI mass
+        M_HI[halo_num] += MHI[i]
+
+        # compute (Vi-V_halo)^2*M_HIi
+        V_HI[halo_num,0] += vel[i,0]*MHI[i]
+        V_HI[halo_num,1] += vel[i,1]*MHI[i]
+        V_HI[halo_num,2] += vel[i,2]*MHI[i]
+        Number += 1
+
+    pars[0], pars[1], pars[2], pars[3] = Number, start_h, end_h, halo_num
+    return done
+    
+#######################################################################
+# This routine computes the HI mass within halos and the HI velocity 
+# dispersion within halos
+@cython.boundscheck(False)
+@cython.cdivision(True)
+@cython.wraparound(False)
+cpdef sigma_HI_halos(long[:] pars, done,
+                     int[:] halo_len, float[:,:] halo_vel,
+                     float[:] MHI, float[:,:] vel,
+                     double[:] sigma2_HI, double[:] M_HI):
+
+    cdef long Number            = pars[0]
+    cdef long start_h           = pars[1]
+    cdef long end_h             = pars[2]
+    cdef long halo_num          = pars[3]
+    cdef long i, particles, num_halos
+    cdef float dVx, dVy, dVz
+    cdef double sigma2
+    
+    # find the number of particles to iterate over
+    particles    = MHI.shape[0]
+    num_halos    = M_HI.shape[0]
+
+    # do a loop over all particles
+    for i in xrange(particles):
+
+        # if particle belongs to new halo change variables
+        if Number>=end_h:
+                
+            # update halo variables
+            halo_num += 1
+
+            if halo_num>=num_halos:
+                done = True;  break
+
+            while halo_len[halo_num]==0 and halo_num<num_halos:
+                halo_num += 1
+            start_h = end_h
+            end_h   = end_h + halo_len[halo_num]
+
+        # for halos always add the HI mass
+        M_HI[halo_num] += MHI[i]
+
+        # compute (Vi-V_halo)^2*M_HIi
+        dVx = vel[i,0]-halo_vel[halo_num,0]
+        dVy = vel[i,1]-halo_vel[halo_num,1]
+        dVz = vel[i,2]-halo_vel[halo_num,2]
+        sigma2 = dVx*dVx + dVy*dVy + dVz*dVz
+        sigma2_HI[halo_num] += (sigma2*MHI[i])
+
+        Number += 1
+
+    pars[0], pars[1], pars[2], pars[3] = Number, start_h, end_h, halo_num
+    return done
+
 ###############################################################
 @cython.boundscheck(False)
 @cython.cdivision(True)
@@ -626,7 +877,6 @@ cpdef locate_nearby_halos(np.float32_t[:,:] halos_pos,
 
 
 ############################################################################
-
 @cython.boundscheck(False)
 @cython.cdivision(True)
 @cython.wraparound(False)
@@ -637,10 +887,11 @@ cpdef HI_profile(np.float32_t[:,:] halo_pos, np.float32_t[:] halo_R,
     
     start = time.time()
     cdef long i, j, particles, halos, index, index_box, begin, end
-    cdef float x, y, z, x_h, y_h, z_h, dx, dy, dz
-    cdef float MHI_part, middle, R2, radius, radius2, R12
+    cdef float x_h, y_h, z_h, dx, dy, dz, factor
+    cdef float middle, R2, radius, radius2, R12
     cdef int dims, dims2, bins, bin, index_x, index_y, index_z, 
-    cdef int ii, jj, kk, iii, jjj, kkk
+    cdef int ii, jj, kk, iii, jjj, kkk, index_x_min, index_x_max
+    cdef int index_y_min, index_y_max, index_z_min, index_z_max
 
     particles = pos.shape[0]
     halos     = halo_pos.shape[0]
@@ -649,6 +900,7 @@ cpdef HI_profile(np.float32_t[:,:] halo_pos, np.float32_t[:] halo_R,
     dims2     = dims*dims
     R12       = R1*R1
     middle    = BoxSize/2.0
+    factor    = dims*1.0/BoxSize
 
     # do a loop over all halos
     for i in xrange(halos):
@@ -658,20 +910,36 @@ cpdef HI_profile(np.float32_t[:,:] halo_pos, np.float32_t[:] halo_R,
         z_h     = halo_pos[i,2]
         radius  = halo_R[i]
         radius2 = radius*radius
-        index   = halo_id[i]
+        #index   = halo_id[i]
 
-        index_x = index/dims2
-        index_y = (index%dims2)/dims
-        index_z = (index%dims2)%dims
+        # in C, <int>(3.2)=3, but <int>(-0.3)=0, so add dims to avoid this
+        index_x_min = <int>((x_h-radius)*factor+dims)
+        index_x_max = <int>((x_h+radius)*factor+dims)
+        index_y_min = <int>((y_h-radius)*factor+dims)
+        index_y_max = <int>((y_h+radius)*factor+dims)
+        index_z_min = <int>((z_h-radius)*factor+dims)
+        index_z_max = <int>((z_h+radius)*factor+dims)
 
-        for ii in xrange(-1,2):
-            iii = (index_x + ii + dims)%dims
+        #index_x = index/dims2
+        #index_y = (index%dims2)/dims
+        #index_z = (index%dims2)%dims
 
-            for jj in xrange(-1,2):
-                jjj = (index_y + jj + dims)%dims
+        #for ii in xrange(-1,2):
+            #iii = (index_x + ii + dims)%dims
 
-                for kk in xrange(-1,2):
-                    kkk = (index_z + kk + dims)%dims
+            #for jj in xrange(-1,2):
+            #    jjj = (index_y + jj + dims)%dims
+
+                 #for kk in xrange(-1,2):
+                 #   kkk = (index_z + kk + dims)%dims
+        for ii in xrange(index_x_min, index_x_max+1):
+            iii = ii%dims
+
+            for jj in xrange(index_y_min, index_y_max+1):
+                jjj = jj%dims
+
+                for kk in xrange(index_z_min, index_z_max+1):
+                    kkk = kk%dims
 
                     index_box = dims2*iii + dims*jjj + kkk
 
@@ -680,20 +948,20 @@ cpdef HI_profile(np.float32_t[:,:] halo_pos, np.float32_t[:] halo_R,
 
                     for j in xrange(begin,end):
 
-                        x        = pos[j,0]
-                        y        = pos[j,1]
-                        z        = pos[j,2]
-                        MHI_part = MHI[j]
+                        #x        = pos[j,0]
+                        #y        = pos[j,1]
+                        #z        = pos[j,2]
+                        #MHI_part = MHI[j]
 
-                        dx = abs(x - x_h)
+                        dx = abs(pos[j,0] - x_h)
                         if dx>middle:  dx = BoxSize - dx
                         if dx>radius:  continue
 
-                        dy = abs(y - y_h)
+                        dy = abs(pos[j,1] - y_h)
                         if dy>middle:  dy = BoxSize - dy
                         if dy>radius:  continue
 
-                        dz = abs(z - z_h)
+                        dz = abs(pos[j,2] - z_h)
                         if dz>middle:  dz = BoxSize - dz
                         if dz>radius:  continue
 
@@ -703,7 +971,7 @@ cpdef HI_profile(np.float32_t[:,:] halo_pos, np.float32_t[:] halo_R,
                             if R2<=R12:  bin = 0
                             else:     
                                 bin = <int>(log10(R2/R12)/log10(radius2/R12)*(bins-1))+1
-                            HI_mass_shell[i,bin]  += MHI_part
+                            HI_mass_shell[i,bin]  += MHI[j]
                             part_in_halo[i] += 1
 
 
@@ -801,6 +1069,93 @@ cpdef overlap_particles_halos(np.float32_t[:,:] halo_pos, float Rvir, float BoxS
 
     return False
 
+############################################################################
+# This routine is used to compute the total HI mass within the radius of 
+# dark matter halos.
+# halo_pos ----------> sorted positions of the halos
+# halo_R ------------> corresponding radii of the halos
+# pos ---------------> sorted positions of the particles
+# M_HI --------------> corresponding HI masses of the particles
+# offset ------------> offset array with the begin,end information of each cell
+# M_HI_halo ---------> array containing the total HI mass inside each halo
+# BoxSize -----------> simulation box size. Needed for boundary conditions
+@cython.boundscheck(False)
+@cython.cdivision(True)
+@cython.wraparound(False)
+cpdef void HI_mass_SO(np.float32_t[:,::1] halo_pos, np.float32_t[::1] halo_R,
+    np.float32_t[:,::1] pos, np.float32_t[::1] MHI, 
+    np.int64_t[::1] offset, np.float64_t[::1] M_HI_halo, float BoxSize):
+    
+    start = time.time()
+    cdef long i, j, particles, halos, index, index_box, begin, end
+    cdef float x_h, y_h, z_h, dx, dy, dz, factor
+    cdef float middle, R2, radius, radius2
+    cdef int dims, dims2, index_x_min, index_x_max
+    cdef int index_y_min, index_y_max, index_z_min, index_z_max
+    cdef int ii, jj, kk, iii, jjj, kkk
+
+    particles = pos.shape[0]
+    halos     = halo_pos.shape[0]
+    dims      = <int>rint((offset.shape[0]-1)**(1.0/3.0))
+    dims2     = dims*dims
+    middle    = BoxSize/2.0
+    factor    = dims*1.0/BoxSize
+
+    # do a loop over all halos
+    for i in xrange(halos):
+
+        x_h     = halo_pos[i,0]
+        y_h     = halo_pos[i,1]
+        z_h     = halo_pos[i,2]
+        radius  = halo_R[i]
+        radius2 = radius*radius
+
+        # in C, <int>(3.2)=3, but <int>(-0.3)=0, so add dims to avoid this
+        index_x_min = <int>((x_h-radius)*factor+dims)
+        index_x_max = <int>((x_h+radius)*factor+dims)
+        index_y_min = <int>((y_h-radius)*factor+dims)
+        index_y_max = <int>((y_h+radius)*factor+dims)
+        index_z_min = <int>((z_h-radius)*factor+dims)
+        index_z_max = <int>((z_h+radius)*factor+dims)
+
+        # do a loop over the cell hosting the halo and its neighburgs
+        for ii in xrange(index_x_min, index_x_max+1):
+            iii = ii%dims
+
+            for jj in xrange(index_y_min, index_y_max+1):
+                jjj = jj%dims
+
+                for kk in xrange(index_z_min, index_z_max+1):
+                    kkk = kk%dims
+
+                    index_box = dims2*iii + dims*jjj + kkk
+
+                    # find the location of the particles belonging to the cell
+                    # in the sorted array
+                    begin = offset[index_box]
+                    end   = offset[index_box+1]
+
+                    # do a loop over all particles in the cell
+                    for j in xrange(begin,end):
+
+                        dx = abs(pos[j,0] - x_h)
+                        if dx>middle:  dx = BoxSize - dx
+                        if dx>radius:  continue
+
+                        dy = abs(pos[j,1] - y_h)
+                        if dy>middle:  dy = BoxSize - dy
+                        if dy>radius:  continue
+
+                        dz = abs(pos[j,2] - z_h)
+                        if dz>middle:  dz = BoxSize - dz
+                        if dz>radius:  continue
+
+                        R2 = dx*dx + dy*dy + dz*dz
+                        if R2<radius2:
+                            M_HI_halo[i] += MHI[j]
+
+
+    print 'Time taken = %.2f seconds'%(time.time()-start)
 
 # # This routine computes the cross-section of the DLAs
 # @cython.boundscheck(False)
@@ -1201,9 +1556,11 @@ cpdef DLAs_cross_section_1halo(np.float32_t[:,:] pos, np.float32_t[:] radii,
 
     # define array contining column densities
     NHI = np.zeros((dims,dims), dtype=np.float64)
+    pos_arr = np.ascontiguousarray(pos[:,0:2])
 
-    MASL.voronoi_RT_2D_no_periodic(np.asarray(NHI), np.asarray(pos[:,0:2]), 
-        np.asarray(MHI), np.asarray(radii), x_min, y_min, BoxSize_region, verbose=False)
+    MASL.voronoi_RT_2D(np.asarray(NHI), pos_arr, 
+        np.asarray(MHI), np.asarray(radii), x_min, y_min, 0, 1, BoxSize_region, 
+        periodic=False, verbose=False)
 
     # convert (Msun/h)/(Mpc/h)^2 to cm^{-2}
     factor = h*(1.0+redshift)**2*\

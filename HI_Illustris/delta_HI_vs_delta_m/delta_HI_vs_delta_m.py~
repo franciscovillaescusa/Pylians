@@ -1,0 +1,17 @@
+File Edit Options Buffers Tools Python Help                      
+import numpy as np
+import sys,os,h5py
+import transformer as TR
+import smoothing_library as SL
+
+################################### INPUT ######################\
+################                                                 
+threads = 28
+
+BoxSize = 75.0 #Mpc/h                                            
+grid    = 2048
+
+Filter  = 'Top-Hat'
+R       = 1.0  #Mpc/h                                            
+################################################################\
+################                                                .
