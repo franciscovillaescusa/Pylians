@@ -175,7 +175,7 @@ cpdef void CIC(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize)
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cdef void CICW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
+cpdef void CICW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
                np.float32_t[:] W):
 
     cdef int axis,dims,coord
@@ -219,7 +219,7 @@ cdef void CICW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cdef void NGP(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
+cpdef void NGP(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
 
     cdef int axis,dims,coord
     cdef long i,particles
@@ -251,7 +251,7 @@ cdef void NGP(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cdef void NGPW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
+cpdef void NGPW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
                np.float32_t[:] W):
 
     cdef int axis,dims,coord
@@ -284,7 +284,7 @@ cdef void NGPW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cdef void NGPW_d(np.float32_t[:,:] pos, np.float64_t[:,:,:] number, 
+cpdef void NGPW_d(np.float32_t[:,:] pos, np.float64_t[:,:,:] number, 
                  float BoxSize, np.float32_t[:] W):
 
     cdef int axis,dims,coord
@@ -315,7 +315,7 @@ cdef void NGPW_d(np.float32_t[:,:] pos, np.float64_t[:,:,:] number,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cdef void TSC(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
+cpdef void TSC(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
 
     cdef int axis, dims, minimum
     cdef int j, l, m, n, coord
@@ -363,7 +363,7 @@ cdef void TSC(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cdef void TSCW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
+cpdef void TSCW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
                np.float32_t[:] W):
 
     cdef int axis,dims,minimum,j,l,m,n,coord
@@ -409,7 +409,7 @@ cdef void TSCW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cdef void PCS(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
+cpdef void PCS(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
 
     cdef int axis,dims,minimum,j,l,m,n,coord
     cdef long i,particles
@@ -456,7 +456,7 @@ cdef void PCS(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cdef void PCSW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
+cpdef void PCSW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
                np.float32_t[:] W):
 
     cdef int axis,dims,minimum,j,l,m,n,coord
