@@ -27,6 +27,7 @@ def FLOAT_type():
 # PCSW(pos,number,BoxSize,W)
 # SPH_NGP(density,pos,radius,r_bins,part_in_shell,BoxSize,verbose)
 # SPH_NGPW(density,pos,radius,W,r_bins,part_in_shell,BoxSize,verbose)
+# NGPW_d(pos,number,BoxSize,W) #same as NGPW but double precision for number
 
 #### given a 3D density field, find value of it at particle positions ####
 # CIC_interp(pos,density,BoxSize,dens)
@@ -252,6 +253,39 @@ cdef void NGP(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize):
 @cython.cdivision(True)
 cdef void NGPW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
                np.float32_t[:] W):
+
+    cdef int axis,dims,coord
+    cdef long i,particles
+    cdef float inv_cell_size
+    cdef int index[3]
+
+    # find number of particles, the inverse of the cell size and dims
+    particles = pos.shape[0];  coord = pos.shape[1];  dims = number.shape[0]
+    inv_cell_size = dims/BoxSize
+
+    # when computing things in 2D, use the index[2]=0 plane
+    for i in xrange(3):  index[i] = 0
+
+    # do a loop over all particles
+    for i in xrange(particles):
+        for axis in xrange(coord):
+            index[axis] = <int>(pos[i,axis]*inv_cell_size + 0.5)
+            index[axis] = (index[axis]+dims)%dims
+        number[index[0],index[1],index[2]] += W[i]
+################################################################################
+
+################################################################################
+# This function computes the density field of a cubic distribution of particles
+# using weights
+# pos ------> positions of the particles. Numpy array
+# number ---> array with the density field. Numpy array (dims,dims,dims)
+# BoxSize --> Size of the box
+# W --------> weights of the particles
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+cdef void NGPW_d(np.float32_t[:,:] pos, np.float64_t[:,:,:] number, 
+                 float BoxSize, np.float32_t[:] W):
 
     cdef int axis,dims,coord
     cdef long i,particles
