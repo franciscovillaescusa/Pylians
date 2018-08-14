@@ -28,6 +28,7 @@ def FLOAT_type():
 # SPH_NGP(density,pos,radius,r_bins,part_in_shell,BoxSize,verbose)
 # SPH_NGPW(density,pos,radius,W,r_bins,part_in_shell,BoxSize,verbose)
 # NGPW_d(pos,number,BoxSize,W) #same as NGPW but double precision for number
+# CICW_d(pos,number,BoxSize,W) #same as CICW but double precision for number
 
 #### given a 3D density field, find value of it at particle positions ####
 # CIC_interp(pos,density,BoxSize,dens)
@@ -176,6 +177,56 @@ cpdef void CIC(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize)
 @cython.wraparound(False)
 @cython.cdivision(True)
 cpdef void CICW(np.float32_t[:,:] pos, np.float32_t[:,:,:] number, float BoxSize,
+               np.float32_t[:] W):
+
+    cdef int axis,dims,coord
+    cdef long i,particles
+    cdef float inv_cell_size,dist
+    cdef float u[3]
+    cdef float d[3]
+    cdef int index_d[3]
+    cdef int index_u[3]
+    
+    # find number of particles, the inverse of the cell size and dims
+    particles = pos.shape[0];  coord = pos.shape[1];  dims = number.shape[0]
+    inv_cell_size = dims/BoxSize
+    
+    # when computing things in 2D, use the index_ud[2]=0 plane
+    for i in xrange(3):
+        index_d[i] = 0;  index_u[i] = 0;  d[i] = 1.0;  u[i] = 1.0
+
+    # do a loop over all particles
+    for i in xrange(particles):
+
+        for axis in xrange(coord):
+            dist          = pos[i,axis]*inv_cell_size
+            u[axis]       = dist - <int>dist
+            d[axis]       = 1.0 - u[axis]
+            index_d[axis] = (<int>dist)%dims
+            index_u[axis] = index_d[axis] + 1
+            index_u[axis] = index_u[axis]%dims #seems this is faster
+
+        number[index_d[0],index_d[1],index_d[2]] += d[0]*d[1]*d[2]*W[i]
+        number[index_d[0],index_d[1],index_u[2]] += d[0]*d[1]*u[2]*W[i]
+        number[index_d[0],index_u[1],index_d[2]] += d[0]*u[1]*d[2]*W[i]
+        number[index_d[0],index_u[1],index_u[2]] += d[0]*u[1]*u[2]*W[i]
+        number[index_u[0],index_d[1],index_d[2]] += u[0]*d[1]*d[2]*W[i]
+        number[index_u[0],index_d[1],index_u[2]] += u[0]*d[1]*u[2]*W[i]
+        number[index_u[0],index_u[1],index_d[2]] += u[0]*u[1]*d[2]*W[i]
+        number[index_u[0],index_u[1],index_u[2]] += u[0]*u[1]*u[2]*W[i]
+################################################################################
+
+################################################################################
+# This function computes the density field of a cubic distribution of particles
+# using weights
+# pos ------> positions of the particles. Numpy array
+# number ---> array with the density field. Numpy array (dims,dims,dims)
+# BoxSize --> Size of the box
+# W --------> weights of the particles
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+cpdef void CICW_d(np.float32_t[:,:] pos, np.float64_t[:,:,:] number, float BoxSize,
                np.float32_t[:] W):
 
     cdef int axis,dims,coord
