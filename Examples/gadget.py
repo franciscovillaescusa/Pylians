@@ -26,7 +26,7 @@ vel = readsnap.read_block(snapshot_fname,"VEL ",parttype=1)     #km/s
 #########################################################################
 # read positions and velocities of halos
 FoF   = readfof.FoF_catalog(snapdir,snapnum,long_ids=False,
-                            swap=False,SFR=False)
+                            swap=False,SFR=False,read_IDs=True)
 pos_h = FoF.GroupPos/1e3            #Mpc/h
 mass  = FoF.GroupMass*1e10          #Msun/h
 vel_h = FoF.GroupVel*(1.0+redshift) #km/s
