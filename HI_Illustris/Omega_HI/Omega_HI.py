@@ -126,7 +126,8 @@ if myrank==0:
     # read partial files and create big array with them
     files = glob.glob(fout[:-4]+'_*');  data = []
     for fin in files:
-        data.append(np.loadtxt(fin,unpack=False))
+        for data_in in np.loadtxt(fin,unpack=False):
+            data.append(data_in)
     data = np.array(data)
 
     # sort big array by redshift (column 0) and save results
