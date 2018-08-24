@@ -124,14 +124,17 @@ comm.Barrier()
 if myrank==0:
 
     # read partial files and create big array with them
-    files = glob.glob(fout[:-4]+'_*');  data = []
+    files = glob.glob(fout[:-4]+'_*');  i = 0
+    data = np.zeros((len(snapnums),5), dtype=np.float64)
     for fin in files:
-        for data_in in np.loadtxt(fin,unpack=False):
-            data.append(data_in)
-    data = np.array(data)
+        f = open(fin, 'r')
+        for data_in in f.readlines():
+            data[i] = np.asarray(data_in.split(), dtype=np.float64);  i += 1
+        f.close()
 
     # sort big array by redshift (column 0) and save results
     np.savetxt(fout, data[data[:,0].argsort()], fmt="%.6e")
+
 
 
     
