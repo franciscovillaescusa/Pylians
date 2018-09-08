@@ -63,7 +63,8 @@ cdef void sigma(double x, double y[], double dydx[],
         index = <int>((logx-a[0])/(a[elements-1]-a[0])*(elements-1))
         Pk_interp = (b[index+1] - b[index])/(a[index+1]-a[index])*(logx-a[index]) + b[index]
     
-    dydx[0] = 10**(Pk_interp)
+    dydx[0] = Pk_interp
+    #dydx[0] = 10**(Pk_interp)  #old method
 
 #######################################################################
 ############### Trapezoidal rule ##############

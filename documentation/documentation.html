@@ -6,68 +6,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <title></title>
   <style type="text/css">code{white-space: pre;}</style>
+  <!--[if lt IE 9]>
+    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
   <style type="text/css">
-div.sourceCode { overflow-x: auto; }
 table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
   margin: 0; padding: 0; vertical-align: baseline; border: none; }
-table.sourceCode { width: 100%; line-height: 100%; background-color: #ffffff; color: #1f1c1b; }
-td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; background-color: #ffffff; color: #a0a0a0; border-right: 1px solid #a0a0a0; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; background-color: #dddddd; }
 td.sourceCode { padding-left: 5px; }
-pre, code { color: #1f1c1b; background-color: #ffffff; }
-code > span.kw { color: #1f1c1b; font-weight: bold; } /* Keyword */
-code > span.dt { color: #0057ae; } /* DataType */
-code > span.dv { color: #b08000; } /* DecVal */
-code > span.bn { color: #b08000; } /* BaseN */
-code > span.fl { color: #b08000; } /* Float */
-code > span.cn { color: #aa5500; } /* Constant */
-code > span.ch { color: #924c9d; } /* Char */
-code > span.sc { color: #3daee9; } /* SpecialChar */
-code > span.st { color: #bf0303; } /* String */
-code > span.vs { color: #bf0303; } /* VerbatimString */
-code > span.ss { color: #ff5500; } /* SpecialString */
-code > span.im { color: #ff5500; } /* Import */
-code > span.co { color: #898887; } /* Comment */
-code > span.do { color: #607880; } /* Documentation */
-code > span.an { color: #ca60ca; } /* Annotation */
-code > span.cv { color: #0095ff; } /* CommentVar */
-code > span.ot { color: #006e28; } /* Other */
-code > span.fu { color: #644a9b; } /* Function */
-code > span.va { color: #0057ae; } /* Variable */
-code > span.cf { color: #1f1c1b; font-weight: bold; } /* ControlFlow */
-code > span.op { color: #1f1c1b; } /* Operator */
-code > span.bu { color: #644a9b; font-weight: bold; } /* BuiltIn */
-code > span.ex { color: #0095ff; font-weight: bold; } /* Extension */
-code > span.pp { color: #006e28; } /* Preprocessor */
-code > span.at { color: #0057ae; } /* Attribute */
-code > span.re { color: #0057ae; } /* RegionMarker */
-code > span.in { color: #b08000; } /* Information */
-code > span.wa { color: #bf0303; } /* Warning */
-code > span.al { color: #bf0303; font-weight: bold; } /* Alert */
-code > span.er { color: #bf0303; text-decoration: underline; } /* Error */
-code > span. { color: #1f1c1b; } /* Normal */
+code > span.kw { font-weight: bold; }
+code > span.dt { color: #800000; }
+code > span.dv { color: #0000ff; }
+code > span.bn { color: #0000ff; }
+code > span.fl { color: #800080; }
+code > span.ch { color: #ff00ff; }
+code > span.st { color: #dd0000; }
+code > span.co { color: #808080; font-style: italic; }
+code > span.al { color: #00ff00; font-weight: bold; }
+code > span.fu { color: #000080; }
+code > span.er { color: #ff0000; font-weight: bold; }
   </style>
-  <link href="data:text/css;charset=utf-8,%40font%2Dface%20%7B%0Afont%2Dfamily%3A%20octicons%2Dlink%3B%0Asrc%3A%20url%28data%3Afont%2Fwoff%3Bcharset%3Dutf%2D8%3Bbase64%2Cd09GRgABAAAAAAZwABAAAAAACFQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABEU0lHAAAGaAAAAAgAAAAIAAAAAUdTVUIAAAZcAAAACgAAAAoAAQAAT1MvMgAAAyQAAABJAAAAYFYEU3RjbWFwAAADcAAAAEUAAACAAJThvmN2dCAAAATkAAAABAAAAAQAAAAAZnBnbQAAA7gAAACyAAABCUM%2B8IhnYXNwAAAGTAAAABAAAAAQABoAI2dseWYAAAFsAAABPAAAAZwcEq9taGVhZAAAAsgAAAA0AAAANgh4a91oaGVhAAADCAAAABoAAAAkCA8DRGhtdHgAAAL8AAAADAAAAAwGAACfbG9jYQAAAsAAAAAIAAAACABiATBtYXhwAAACqAAAABgAAAAgAA8ASm5hbWUAAAToAAABQgAAAlXu73sOcG9zdAAABiwAAAAeAAAAME3QpOBwcmVwAAAEbAAAAHYAAAB%2FaFGpk3jaTY6xa8JAGMW%2FO62BDi0tJLYQincXEypYIiGJjSgHniQ6umTsUEyLm5BV6NDBP8Tpts6F0v%2Bk%2F0an2i%2BitHDw3v2%2B9%2BDBKTzsJNnWJNTgHEy4BgG3EMI9DCEDOGEXzDADU5hBKMIgNPZqoD3SilVaXZCER3%2FI7AtxEJLtzzuZfI%2BVVkprxTlXShWKb3TBecG11rwoNlmmn1P2WYcJczl32etSpKnziC7lQyWe1smVPy%2FLt7Kc%2B0vWY%2FgAgIIEqAN9we0pwKXreiMasxvabDQMM4riO%2BqxM2ogwDGOZTXxwxDiycQIcoYFBLj5K3EIaSctAq2kTYiw%2Bymhce7vwM9jSqO8JyVd5RH9gyTt2%2BJ%2FyUmYlIR0s04n6%2B7Vm1ozezUeLEaUjhaDSuXHwVRgvLJn1tQ7xiuVv%2FocTRF42mNgZGBgYGbwZOBiAAFGJBIMAAizAFoAAABiAGIAznjaY2BkYGAA4in8zwXi%2BW2%2BMjCzMIDApSwvXzC97Z4Ig8N%2FBxYGZgcgl52BCSQKAA3jCV8CAABfAAAAAAQAAEB42mNgZGBg4f3vACQZQABIMjKgAmYAKEgBXgAAeNpjYGY6wTiBgZWBg2kmUxoDA4MPhGZMYzBi1AHygVLYQUCaawqDA4PChxhmh%2F8ODDEsvAwHgMKMIDnGL0x7gJQCAwMAJd4MFwAAAHjaY2BgYGaA4DAGRgYQkAHyGMF8NgYrIM3JIAGVYYDT%2BAEjAwuDFpBmA9KMDEwMCh9i%2Fv8H8sH0%2F4dQc1iAmAkALaUKLgAAAHjaTY9LDsIgEIbtgqHUPpDi3gPoBVyRTmTddOmqTXThEXqrob2gQ1FjwpDvfwCBdmdXC5AVKFu3e5MfNFJ29KTQT48Ob9%2FlqYwOGZxeUelN2U2R6%2BcArgtCJpauW7UQBqnFkUsjAY%2FkOU1cP%2BDAgvxwn1chZDwUbd6CFimGXwzwF6tPbFIcjEl%2BvvmM%2FbyA48e6tWrKArm4ZJlCbdsrxksL1AwWn%2FyBSJKpYbq8AXaaTb8AAHja28jAwOC00ZrBeQNDQOWO%2F%2FsdBBgYGRiYWYAEELEwMTE4uzo5Zzo5b2BxdnFOcALxNjA6b2ByTswC8jYwg0VlNuoCTWAMqNzMzsoK1rEhNqByEyerg5PMJlYuVueETKcd%2F89uBpnpvIEVomeHLoMsAAe1Id4AAAAAAAB42oWQT07CQBTGv0JBhagk7HQzKxca2sJCE1hDt4QF%2B9JOS0nbaaYDCQfwCJ7Au3AHj%2BLO13FMmm6cl7785vven0kBjHCBhfpYuNa5Ph1c0e2Xu3jEvWG7UdPDLZ4N92nOm%2BEBXuAbHmIMSRMs%2B4aUEd4Nd3CHD8NdvOLTsA2GL8M9PODbcL%2BhD7C1xoaHeLJSEao0FEW14ckxC%2BTU8TxvsY6X0eLPmRhry2WVioLpkrbp84LLQPGI7c6sOiUzpWIWS5GzlSgUzzLBSikOPFTOXqly7rqx0Z1Q5BAIoZBSFihQYQOOBEdkCOgXTOHA07HAGjGWiIjaPZNW13%2F%2Blm6S9FT7rLHFJ6fQbkATOG1j2OFMucKJJsxIVfQORl%2B9Jyda6Sl1dUYhSCm1dyClfoeDve4qMYdLEbfqHf3O%2FAdDumsjAAB42mNgYoAAZQYjBmyAGYQZmdhL8zLdDEydARfoAqIAAAABAAMABwAKABMAB%2F%2F%2FAA8AAQAAAAAAAAAAAAAAAAABAAAAAA%3D%3D%29%20format%28%27woff%27%29%3B%0A%7D%0Abody%20%7B%0A%2Dwebkit%2Dtext%2Dsize%2Dadjust%3A%20100%25%3B%0Atext%2Dsize%2Dadjust%3A%20100%25%3B%0Acolor%3A%20%23333%3B%0Afont%2Dfamily%3A%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20%22Segoe%20UI%22%2C%20Arial%2C%20freesans%2C%20sans%2Dserif%2C%20%22Apple%20Color%20Emoji%22%2C%20%22Segoe%20UI%20Emoji%22%2C%20%22Segoe%20UI%20Symbol%22%3B%0Afont%2Dsize%3A%2016px%3B%0Aline%2Dheight%3A%201%2E6%3B%0Aword%2Dwrap%3A%20break%2Dword%3B%0Awidth%3A%201000px%3B%0Amax%2Dwidth%3A%2099%25%3B%0Abox%2Dsizing%3A%20border%2Dbox%3B%0Apadding%3A%2030px%2030px%208rem%2030px%3B%0Amargin%2Dleft%3A%20auto%3B%0Amargin%2Dright%3A%20auto%3B%0A%7D%0Abody%20a%20%7B%0Abackground%2Dcolor%3A%20transparent%3B%0A%7D%0Abody%20a%3Aactive%2C%0Abody%20a%3Ahover%20%7B%0Aoutline%3A%200%3B%0A%7D%0Abody%20strong%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Abody%20h1%20%7B%0Afont%2Dsize%3A%202em%3B%0Amargin%3A%200%2E67em%200%3B%0A%7D%0Abody%20img%20%7B%0Aborder%3A%200%3B%0A%7D%0Abody%20hr%20%7B%0Abox%2Dsizing%3A%20content%2Dbox%3B%0Aheight%3A%200%3B%0A%7D%0Abody%20pre%20%7B%0Aoverflow%3A%20auto%3B%0A%7D%0Abody%20code%2C%0Abody%20kbd%2C%0Abody%20pre%20%7B%0Afont%2Dfamily%3A%20monospace%2C%20monospace%3B%0Afont%2Dsize%3A%201em%3B%0A%7D%0Abody%20input%20%7B%0Acolor%3A%20inherit%3B%0Afont%3A%20inherit%3B%0Amargin%3A%200%3B%0A%7D%0Abody%20html%20input%5Bdisabled%5D%20%7B%0Acursor%3A%20default%3B%0A%7D%0Abody%20input%20%7B%0Aline%2Dheight%3A%20normal%3B%0A%7D%0Abody%20input%5Btype%3D%22checkbox%22%5D%20%7B%0Abox%2Dsizing%3A%20border%2Dbox%3B%0Apadding%3A%200%3B%0A%7D%0Abody%20table%20%7B%0Aborder%2Dcollapse%3A%20collapse%3B%0Aborder%2Dspacing%3A%200%3B%0A%7D%0Abody%20td%2C%0Abody%20th%20%7B%0Apadding%3A%200%3B%0A%7D%0Abody%20%2A%20%7B%0Abox%2Dsizing%3A%20border%2Dbox%3B%0A%7D%0Abody%20input%20%7B%0Afont%3A%2013px%20%2F%201%2E4%20Helvetica%2C%20arial%2C%20nimbussansl%2C%20liberationsans%2C%20freesans%2C%20clean%2C%20sans%2Dserif%2C%20%22Apple%20Color%20Emoji%22%2C%20%22Segoe%20UI%20Emoji%22%2C%20%22Segoe%20UI%20Symbol%22%3B%0A%7D%0Abody%20a%20%7B%0Acolor%3A%20%234078c0%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Abody%20a%3Ahover%2C%0Abody%20a%3Aactive%20%7B%0Atext%2Ddecoration%3A%20underline%3B%0A%7D%0Abody%20hr%20%7B%0Aheight%3A%200%3B%0Amargin%3A%2015px%200%3B%0Aoverflow%3A%20hidden%3B%0Abackground%3A%20transparent%3B%0Aborder%3A%200%3B%0Aborder%2Dbottom%3A%201px%20solid%20%23ddd%3B%0A%7D%0Abody%20hr%3Abefore%20%7B%0Adisplay%3A%20table%3B%0Acontent%3A%20%22%22%3B%0A%7D%0Abody%20hr%3Aafter%20%7B%0Adisplay%3A%20table%3B%0Aclear%3A%20both%3B%0Acontent%3A%20%22%22%3B%0A%7D%0Abody%20h1%2C%0Abody%20h2%2C%0Abody%20h3%2C%0Abody%20h4%2C%0Abody%20h5%2C%0Abody%20h6%20%7B%0Amargin%2Dtop%3A%2015px%3B%0Amargin%2Dbottom%3A%2015px%3B%0Aline%2Dheight%3A%201%2E1%3B%0A%7D%0Abody%20h1%20%7B%0Afont%2Dsize%3A%2030px%3B%0A%7D%0Abody%20h2%20%7B%0Afont%2Dsize%3A%2021px%3B%0A%7D%0Abody%20h3%20%7B%0Afont%2Dsize%3A%2016px%3B%0A%7D%0Abody%20h4%20%7B%0Afont%2Dsize%3A%2014px%3B%0A%7D%0Abody%20h5%20%7B%0Afont%2Dsize%3A%2012px%3B%0A%7D%0Abody%20h6%20%7B%0Afont%2Dsize%3A%2011px%3B%0A%7D%0Abody%20blockquote%20%7B%0Amargin%3A%200%3B%0A%7D%0Abody%20ul%2C%0Abody%20ol%20%7B%0Apadding%3A%200%3B%0Amargin%2Dtop%3A%200%3B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Abody%20ol%20ol%2C%0Abody%20ul%20ol%20%7B%0Alist%2Dstyle%2Dtype%3A%20lower%2Droman%3B%0A%7D%0Abody%20ul%20ul%20ol%2C%0Abody%20ul%20ol%20ol%2C%0Abody%20ol%20ul%20ol%2C%0Abody%20ol%20ol%20ol%20%7B%0Alist%2Dstyle%2Dtype%3A%20lower%2Dalpha%3B%0A%7D%0Abody%20dd%20%7B%0Amargin%2Dleft%3A%200%3B%0A%7D%0Abody%20code%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20%22Liberation%20Mono%22%2C%20Menlo%2C%20Courier%2C%20monospace%3B%0Afont%2Dsize%3A%2012px%3B%0A%7D%0Abody%20pre%20%7B%0Amargin%2Dtop%3A%200%3B%0Amargin%2Dbottom%3A%200%3B%0Afont%3A%2012px%20Consolas%2C%20%22Liberation%20Mono%22%2C%20Menlo%2C%20Courier%2C%20monospace%3B%0A%7D%0Abody%20%2Eselect%3A%3A%2Dms%2Dexpand%20%7B%0Aopacity%3A%200%3B%0A%7D%0Abody%20%2Eocticon%20%7B%0Afont%3A%20normal%20normal%20normal%2016px%2F1%20octicons%2Dlink%3B%0Adisplay%3A%20inline%2Dblock%3B%0Atext%2Ddecoration%3A%20none%3B%0Atext%2Drendering%3A%20auto%3B%0A%2Dwebkit%2Dfont%2Dsmoothing%3A%20antialiased%3B%0A%2Dmoz%2Dosx%2Dfont%2Dsmoothing%3A%20grayscale%3B%0A%2Dwebkit%2Duser%2Dselect%3A%20none%3B%0A%2Dmoz%2Duser%2Dselect%3A%20none%3B%0A%2Dms%2Duser%2Dselect%3A%20none%3B%0Auser%2Dselect%3A%20none%3B%0A%7D%0Abody%20%2Eocticon%2Dlink%3Abefore%20%7B%0Acontent%3A%20%27%5Cf05c%27%3B%0A%7D%0Abody%3Abefore%20%7B%0Adisplay%3A%20table%3B%0Acontent%3A%20%22%22%3B%0A%7D%0Abody%3Aafter%20%7B%0Adisplay%3A%20table%3B%0Aclear%3A%20both%3B%0Acontent%3A%20%22%22%3B%0A%7D%0Abody%3E%2A%3Afirst%2Dchild%20%7B%0Amargin%2Dtop%3A%200%20%21important%3B%0A%7D%0Abody%3E%2A%3Alast%2Dchild%20%7B%0Amargin%2Dbottom%3A%200%20%21important%3B%0A%7D%0Abody%20a%3Anot%28%5Bhref%5D%29%20%7B%0Acolor%3A%20inherit%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Abody%20%2Eanchor%20%7B%0Adisplay%3A%20inline%2Dblock%3B%0Apadding%2Dright%3A%202px%3B%0Amargin%2Dleft%3A%20%2D18px%3B%0A%7D%0Abody%20%2Eanchor%3Afocus%20%7B%0Aoutline%3A%20none%3B%0A%7D%0Abody%20h1%2C%0Abody%20h2%2C%0Abody%20h3%2C%0Abody%20h4%2C%0Abody%20h5%2C%0Abody%20h6%20%7B%0Amargin%2Dtop%3A%201em%3B%0Amargin%2Dbottom%3A%2016px%3B%0Afont%2Dweight%3A%20bold%3B%0Aline%2Dheight%3A%201%2E4%3B%0A%7D%0Abody%20h1%20%2Eocticon%2Dlink%2C%0Abody%20h2%20%2Eocticon%2Dlink%2C%0Abody%20h3%20%2Eocticon%2Dlink%2C%0Abody%20h4%20%2Eocticon%2Dlink%2C%0Abody%20h5%20%2Eocticon%2Dlink%2C%0Abody%20h6%20%2Eocticon%2Dlink%20%7B%0Acolor%3A%20%23000%3B%0Avertical%2Dalign%3A%20middle%3B%0Avisibility%3A%20hidden%3B%0A%7D%0Abody%20h1%3Ahover%20%2Eanchor%2C%0Abody%20h2%3Ahover%20%2Eanchor%2C%0Abody%20h3%3Ahover%20%2Eanchor%2C%0Abody%20h4%3Ahover%20%2Eanchor%2C%0Abody%20h5%3Ahover%20%2Eanchor%2C%0Abody%20h6%3Ahover%20%2Eanchor%20%7B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Abody%20h1%3Ahover%20%2Eanchor%20%2Eocticon%2Dlink%2C%0Abody%20h2%3Ahover%20%2Eanchor%20%2Eocticon%2Dlink%2C%0Abody%20h3%3Ahover%20%2Eanchor%20%2Eocticon%2Dlink%2C%0Abody%20h4%3Ahover%20%2Eanchor%20%2Eocticon%2Dlink%2C%0Abody%20h5%3Ahover%20%2Eanchor%20%2Eocticon%2Dlink%2C%0Abody%20h6%3Ahover%20%2Eanchor%20%2Eocticon%2Dlink%20%7B%0Avisibility%3A%20visible%3B%0A%7D%0Abody%20h1%20%7B%0Apadding%2Dbottom%3A%200%2E3em%3B%0Afont%2Dsize%3A%201%2E75em%3B%0Aline%2Dheight%3A%201%2E2%3B%0A%7D%0Abody%20h1%20%2Eanchor%20%7B%0Aline%2Dheight%3A%201%3B%0A%7D%0Abody%20h2%20%7B%0Apadding%2Dbottom%3A%200%2E3em%3B%0Afont%2Dsize%3A%201%2E5em%3B%0Aline%2Dheight%3A%201%2E225%3B%0A%7D%0Abody%20h2%20%2Eanchor%20%7B%0Aline%2Dheight%3A%201%3B%0A%7D%0Abody%20h3%20%7B%0Afont%2Dsize%3A%201%2E25em%3B%0Aline%2Dheight%3A%201%2E43%3B%0A%7D%0Abody%20h3%20%2Eanchor%20%7B%0Aline%2Dheight%3A%201%2E2%3B%0A%7D%0Abody%20h4%20%7B%0Afont%2Dsize%3A%201em%3B%0A%7D%0Abody%20h4%20%2Eanchor%20%7B%0Aline%2Dheight%3A%201%2E2%3B%0A%7D%0Abody%20h5%20%7B%0Afont%2Dsize%3A%201em%3B%0A%7D%0Abody%20h5%20%2Eanchor%20%7B%0Aline%2Dheight%3A%201%2E1%3B%0A%7D%0Abody%20h6%20%7B%0Afont%2Dsize%3A%201em%3B%0Acolor%3A%20%23777%3B%0A%7D%0Abody%20h6%20%2Eanchor%20%7B%0Aline%2Dheight%3A%201%2E1%3B%0A%7D%0Abody%20p%2C%0Abody%20blockquote%2C%0Abody%20ul%2C%0Abody%20ol%2C%0Abody%20dl%2C%0Abody%20table%2C%0Abody%20pre%20%7B%0Amargin%2Dtop%3A%200%3B%0Amargin%2Dbottom%3A%2016px%3B%0A%7D%0Abody%20hr%20%7B%0Aheight%3A%204px%3B%0Apadding%3A%200%3B%0Amargin%3A%2016px%200%3B%0Abackground%2Dcolor%3A%20%23e7e7e7%3B%0Aborder%3A%200%20none%3B%0A%7D%0Abody%20ul%2C%0Abody%20ol%20%7B%0Apadding%2Dleft%3A%202em%3B%0A%7D%0Abody%20ul%20ul%2C%0Abody%20ul%20ol%2C%0Abody%20ol%20ol%2C%0Abody%20ol%20ul%20%7B%0Amargin%2Dtop%3A%200%3B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Abody%20li%3Ep%20%7B%0Amargin%2Dtop%3A%2016px%3B%0A%7D%0Abody%20dl%20%7B%0Apadding%3A%200%3B%0A%7D%0Abody%20dl%20dt%20%7B%0Apadding%3A%200%3B%0Amargin%2Dtop%3A%2016px%3B%0Afont%2Dsize%3A%201em%3B%0Afont%2Dstyle%3A%20italic%3B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Abody%20dl%20dd%20%7B%0Apadding%3A%200%2016px%3B%0Amargin%2Dbottom%3A%2016px%3B%0A%7D%0Abody%20blockquote%20%7B%0Apadding%3A%200%2015px%3B%0Acolor%3A%20%23777%3B%0Aborder%2Dleft%3A%204px%20solid%20%23ddd%3B%0A%7D%0Abody%20blockquote%3E%3Afirst%2Dchild%20%7B%0Amargin%2Dtop%3A%200%3B%0A%7D%0Abody%20blockquote%3E%3Alast%2Dchild%20%7B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Abody%20table%20%7B%0Adisplay%3A%20block%3B%0Awidth%3A%20100%25%3B%0Aoverflow%3A%20auto%3B%0Aword%2Dbreak%3A%20normal%3B%0Aword%2Dbreak%3A%20keep%2Dall%3B%0A%7D%0Abody%20table%20th%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Abody%20table%20th%2C%0Abody%20table%20td%20%7B%0Apadding%3A%206px%2013px%3B%0Aborder%3A%201px%20solid%20%23ddd%3B%0A%7D%0Abody%20table%20tr%20%7B%0Abackground%2Dcolor%3A%20%23fff%3B%0Aborder%2Dtop%3A%201px%20solid%20%23ccc%3B%0A%7D%0Abody%20table%20tr%3Anth%2Dchild%282n%29%20%7B%0Abackground%2Dcolor%3A%20%23f8f8f8%3B%0A%7D%0Abody%20img%20%7B%0Amax%2Dwidth%3A%20100%25%3B%0Abox%2Dsizing%3A%20content%2Dbox%3B%0Abackground%2Dcolor%3A%20%23fff%3B%0A%7D%0Abody%20code%20%7B%0Apadding%3A%200%3B%0Apadding%2Dtop%3A%200%3B%0Apadding%2Dbottom%3A%200%3B%0Amargin%3A%200%3B%0Afont%2Dsize%3A%2085%25%3B%0Abackground%2Dcolor%3A%20rgba%280%2C0%2C0%2C0%2E04%29%3B%0Aborder%2Dradius%3A%203px%3B%0A%7D%0Abody%20code%3Abefore%2C%0Abody%20code%3Aafter%20%7B%0Aletter%2Dspacing%3A%20%2D0%2E2em%3B%0Acontent%3A%20%22%5C00a0%22%3B%0A%7D%0Abody%20pre%3Ecode%20%7B%0Apadding%3A%200%3B%0Amargin%3A%200%3B%0Afont%2Dsize%3A%20100%25%3B%0Aword%2Dbreak%3A%20normal%3B%0Awhite%2Dspace%3A%20pre%3B%0Abackground%3A%20transparent%3B%0Aborder%3A%200%3B%0A%7D%0Abody%20%2Ehighlight%20%7B%0Amargin%2Dbottom%3A%2016px%3B%0A%7D%0Abody%20%2Ehighlight%20pre%2C%0Abody%20pre%20%7B%0Apadding%3A%2016px%3B%0Aoverflow%3A%20auto%3B%0Afont%2Dsize%3A%2085%25%3B%0Aline%2Dheight%3A%201%2E45%3B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0Aborder%2Dradius%3A%203px%3B%0A%7D%0Abody%20%2Ehighlight%20pre%20%7B%0Amargin%2Dbottom%3A%200%3B%0Aword%2Dbreak%3A%20normal%3B%0A%7D%0Abody%20pre%20%7B%0Aword%2Dwrap%3A%20normal%3B%0A%7D%0Abody%20pre%20code%20%7B%0Adisplay%3A%20inline%3B%0Amax%2Dwidth%3A%20initial%3B%0Apadding%3A%200%3B%0Amargin%3A%200%3B%0Aoverflow%3A%20initial%3B%0Aline%2Dheight%3A%20inherit%3B%0Aword%2Dwrap%3A%20normal%3B%0Abackground%2Dcolor%3A%20transparent%3B%0Aborder%3A%200%3B%0A%7D%0Abody%20pre%20code%3Abefore%2C%0Abody%20pre%20code%3Aafter%20%7B%0Acontent%3A%20normal%3B%0A%7D%0Abody%20kbd%20%7B%0Adisplay%3A%20inline%2Dblock%3B%0Apadding%3A%203px%205px%3B%0Afont%2Dsize%3A%2011px%3B%0Aline%2Dheight%3A%2010px%3B%0Acolor%3A%20%23555%3B%0Avertical%2Dalign%3A%20middle%3B%0Abackground%2Dcolor%3A%20%23fcfcfc%3B%0Aborder%3A%20solid%201px%20%23ccc%3B%0Aborder%2Dbottom%2Dcolor%3A%20%23bbb%3B%0Aborder%2Dradius%3A%203px%3B%0Abox%2Dshadow%3A%20inset%200%20%2D1px%200%20%23bbb%3B%0A%7D%0Abody%20%2Epl%2Dc%20%7B%0Acolor%3A%20%23969896%3B%0A%7D%0Abody%20%2Epl%2Dc1%2C%0Abody%20%2Epl%2Ds%20%2Epl%2Dv%20%7B%0Acolor%3A%20%230086b3%3B%0A%7D%0Abody%20%2Epl%2De%2C%0Abody%20%2Epl%2Den%20%7B%0Acolor%3A%20%23795da3%3B%0A%7D%0Abody%20%2Epl%2Ds%20%2Epl%2Ds1%2C%0Abody%20%2Epl%2Dsmi%20%7B%0Acolor%3A%20%23333%3B%0A%7D%0Abody%20%2Epl%2Dent%20%7B%0Acolor%3A%20%2363a35c%3B%0A%7D%0Abody%20%2Epl%2Dk%20%7B%0Acolor%3A%20%23a71d5d%3B%0A%7D%0Abody%20%2Epl%2Dpds%2C%0Abody%20%2Epl%2Ds%2C%0Abody%20%2Epl%2Ds%20%2Epl%2Dpse%20%2Epl%2Ds1%2C%0Abody%20%2Epl%2Dsr%2C%0Abody%20%2Epl%2Dsr%20%2Epl%2Dcce%2C%0Abody%20%2Epl%2Dsr%20%2Epl%2Dsra%2C%0Abody%20%2Epl%2Dsr%20%2Epl%2Dsre%20%7B%0Acolor%3A%20%23183691%3B%0A%7D%0Abody%20%2Epl%2Dv%20%7B%0Acolor%3A%20%23ed6a43%3B%0A%7D%0Abody%20%2Epl%2Did%20%7B%0Acolor%3A%20%23b52a1d%3B%0A%7D%0Abody%20%2Epl%2Dii%20%7B%0Abackground%2Dcolor%3A%20%23b52a1d%3B%0Acolor%3A%20%23f8f8f8%3B%0A%7D%0Abody%20%2Epl%2Dsr%20%2Epl%2Dcce%20%7B%0Acolor%3A%20%2363a35c%3B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Abody%20%2Epl%2Dml%20%7B%0Acolor%3A%20%23693a17%3B%0A%7D%0Abody%20%2Epl%2Dmh%2C%0Abody%20%2Epl%2Dmh%20%2Epl%2Den%2C%0Abody%20%2Epl%2Dms%20%7B%0Acolor%3A%20%231d3e81%3B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Abody%20%2Epl%2Dmq%20%7B%0Acolor%3A%20%23008080%3B%0A%7D%0Abody%20%2Epl%2Dmi%20%7B%0Acolor%3A%20%23333%3B%0Afont%2Dstyle%3A%20italic%3B%0A%7D%0Abody%20%2Epl%2Dmb%20%7B%0Acolor%3A%20%23333%3B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Abody%20%2Epl%2Dmd%20%7B%0Abackground%2Dcolor%3A%20%23ffecec%3B%0Acolor%3A%20%23bd2c00%3B%0A%7D%0Abody%20%2Epl%2Dmi1%20%7B%0Abackground%2Dcolor%3A%20%23eaffea%3B%0Acolor%3A%20%2355a532%3B%0A%7D%0Abody%20%2Epl%2Dmdr%20%7B%0Acolor%3A%20%23795da3%3B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Abody%20%2Epl%2Dmo%20%7B%0Acolor%3A%20%231d3e81%3B%0A%7D%0Abody%20kbd%20%7B%0Adisplay%3A%20inline%2Dblock%3B%0Apadding%3A%203px%205px%3B%0Afont%3A%2011px%20Consolas%2C%20%22Liberation%20Mono%22%2C%20Menlo%2C%20Courier%2C%20monospace%3B%0Aline%2Dheight%3A%2010px%3B%0Acolor%3A%20%23555%3B%0Avertical%2Dalign%3A%20middle%3B%0Abackground%2Dcolor%3A%20%23fcfcfc%3B%0Aborder%3A%20solid%201px%20%23ccc%3B%0Aborder%2Dbottom%2Dcolor%3A%20%23bbb%3B%0Aborder%2Dradius%3A%203px%3B%0Abox%2Dshadow%3A%20inset%200%20%2D1px%200%20%23bbb%3B%0A%7D%0Abody%20%2Etask%2Dlist%2Ditem%20%7B%0Alist%2Dstyle%2Dtype%3A%20none%3B%0A%7D%0Abody%20%2Etask%2Dlist%2Ditem%2B%2Etask%2Dlist%2Ditem%20%7B%0Amargin%2Dtop%3A%203px%3B%0A%7D%0Abody%20%2Etask%2Dlist%2Ditem%20input%20%7B%0Amargin%3A%200%200%2E35em%200%2E25em%20%2D1%2E6em%3B%0Avertical%2Dalign%3A%20middle%3B%0A%7D%0Abody%20%3Achecked%2B%2Eradio%2Dlabel%20%7B%0Az%2Dindex%3A%201%3B%0Aposition%3A%20relative%3B%0Aborder%2Dcolor%3A%20%234078c0%3B%0A%7D%0A" rel="stylesheet">
-  <!--[if lt IE 9]>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
-  <![endif]-->
+  <link href="data:text/css,%40font%2Dface%20%7B%0A%20%20font%2Dfamily%3A%20octicons%2Dlink%3B%0A%20%20src%3A%20url%28data%3Afont%2Fwoff%3Bcharset%3Dutf%2D8%3Bbase64%3Bbase64%2Cd09GRgABAAAAAAZwABAAAAAACFQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABEU0lHAAAGaAAAAAgAAAAIAAAAAUdTVUIAAAZcAAAACgAAAAoAAQAAT1MvMgAAAyQAAABJAAAAYFYEU3RjbWFwAAADcAAAAEUAAACAAJThvmN2dCAAAATkAAAABAAAAAQAAAAAZnBnbQAAA7gAAACyAAABCUM%2B8IhnYXNwAAAGTAAAABAAAAAQABoAI2dseWYAAAFsAAABPAAAAZwcEq9taGVhZAAAAsgAAAA0AAAANgh4a91oaGVhAAADCAAAABoAAAAkCA8DRGhtdHgAAAL8AAAADAAAAAwGAACfbG9jYQAAAsAAAAAIAAAACABiATBtYXhwAAACqAAAABgAAAAgAA8ASm5hbWUAAAToAAABQgAAAlXu73sOcG9zdAAABiwAAAAeAAAAME3QpOBwcmVwAAAEbAAAAHYAAAB%2FaFGpk3jaTY6xa8JAGMW%2FO62BDi0tJLYQincXEypYIiGJjSgHniQ6umTsUEyLm5BV6NDBP8Tpts6F0v%2Bk%2F0an2i%2BitHDw3v2%2B9%2BDBKTzsJNnWJNTgHEy4BgG3EMI9DCEDOGEXzDADU5hBKMIgNPZqoD3SilVaXZCER3%2FI7AtxEJLtzzuZfI%2BVVkprxTlXShWKb3TBecG11rwoNlmmn1P2WYcJczl32etSpKnziC7lQyWe1smVPy%2FLt7Kc%2B0vWY%2FgAgIIEqAN9we0pwKXreiMasxvabDQMM4riO%2BqxM2ogwDGOZTXxwxDiycQIcoYFBLj5K3EIaSctAq2kTYiw%2Bymhce7vwM9jSqO8JyVd5RH9gyTt2%2BJ%2FyUmYlIR0s04n6%2B7Vm1ozezUeLEaUjhaDSuXHwVRgvLJn1tQ7xiuVv%2FocTRF42mNgZGBgYGbwZOBiAAFGJBIMAAizAFoAAABiAGIAznjaY2BkYGAA4in8zwXi%2BW2%2BMjCzMIDApSwvXzC97Z4Ig8N%2FBxYGZgcgl52BCSQKAA3jCV8CAABfAAAAAAQAAEB42mNgZGBg4f3vACQZQABIMjKgAmYAKEgBXgAAeNpjYGY6wTiBgZWBg2kmUxoDA4MPhGZMYzBi1AHygVLYQUCaawqDA4PChxhmh%2F8ODDEsvAwHgMKMIDnGL0x7gJQCAwMAJd4MFwAAAHjaY2BgYGaA4DAGRgYQkAHyGMF8NgYrIM3JIAGVYYDT%2BAEjAwuDFpBmA9KMDEwMCh9i%2Fv8H8sH0%2F4dQc1iAmAkALaUKLgAAAHjaTY9LDsIgEIbtgqHUPpDi3gPoBVyRTmTddOmqTXThEXqrob2gQ1FjwpDvfwCBdmdXC5AVKFu3e5MfNFJ29KTQT48Ob9%2FlqYwOGZxeUelN2U2R6%2BcArgtCJpauW7UQBqnFkUsjAY%2FkOU1cP%2BDAgvxwn1chZDwUbd6CFimGXwzwF6tPbFIcjEl%2BvvmM%2FbyA48e6tWrKArm4ZJlCbdsrxksL1AwWn%2FyBSJKpYbq8AXaaTb8AAHja28jAwOC00ZrBeQNDQOWO%2F%2FsdBBgYGRiYWYAEELEwMTE4uzo5Zzo5b2BxdnFOcALxNjA6b2ByTswC8jYwg0VlNuoCTWAMqNzMzsoK1rEhNqByEyerg5PMJlYuVueETKcd%2F89uBpnpvIEVomeHLoMsAAe1Id4AAAAAAAB42oWQT07CQBTGv0JBhagk7HQzKxca2sJCE1hDt4QF%2B9JOS0nbaaYDCQfwCJ7Au3AHj%2BLO13FMmm6cl7785vven0kBjHCBhfpYuNa5Ph1c0e2Xu3jEvWG7UdPDLZ4N92nOm%2BEBXuAbHmIMSRMs%2B4aUEd4Nd3CHD8NdvOLTsA2GL8M9PODbcL%2BhD7C1xoaHeLJSEao0FEW14ckxC%2BTU8TxvsY6X0eLPmRhry2WVioLpkrbp84LLQPGI7c6sOiUzpWIWS5GzlSgUzzLBSikOPFTOXqly7rqx0Z1Q5BAIoZBSFihQYQOOBEdkCOgXTOHA07HAGjGWiIjaPZNW13%2F%2Blm6S9FT7rLHFJ6fQbkATOG1j2OFMucKJJsxIVfQORl%2B9Jyda6Sl1dUYhSCm1dyClfoeDve4qMYdLEbfqHf3O%2FAdDumsjAAB42mNgYoAAZQYjBmyAGYQZmdhL8zLdDEydARfoAqIAAAABAAMABwAKABMAB%2F%2F%2FAA8AAQAAAAAAAAAAAAAAAAABAAAAAA%3D%3D%29%20format%28%27woff%27%29%3B%0A%7D%0A%0Abody%20%7B%0A%20%20%2Dwebkit%2Dtext%2Dsize%2Dadjust%3A%20100%25%3B%0A%20%20text%2Dsize%2Dadjust%3A%20100%25%3B%0A%20%20color%3A%20%23333%3B%0A%20%20font%2Dfamily%3A%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20%22Segoe%20UI%22%2C%20Arial%2C%20freesans%2C%20sans%2Dserif%2C%20%22Apple%20Color%20Emoji%22%2C%20%22Segoe%20UI%20Emoji%22%2C%20%22Segoe%20UI%20Symbol%22%3B%0A%20%20font%2Dsize%3A%2016px%3B%0A%20%20line%2Dheight%3A%201%2E6%3B%0A%20%20word%2Dwrap%3A%20break%2Dword%3B%0A%20%20width%3A%201000px%3B%0A%20%20max%2Dwidth%3A%2099%25%3B%0A%20%20box%2Dsizing%3A%20border%2Dbox%3B%0A%20%20padding%3A%2030px%2030px%208rem%2030px%3B%0A%20%20margin%2Dleft%3A%20auto%3B%0A%20%20margin%2Dright%3A%20auto%3B%0A%7D%0A%0Abody%20a%20%7B%0A%20%20background%2Dcolor%3A%20transparent%3B%0A%7D%0A%0Abody%20a%3Aactive%2C%0Abody%20a%3Ahover%20%7B%0A%20%20outline%3A%200%3B%0A%7D%0A%0Abody%20strong%20%7B%0A%20%20font%2Dweight%3A%20bold%3B%0A%7D%0A%0Abody%20h1%20%7B%0A%20%20font%2Dsize%3A%202em%3B%0A%20%20margin%3A%200%2E67em%200%3B%0A%7D%0A%0Abody%20img%20%7B%0A%20%20border%3A%200%3B%0A%7D%0A%0Abody%20hr%20%7B%0A%20%20box%2Dsizing%3A%20content%2Dbox%3B%0A%20%20height%3A%200%3B%0A%7D%0A%0Abody%20pre%20%7B%0A%20%20overflow%3A%20auto%3B%0A%7D%0A%0Abody%20code%2C%0Abody%20kbd%2C%0Abody%20pre%20%7B%0A%20%20font%2Dfamily%3A%20monospace%2C%20monospace%3B%0A%20%20font%2Dsize%3A%201em%3B%0A%7D%0A%0Abody%20input%20%7B%0A%20%20color%3A%20inherit%3B%0A%20%20font%3A%20inherit%3B%0A%20%20margin%3A%200%3B%0A%7D%0A%0Abody%20html%20input%5Bdisabled%5D%20%7B%0A%20%20cursor%3A%20default%3B%0A%7D%0A%0Abody%20input%20%7B%0A%20%20line%2Dheight%3A%20normal%3B%0A%7D%0A%0Abody%20input%5Btype%3D%22checkbox%22%5D%20%7B%0A%20%20box%2Dsizing%3A%20border%2Dbox%3B%0A%20%20padding%3A%200%3B%0A%7D%0A%0Abody%20table%20%7B%0A%20%20border%2Dcollapse%3A%20collapse%3B%0A%20%20border%2Dspacing%3A%200%3B%0A%7D%0A%0Abody%20td%2C%0Abody%20th%20%7B%0A%20%20padding%3A%200%3B%0A%7D%0A%0Abody%20%2A%20%7B%0A%20%20box%2Dsizing%3A%20border%2Dbox%3B%0A%7D%0A%0Abody%20input%20%7B%0A%20%20font%3A%2013px%20%2F%201%2E4%20Helvetica%2C%20arial%2C%20nimbussansl%2C%20liberationsans%2C%20freesans%2C%20clean%2C%20sans%2Dserif%2C%20%22Apple%20Color%20Emoji%22%2C%20%22Segoe%20UI%20Emoji%22%2C%20%22Segoe%20UI%20Symbol%22%3B%0A%7D%0A%0Abody%20a%20%7B%0A%20%20color%3A%20%234078c0%3B%0A%20%20text%2Ddecoration%3A%20none%3B%0A%7D%0A%0Abody%20a%3Ahover%2C%0Abody%20a%3Aactive%20%7B%0A%20%20text%2Ddecoration%3A%20underline%3B%0A%7D%0A%0Abody%20hr%20%7B%0A%20%20height%3A%200%3B%0A%20%20margin%3A%2015px%200%3B%0A%20%20overflow%3A%20hidden%3B%0A%20%20background%3A%20transparent%3B%0A%20%20border%3A%200%3B%0A%20%20border%2Dbottom%3A%201px%20solid%20%23ddd%3B%0A%7D%0A%0Abody%20hr%3Abefore%20%7B%0A%20%20display%3A%20table%3B%0A%20%20content%3A%20%22%22%3B%0A%7D%0A%0Abody%20hr%3Aafter%20%7B%0A%20%20display%3A%20table%3B%0A%20%20clear%3A%20both%3B%0A%20%20content%3A%20%22%22%3B%0A%7D%0A%0Abody%20h1%2C%0Abody%20h2%2C%0Abody%20h3%2C%0Abody%20h4%2C%0Abody%20h5%2C%0Abody%20h6%20%7B%0A%20%20margin%2Dtop%3A%2015px%3B%0A%20%20margin%2Dbottom%3A%2015px%3B%0A%20%20line%2Dheight%3A%201%2E1%3B%0A%7D%0A%0Abody%20h1%20%7B%0A%20%20font%2Dsize%3A%2030px%3B%0A%7D%0A%0Abody%20h2%20%7B%0A%20%20font%2Dsize%3A%2021px%3B%0A%7D%0A%0Abody%20h3%20%7B%0A%20%20font%2Dsize%3A%2016px%3B%0A%7D%0A%0Abody%20h4%20%7B%0A%20%20font%2Dsize%3A%2014px%3B%0A%7D%0A%0Abody%20h5%20%7B%0A%20%20font%2Dsize%3A%2012px%3B%0A%7D%0A%0Abody%20h6%20%7B%0A%20%20font%2Dsize%3A%2011px%3B%0A%7D%0A%0Abody%20blockquote%20%7B%0A%20%20margin%3A%200%3B%0A%7D%0A%0Abody%20ul%2C%0Abody%20ol%20%7B%0A%20%20padding%3A%200%3B%0A%20%20margin%2Dtop%3A%200%3B%0A%20%20margin%2Dbottom%3A%200%3B%0A%7D%0A%0Abody%20ol%20ol%2C%0Abody%20ul%20ol%20%7B%0A%20%20list%2Dstyle%2Dtype%3A%20lower%2Droman%3B%0A%7D%0A%0Abody%20ul%20ul%20ol%2C%0Abody%20ul%20ol%20ol%2C%0Abody%20ol%20ul%20ol%2C%0Abody%20ol%20ol%20ol%20%7B%0A%20%20list%2Dstyle%2Dtype%3A%20lower%2Dalpha%3B%0A%7D%0A%0Abody%20dd%20%7B%0A%20%20margin%2Dleft%3A%200%3B%0A%7D%0A%0Abody%20code%20%7B%0A%20%20font%2Dfamily%3A%20Consolas%2C%20%22Liberation%20Mono%22%2C%20Menlo%2C%20Courier%2C%20monospace%3B%0A%20%20font%2Dsize%3A%2012px%3B%0A%7D%0A%0Abody%20pre%20%7B%0A%20%20margin%2Dtop%3A%200%3B%0A%20%20margin%2Dbottom%3A%200%3B%0A%20%20font%3A%2012px%20Consolas%2C%20%22Liberation%20Mono%22%2C%20Menlo%2C%20Courier%2C%20monospace%3B%0A%7D%0A%0Abody%20%2Eselect%3A%3A%2Dms%2Dexpand%20%7B%0A%20%20opacity%3A%200%3B%0A%7D%0A%0Abody%20%2Eocticon%20%7B%0A%20%20font%3A%20normal%20normal%20normal%2016px%2F1%20octicons%2Dlink%3B%0A%20%20display%3A%20inline%2Dblock%3B%0A%20%20text%2Ddecoration%3A%20none%3B%0A%20%20text%2Drendering%3A%20auto%3B%0A%20%20%2Dwebkit%2Dfont%2Dsmoothing%3A%20antialiased%3B%0A%20%20%2Dmoz%2Dosx%2Dfont%2Dsmoothing%3A%20grayscale%3B%0A%20%20%2Dwebkit%2Duser%2Dselect%3A%20none%3B%0A%20%20%2Dmoz%2Duser%2Dselect%3A%20none%3B%0A%20%20%2Dms%2Duser%2Dselect%3A%20none%3B%0A%20%20user%2Dselect%3A%20none%3B%0A%7D%0A%0Abody%20%2Eocticon%2Dlink%3Abefore%20%7B%0A%20%20content%3A%20%27%5Cf05c%27%3B%0A%7D%0A%0Abody%3Abefore%20%7B%0A%20%20display%3A%20table%3B%0A%20%20content%3A%20%22%22%3B%0A%7D%0A%0Abody%3Aafter%20%7B%0A%20%20display%3A%20table%3B%0A%20%20clear%3A%20both%3B%0A%20%20content%3A%20%22%22%3B%0A%7D%0A%0Abody%3E%2A%3Afirst%2Dchild%20%7B%0A%20%20margin%2Dtop%3A%200%20%21important%3B%0A%7D%0A%0Abody%3E%2A%3Alast%2Dchild%20%7B%0A%20%20margin%2Dbottom%3A%200%20%21important%3B%0A%7D%0A%0Abody%20a%3Anot%28%5Bhref%5D%29%20%7B%0A%20%20color%3A%20inherit%3B%0A%20%20text%2Ddecoration%3A%20none%3B%0A%7D%0A%0Abody%20%2Eanchor%20%7B%0A%20%20display%3A%20inline%2Dblock%3B%0A%20%20padding%2Dright%3A%202px%3B%0A%20%20margin%2Dleft%3A%20%2D18px%3B%0A%7D%0A%0Abody%20%2Eanchor%3Afocus%20%7B%0A%20%20outline%3A%20none%3B%0A%7D%0A%0Abody%20h1%2C%0Abody%20h2%2C%0Abody%20h3%2C%0Abody%20h4%2C%0Abody%20h5%2C%0Abody%20h6%20%7B%0A%20%20margin%2Dtop%3A%201em%3B%0A%20%20margin%2Dbottom%3A%2016px%3B%0A%20%20font%2Dweight%3A%20bold%3B%0A%20%20line%2Dheight%3A%201%2E4%3B%0A%7D%0A%0Abody%20h1%20%2Eocticon%2Dlink%2C%0Abody%20h2%20%2Eocticon%2Dlink%2C%0Abody%20h3%20%2Eocticon%2Dlink%2C%0Abody%20h4%20%2Eocticon%2Dlink%2C%0Abody%20h5%20%2Eocticon%2Dlink%2C%0Abody%20h6%20%2Eocticon%2Dlink%20%7B%0A%20%20color%3A%20%23000%3B%0A%20%20vertical%2Dalign%3A%20middle%3B%0A%20%20visibility%3A%20hidden%3B%0A%7D%0A%0Abody%20h1%3Ahover%20%2Eanchor%2C%0Abody%20h2%3Ahover%20%2Eanchor%2C%0Abody%20h3%3Ahover%20%2Eanchor%2C%0Abody%20h4%3Ahover%20%2Eanchor%2C%0Abody%20h5%3Ahover%20%2Eanchor%2C%0Abody%20h6%3Ahover%20%2Eanchor%20%7B%0A%20%20text%2Ddecoration%3A%20none%3B%0A%7D%0A%0Abody%20h1%3Ahover%20%2Eanchor%20%2Eocticon%2Dlink%2C%0Abody%20h2%3Ahover%20%2Eanchor%20%2Eocticon%2Dlink%2C%0Abody%20h3%3Ahover%20%2Eanchor%20%2Eocticon%2Dlink%2C%0Abody%20h4%3Ahover%20%2Eanchor%20%2Eocticon%2Dlink%2C%0Abody%20h5%3Ahover%20%2Eanchor%20%2Eocticon%2Dlink%2C%0Abody%20h6%3Ahover%20%2Eanchor%20%2Eocticon%2Dlink%20%7B%0A%20%20visibility%3A%20visible%3B%0A%7D%0A%0Abody%20h1%20%7B%0A%20%20padding%2Dbottom%3A%200%2E3em%3B%0A%20%20font%2Dsize%3A%201%2E75em%3B%0A%20%20line%2Dheight%3A%201%2E2%3B%0A%7D%0A%0Abody%20h1%20%2Eanchor%20%7B%0A%20%20line%2Dheight%3A%201%3B%0A%7D%0A%0Abody%20h2%20%7B%0A%20%20padding%2Dbottom%3A%200%2E3em%3B%0A%20%20font%2Dsize%3A%201%2E5em%3B%0A%20%20line%2Dheight%3A%201%2E225%3B%0A%7D%0A%0Abody%20h2%20%2Eanchor%20%7B%0A%20%20line%2Dheight%3A%201%3B%0A%7D%0A%0Abody%20h3%20%7B%0A%20%20font%2Dsize%3A%201%2E25em%3B%0A%20%20line%2Dheight%3A%201%2E43%3B%0A%7D%0A%0Abody%20h3%20%2Eanchor%20%7B%0A%20%20line%2Dheight%3A%201%2E2%3B%0A%7D%0A%0Abody%20h4%20%7B%0A%20%20font%2Dsize%3A%201em%3B%0A%7D%0A%0Abody%20h4%20%2Eanchor%20%7B%0A%20%20line%2Dheight%3A%201%2E2%3B%0A%7D%0A%0Abody%20h5%20%7B%0A%20%20font%2Dsize%3A%201em%3B%0A%7D%0A%0Abody%20h5%20%2Eanchor%20%7B%0A%20%20line%2Dheight%3A%201%2E1%3B%0A%7D%0A%0Abody%20h6%20%7B%0A%20%20font%2Dsize%3A%201em%3B%0A%20%20color%3A%20%23777%3B%0A%7D%0A%0Abody%20h6%20%2Eanchor%20%7B%0A%20%20line%2Dheight%3A%201%2E1%3B%0A%7D%0A%0Abody%20p%2C%0Abody%20blockquote%2C%0Abody%20ul%2C%0Abody%20ol%2C%0Abody%20dl%2C%0Abody%20table%2C%0Abody%20pre%20%7B%0A%20%20margin%2Dtop%3A%200%3B%0A%20%20margin%2Dbottom%3A%2016px%3B%0A%7D%0A%0Abody%20hr%20%7B%0A%20%20height%3A%204px%3B%0A%20%20padding%3A%200%3B%0A%20%20margin%3A%2016px%200%3B%0A%20%20background%2Dcolor%3A%20%23e7e7e7%3B%0A%20%20border%3A%200%20none%3B%0A%7D%0A%0Abody%20ul%2C%0Abody%20ol%20%7B%0A%20%20padding%2Dleft%3A%202em%3B%0A%7D%0A%0Abody%20ul%20ul%2C%0Abody%20ul%20ol%2C%0Abody%20ol%20ol%2C%0Abody%20ol%20ul%20%7B%0A%20%20margin%2Dtop%3A%200%3B%0A%20%20margin%2Dbottom%3A%200%3B%0A%7D%0A%0Abody%20li%3Ep%20%7B%0A%20%20margin%2Dtop%3A%2016px%3B%0A%7D%0A%0Abody%20dl%20%7B%0A%20%20padding%3A%200%3B%0A%7D%0A%0Abody%20dl%20dt%20%7B%0A%20%20padding%3A%200%3B%0A%20%20margin%2Dtop%3A%2016px%3B%0A%20%20font%2Dsize%3A%201em%3B%0A%20%20font%2Dstyle%3A%20italic%3B%0A%20%20font%2Dweight%3A%20bold%3B%0A%7D%0A%0Abody%20dl%20dd%20%7B%0A%20%20padding%3A%200%2016px%3B%0A%20%20margin%2Dbottom%3A%2016px%3B%0A%7D%0A%0Abody%20blockquote%20%7B%0A%20%20padding%3A%200%2015px%3B%0A%20%20color%3A%20%23777%3B%0A%20%20border%2Dleft%3A%204px%20solid%20%23ddd%3B%0A%7D%0A%0Abody%20blockquote%3E%3Afirst%2Dchild%20%7B%0A%20%20margin%2Dtop%3A%200%3B%0A%7D%0A%0Abody%20blockquote%3E%3Alast%2Dchild%20%7B%0A%20%20margin%2Dbottom%3A%200%3B%0A%7D%0A%0Abody%20table%20%7B%0A%20%20display%3A%20block%3B%0A%20%20width%3A%20100%25%3B%0A%20%20overflow%3A%20auto%3B%0A%20%20word%2Dbreak%3A%20normal%3B%0A%20%20word%2Dbreak%3A%20keep%2Dall%3B%0A%7D%0A%0Abody%20table%20th%20%7B%0A%20%20font%2Dweight%3A%20bold%3B%0A%7D%0A%0Abody%20table%20th%2C%0Abody%20table%20td%20%7B%0A%20%20padding%3A%206px%2013px%3B%0A%20%20border%3A%201px%20solid%20%23ddd%3B%0A%7D%0A%0Abody%20table%20tr%20%7B%0A%20%20background%2Dcolor%3A%20%23fff%3B%0A%20%20border%2Dtop%3A%201px%20solid%20%23ccc%3B%0A%7D%0A%0Abody%20table%20tr%3Anth%2Dchild%282n%29%20%7B%0A%20%20background%2Dcolor%3A%20%23f8f8f8%3B%0A%7D%0A%0Abody%20img%20%7B%0A%20%20max%2Dwidth%3A%20100%25%3B%0A%20%20box%2Dsizing%3A%20content%2Dbox%3B%0A%20%20background%2Dcolor%3A%20%23fff%3B%0A%7D%0A%0Abody%20code%20%7B%0A%20%20padding%3A%200%3B%0A%20%20padding%2Dtop%3A%200%3B%0A%20%20padding%2Dbottom%3A%200%3B%0A%20%20margin%3A%200%3B%0A%20%20font%2Dsize%3A%2085%25%3B%0A%20%20background%2Dcolor%3A%20rgba%280%2C0%2C0%2C0%2E04%29%3B%0A%20%20border%2Dradius%3A%203px%3B%0A%7D%0A%0Abody%20code%3Abefore%2C%0Abody%20code%3Aafter%20%7B%0A%20%20letter%2Dspacing%3A%20%2D0%2E2em%3B%0A%20%20content%3A%20%22%5C00a0%22%3B%0A%7D%0A%0Abody%20pre%3Ecode%20%7B%0A%20%20padding%3A%200%3B%0A%20%20margin%3A%200%3B%0A%20%20font%2Dsize%3A%20100%25%3B%0A%20%20word%2Dbreak%3A%20normal%3B%0A%20%20white%2Dspace%3A%20pre%3B%0A%20%20background%3A%20transparent%3B%0A%20%20border%3A%200%3B%0A%7D%0A%0Abody%20%2Ehighlight%20%7B%0A%20%20margin%2Dbottom%3A%2016px%3B%0A%7D%0A%0Abody%20%2Ehighlight%20pre%2C%0Abody%20pre%20%7B%0A%20%20padding%3A%2016px%3B%0A%20%20overflow%3A%20auto%3B%0A%20%20font%2Dsize%3A%2085%25%3B%0A%20%20line%2Dheight%3A%201%2E45%3B%0A%20%20background%2Dcolor%3A%20%23f7f7f7%3B%0A%20%20border%2Dradius%3A%203px%3B%0A%7D%0A%0Abody%20%2Ehighlight%20pre%20%7B%0A%20%20margin%2Dbottom%3A%200%3B%0A%20%20word%2Dbreak%3A%20normal%3B%0A%7D%0A%0Abody%20pre%20%7B%0A%20%20word%2Dwrap%3A%20normal%3B%0A%7D%0A%0Abody%20pre%20code%20%7B%0A%20%20display%3A%20inline%3B%0A%20%20max%2Dwidth%3A%20initial%3B%0A%20%20padding%3A%200%3B%0A%20%20margin%3A%200%3B%0A%20%20overflow%3A%20initial%3B%0A%20%20line%2Dheight%3A%20inherit%3B%0A%20%20word%2Dwrap%3A%20normal%3B%0A%20%20background%2Dcolor%3A%20transparent%3B%0A%20%20border%3A%200%3B%0A%7D%0A%0Abody%20pre%20code%3Abefore%2C%0Abody%20pre%20code%3Aafter%20%7B%0A%20%20content%3A%20normal%3B%0A%7D%0A%0Abody%20kbd%20%7B%0A%20%20display%3A%20inline%2Dblock%3B%0A%20%20padding%3A%203px%205px%3B%0A%20%20font%2Dsize%3A%2011px%3B%0A%20%20line%2Dheight%3A%2010px%3B%0A%20%20color%3A%20%23555%3B%0A%20%20vertical%2Dalign%3A%20middle%3B%0A%20%20background%2Dcolor%3A%20%23fcfcfc%3B%0A%20%20border%3A%20solid%201px%20%23ccc%3B%0A%20%20border%2Dbottom%2Dcolor%3A%20%23bbb%3B%0A%20%20border%2Dradius%3A%203px%3B%0A%20%20box%2Dshadow%3A%20inset%200%20%2D1px%200%20%23bbb%3B%0A%7D%0A%0Abody%20%2Epl%2Dc%20%7B%0A%20%20color%3A%20%23969896%3B%0A%7D%0A%0Abody%20%2Epl%2Dc1%2C%0Abody%20%2Epl%2Ds%20%2Epl%2Dv%20%7B%0A%20%20color%3A%20%230086b3%3B%0A%7D%0A%0Abody%20%2Epl%2De%2C%0Abody%20%2Epl%2Den%20%7B%0A%20%20color%3A%20%23795da3%3B%0A%7D%0A%0Abody%20%2Epl%2Ds%20%2Epl%2Ds1%2C%0Abody%20%2Epl%2Dsmi%20%7B%0A%20%20color%3A%20%23333%3B%0A%7D%0A%0Abody%20%2Epl%2Dent%20%7B%0A%20%20color%3A%20%2363a35c%3B%0A%7D%0A%0Abody%20%2Epl%2Dk%20%7B%0A%20%20color%3A%20%23a71d5d%3B%0A%7D%0A%0Abody%20%2Epl%2Dpds%2C%0Abody%20%2Epl%2Ds%2C%0Abody%20%2Epl%2Ds%20%2Epl%2Dpse%20%2Epl%2Ds1%2C%0Abody%20%2Epl%2Dsr%2C%0Abody%20%2Epl%2Dsr%20%2Epl%2Dcce%2C%0Abody%20%2Epl%2Dsr%20%2Epl%2Dsra%2C%0Abody%20%2Epl%2Dsr%20%2Epl%2Dsre%20%7B%0A%20%20color%3A%20%23183691%3B%0A%7D%0A%0Abody%20%2Epl%2Dv%20%7B%0A%20%20color%3A%20%23ed6a43%3B%0A%7D%0A%0Abody%20%2Epl%2Did%20%7B%0A%20%20color%3A%20%23b52a1d%3B%0A%7D%0A%0Abody%20%2Epl%2Dii%20%7B%0A%20%20background%2Dcolor%3A%20%23b52a1d%3B%0A%20%20color%3A%20%23f8f8f8%3B%0A%7D%0A%0Abody%20%2Epl%2Dsr%20%2Epl%2Dcce%20%7B%0A%20%20color%3A%20%2363a35c%3B%0A%20%20font%2Dweight%3A%20bold%3B%0A%7D%0A%0Abody%20%2Epl%2Dml%20%7B%0A%20%20color%3A%20%23693a17%3B%0A%7D%0A%0Abody%20%2Epl%2Dmh%2C%0Abody%20%2Epl%2Dmh%20%2Epl%2Den%2C%0Abody%20%2Epl%2Dms%20%7B%0A%20%20color%3A%20%231d3e81%3B%0A%20%20font%2Dweight%3A%20bold%3B%0A%7D%0A%0Abody%20%2Epl%2Dmq%20%7B%0A%20%20color%3A%20%23008080%3B%0A%7D%0A%0Abody%20%2Epl%2Dmi%20%7B%0A%20%20color%3A%20%23333%3B%0A%20%20font%2Dstyle%3A%20italic%3B%0A%7D%0A%0Abody%20%2Epl%2Dmb%20%7B%0A%20%20color%3A%20%23333%3B%0A%20%20font%2Dweight%3A%20bold%3B%0A%7D%0A%0Abody%20%2Epl%2Dmd%20%7B%0A%20%20background%2Dcolor%3A%20%23ffecec%3B%0A%20%20color%3A%20%23bd2c00%3B%0A%7D%0A%0Abody%20%2Epl%2Dmi1%20%7B%0A%20%20background%2Dcolor%3A%20%23eaffea%3B%0A%20%20color%3A%20%2355a532%3B%0A%7D%0A%0Abody%20%2Epl%2Dmdr%20%7B%0A%20%20color%3A%20%23795da3%3B%0A%20%20font%2Dweight%3A%20bold%3B%0A%7D%0A%0Abody%20%2Epl%2Dmo%20%7B%0A%20%20color%3A%20%231d3e81%3B%0A%7D%0A%0Abody%20kbd%20%7B%0A%20%20display%3A%20inline%2Dblock%3B%0A%20%20padding%3A%203px%205px%3B%0A%20%20font%3A%2011px%20Consolas%2C%20%22Liberation%20Mono%22%2C%20Menlo%2C%20Courier%2C%20monospace%3B%0A%20%20line%2Dheight%3A%2010px%3B%0A%20%20color%3A%20%23555%3B%0A%20%20vertical%2Dalign%3A%20middle%3B%0A%20%20background%2Dcolor%3A%20%23fcfcfc%3B%0A%20%20border%3A%20solid%201px%20%23ccc%3B%0A%20%20border%2Dbottom%2Dcolor%3A%20%23bbb%3B%0A%20%20border%2Dradius%3A%203px%3B%0A%20%20box%2Dshadow%3A%20inset%200%20%2D1px%200%20%23bbb%3B%0A%7D%0A%0Abody%20%2Etask%2Dlist%2Ditem%20%7B%0A%20%20list%2Dstyle%2Dtype%3A%20none%3B%0A%7D%0A%0Abody%20%2Etask%2Dlist%2Ditem%2B%2Etask%2Dlist%2Ditem%20%7B%0A%20%20margin%2Dtop%3A%203px%3B%0A%7D%0A%0Abody%20%2Etask%2Dlist%2Ditem%20input%20%7B%0A%20%20margin%3A%200%200%2E35em%200%2E25em%20%2D1%2E6em%3B%0A%20%20vertical%2Dalign%3A%20middle%3B%0A%7D%0A%0Abody%20%3Achecked%2B%2Eradio%2Dlabel%20%7B%0A%20%20z%2Dindex%3A%201%3B%0A%20%20position%3A%20relative%3B%0A%20%20border%2Dcolor%3A%20%234078c0%3B%0A%7D%0A" rel="stylesheet">
 </head>
 <body>
 <ul>
-<li><h1 id="pylians"><a href="#Pylians">Pylians</a></h1>
+<li><h1><a href="#Pylians">Pylians</a></h1>
 <ul>
-<li><h3 id="requisites"><a href="#Requisites">Requisites</a></h3></li>
-<li><h3 id="installation"><a href="#Installation">Installation</a></h3></li>
+<li><h3><a href="#Requisites">Requisites</a></h3></li>
+<li><h3><a href="#Installation">Installation</a></h3></li>
 </ul></li>
-<li><h1 id="density-field"><a href="#density_field">Density field</a></h1></li>
-<li><h1 id="power-spectrum"><a href="#auto_Pk">Power spectrum</a></h1>
+<li><h1><a href="#density_field">Density field</a></h1></li>
+<li><h1><a href="#auto_Pk">Power spectrum</a></h1>
 <ul>
-<li><h3 id="auto-power-spectrum"><a href="#auto_Pk">Auto-power spectrum</a></h3></li>
-<li><h3 id="cross-power-spectrum"><a href="#cross_Pk">Cross-power spectrum</a></h3></li>
+<li><h3><a href="#auto_Pk">Auto-power spectrum</a></h3></li>
+<li><h3><a href="#cross_Pk">Cross-power spectrum</a></h3></li>
 </ul></li>
-<li><h1 id="cosmology"><a href="#cosmology">Cosmology</a></h1></li>
-<li><h1 id="integrals"><a href="#Integrals">Integrals</a></h1></li>
-<li><h1 id="smooth-fields"><a href="#smooth">Smooth fields</a></h1></li>
-<li><h1 id="contact"><a href="#Contact">Contact</a></h1></li>
+<li><h1><a href="#cosmology">Cosmology</a></h1></li>
+<li><h1><a href="#Integrals">Integrals</a></h1></li>
+<li><h1><a href="#smooth">Smooth fields</a></h1></li>
+<li><h1><a href="#Contact">Contact</a></h1></li>
 </ul>
 <h1 id="pylians-1"><a id="Pylians"></a> Pylians</h1>
 <p>Pylians stands for <strong>Py</strong>thon <strong>li</strong>braries for the <strong>a</strong>nalysis of <strong>n</strong>umerical <strong>s</strong>imulations. They are a set of python libraries, written in python, cython and C, whose purposes is to facilitate the analysis of numerical simulations (both N-body and hydro). Among other things, they can be used to:</p>
@@ -96,11 +74,11 @@ code > span. { color: #1f1c1b; } /* Normal */
 </ul>
 <p>We recommend installing the first packages with <a href="https://www.anaconda.com/download/?lang=en-us">anaconda</a>.</p>
 <h2 id="installation-1"><a id="Installation"></a> Installation</h2>
-<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">cd library
-python setup.py build</code></pre></div>
+<pre class="sourceCode python"><code class="sourceCode python">cd library
+python setup.py build</code></pre>
 <p>The compiled libraries and scripts are in build/lib.XXX, where XXX depends on your machine. E.g. build/lib.linux-x86_64-2.7 or build/lib.macosx-10.7-x86_64-2.7</p>
 <p>Add that folder to your PYTHONPATH in ~/.bashrc, e.g.</p>
-<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash"><span class="bu">export</span> <span class="va">PYTHONPATH=$PYTHONPATH</span>:<span class="va">$HOME</span>/Pylians/library/build/lib.linux-x86_64-2.7</code></pre></div>
+<pre class="sh"><code>export PYTHONPATH=$PYTHONPATH:$HOME/Pylians/library/build/lib.linux-x86_64-2.7</code></pre>
 <h2 id="usage">Usage</h2>
 <p>We provide some examples on how to use the library for different purposes.</p>
 <h4 id="density-field-1"><a id="density_field"></a> Density field</h4>
@@ -114,40 +92,40 @@ python setup.py build</code></pre></div>
 <li><code>axis</code>. Axis along which redshift-space distortions will be implemented (only needed if <code>do_RSD=True</code>): 0, 1 or 2 for x-axis, y-axis or z-axis, respectively.</li>
 </ul>
 <p>An example is as follows</p>
-<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> numpy <span class="im">as</span> np
-<span class="im">import</span> MAS_library <span class="im">as</span> MASL
+<pre class="sourceCode python"><code class="sourceCode python"><span class="ch">import</span> numpy <span class="ch">as</span> np
+<span class="ch">import</span> MAS_library <span class="ch">as</span> MASL
 
-snapshot <span class="op">=</span> <span class="st">'snapdir_010/snap_010'</span>
-grid     <span class="op">=</span> <span class="dv">512</span>  
-ptypes   <span class="op">=</span> [<span class="dv">1</span>] 
-MAS      <span class="op">=</span> <span class="st">'CIC'</span> 
-do_RSD   <span class="op">=</span> <span class="va">False</span>
-axis     <span class="op">=</span> <span class="dv">0</span> 
+snapshot = <span class="st">'snapdir_010/snap_010'</span>
+grid     = <span class="dv">512</span>  
+ptypes   = [<span class="dv">1</span>] 
+MAS      = <span class="st">'CIC'</span> 
+do_RSD   = <span class="ot">False</span>
+axis     = <span class="dv">0</span> 
 
-delta <span class="op">=</span> MASL.density_field_gadget(snapshot, ptypes, grid, MAS, do_RSD, axis)</code></pre></div>
+delta = MASL.density_field_gadget(snapshot, ptypes, grid, MAS, do_RSD, axis)</code></pre>
 <p><code>delta</code> contains the number density field of CDM. To compute its overdensity do</p>
-<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">delta <span class="op">/=</span> np.mean(delta, dtype<span class="op">=</span>np.float64)<span class="op">;</span>  delta <span class="op">-=</span> <span class="fl">1.0</span></code></pre></div>
+<pre class="sourceCode python"><code class="sourceCode python">delta /= np.mean(delta, dtype=np.float64);  delta -= <span class="fl">1.0</span></code></pre>
 <p>Pylians can also be used to compute the power spectrum of a set of particles that are not in gadget format. An example is this</p>
-<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> numpy <span class="im">as</span> np
-<span class="im">import</span> MAS_library <span class="im">as</span> MASL
+<pre class="sourceCode python"><code class="sourceCode python"><span class="ch">import</span> numpy <span class="ch">as</span> np
+<span class="ch">import</span> MAS_library <span class="ch">as</span> MASL
 
 <span class="co"># input parameters</span>
-grid    <span class="op">=</span> <span class="dv">512</span>  
-BoxSize <span class="op">=</span> <span class="dv">1000</span> <span class="co">#Mpc/h</span>
-MAS     <span class="op">=</span> <span class="st">'CIC'</span>
+grid    = <span class="dv">512</span>  
+BoxSize = <span class="dv">1000</span> <span class="co">#Mpc/h</span>
+MAS     = <span class="st">'CIC'</span>
 
 <span class="co"># define the array hosting the density field</span>
-delta <span class="op">=</span> np.zeros((grid,grid,grid), dtype<span class="op">=</span>np.float32)
+delta = np.zeros((grid,grid,grid), dtype=np.float32)
 
 <span class="co"># read the particle positions</span>
-pos <span class="op">=</span> np.loadtxt(<span class="st">'myfile.txt'</span>) <span class="co">#Mpc/h </span>
-pos <span class="op">=</span> pos.astype(np.float32)   <span class="co">#pos should be a numpy float array</span>
+pos = np.loadtxt(<span class="st">'myfile.txt'</span>) <span class="co">#Mpc/h </span>
+pos = pos.astype(np.float32)   <span class="co">#pos should be a numpy float array</span>
 
 <span class="co"># compute density field</span>
 MASL.MA(pos,delta,BoxSize,MAS)
 
 <span class="co"># compute overdensity field</span>
-delta <span class="op">/=</span> np.mean(delta, dtype<span class="op">=</span>np.float64)<span class="op">;</span>  delta <span class="op">-=</span> <span class="fl">1.0</span> </code></pre></div>
+delta /= np.mean(delta, dtype=np.float64);  delta -= <span class="fl">1.0</span> </code></pre>
 <h4 id="power-spectrum-1"><a id="auto_Pk"></a> Power spectrum</h4>
 <p>The ingredients needed to compute the power spectrum are:</p>
 <ul>
@@ -158,110 +136,110 @@ delta <span class="op">/=</span> np.mean(delta, dtype<span class="op">=</span>np
 <li><code>threads</code>. Number of openmp threads to be used.</li>
 </ul>
 <p>The power spectrum can be computed as:</p>
-<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> Pk_library <span class="im">as</span> PKL
+<pre class="sourceCode python"><code class="sourceCode python"><span class="ch">import</span> Pk_library <span class="ch">as</span> PKL
 
-Pk <span class="op">=</span> PKL.Pk(delta, BoxSize, axis, MAS, threads)</code></pre></div>
+Pk = PKL.Pk(delta, BoxSize, axis, MAS, threads)</code></pre>
 <p><code>Pk</code> is a python class containing the 1D, 2D and 3D power spectra, that can be retrieved with</p>
-<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="co"># 1D P(k)</span>
-k1D      <span class="op">=</span> Pk.k1D      
-Pk1D     <span class="op">=</span> Pk.Pk1D     
-Nmodes1D <span class="op">=</span> Pk.Nmodes1D  
+<pre class="sourceCode python"><code class="sourceCode python"><span class="co"># 1D P(k)</span>
+k1D      = Pk.k1D      
+Pk1D     = Pk.Pk1D     
+Nmodes1D = Pk.Nmodes1D  
 
 <span class="co"># 2D P(k)</span>
-kpar     <span class="op">=</span> Pk.kpar    
-kper     <span class="op">=</span> Pk.kper
-Pk2D     <span class="op">=</span> Pk.Pk2D
-Nmodes2D <span class="op">=</span> Pk.Nmodes2D
+kpar     = Pk.kpar    
+kper     = Pk.kper
+Pk2D     = Pk.Pk2D
+Nmodes2D = Pk.Nmodes2D
 
 <span class="co"># 3D P(k)</span>
-k      <span class="op">=</span> Pk.k3D
-Pk0    <span class="op">=</span> Pk.Pk[:,<span class="dv">0</span>] <span class="co">#monopole</span>
-Pk2    <span class="op">=</span> Pk.Pk[:,<span class="dv">1</span>] <span class="co">#quadrupole</span>
-Pk4    <span class="op">=</span> Pk.Pk[:,<span class="dv">2</span>] <span class="co">#hexadecapole</span>
-Nmodes <span class="op">=</span> Pk.Nmodes3D</code></pre></div>
+k      = Pk.k3D
+Pk0    = Pk.Pk[:,<span class="dv">0</span>] <span class="co">#monopole</span>
+Pk2    = Pk.Pk[:,<span class="dv">1</span>] <span class="co">#quadrupole</span>
+Pk4    = Pk.Pk[:,<span class="dv">2</span>] <span class="co">#hexadecapole</span>
+Nmodes = Pk.Nmodes3D</code></pre>
 <h4 id="cross-power-spectrum-1"><a id="cross_Pk"></a> Cross-power spectrum</h4>
 <p>Pylians can be used to compute the auto- and cross-power spectrum of multiple fields. For instance, to compute the auto- and cross-power spectra of two overdensity fields, <code>delta1</code> and <code>delta2</code>:</p>
-<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> Pk_library <span class="im">as</span> PKL
+<pre class="sourceCode python"><code class="sourceCode python"><span class="ch">import</span> Pk_library <span class="ch">as</span> PKL
 
-Pk <span class="op">=</span> PKL.XPk([delta1,delta2], BoxSize, axis, MAS<span class="op">=</span>[<span class="st">'CIC'</span>,<span class="st">'CIC'</span>], threads)</code></pre></div>
+Pk = PKL.XPk([delta1,delta2], BoxSize, axis, MAS=[<span class="st">'CIC'</span>,<span class="st">'CIC'</span>], threads)</code></pre>
 <p>A description of the variables <code>BoxSize</code>, <code>axis</code>, <code>MAS</code> and <code>threads</code> can be found in the <a href="#auto_Pk">power spectrum</a> section. As with the auto-power spectrum, <code>delta1</code> and <code>delta2</code> need to be 3D float numpy arrays. <code>Pk</code> is a python class that contains all the following information</p>
-<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="co"># 1D P(k)</span>
-k1D      <span class="op">=</span> Pk.k1D
-Pk1D_1   <span class="op">=</span> Pk.Pk1D[:,<span class="dv">0</span>]  <span class="co">#field 1</span>
-Pk1D_2   <span class="op">=</span> Pk.Pk1D[:,<span class="dv">1</span>]  <span class="co">#field 2</span>
-Pk1D_X   <span class="op">=</span> Pk.PkX1D[:,<span class="dv">0</span>] <span class="co">#field 1 - field 2 cross 1D P(k)</span>
-Nmodes1D <span class="op">=</span> Pk.Nmodes1D
+<pre class="sourceCode python"><code class="sourceCode python"><span class="co"># 1D P(k)</span>
+k1D      = Pk.k1D
+Pk1D_1   = Pk.Pk1D[:,<span class="dv">0</span>]  <span class="co">#field 1</span>
+Pk1D_2   = Pk.Pk1D[:,<span class="dv">1</span>]  <span class="co">#field 2</span>
+Pk1D_X   = Pk.PkX1D[:,<span class="dv">0</span>] <span class="co">#field 1 - field 2 cross 1D P(k)</span>
+Nmodes1D = Pk.Nmodes1D
 
 <span class="co"># 2D P(k)</span>
-kpar     <span class="op">=</span> Pk.kpar
-kper     <span class="op">=</span> Pk.kper
-Pk2D_1   <span class="op">=</span> Pk.Pk2D[:,<span class="dv">0</span>]  <span class="co">#2D P(k) of field 1</span>
-Pk2D_2   <span class="op">=</span> Pk.Pk2D[:,<span class="dv">1</span>]  <span class="co">#2D P(k) of field 2</span>
-Pk2D_X   <span class="op">=</span> Pk.PkX2D[:,<span class="dv">0</span>] <span class="co">#2D cross-P(k) of fields 1 and 2</span>
-Nmodes2D <span class="op">=</span> Pk.Nmodes2D
+kpar     = Pk.kpar
+kper     = Pk.kper
+Pk2D_1   = Pk.Pk2D[:,<span class="dv">0</span>]  <span class="co">#2D P(k) of field 1</span>
+Pk2D_2   = Pk.Pk2D[:,<span class="dv">1</span>]  <span class="co">#2D P(k) of field 2</span>
+Pk2D_X   = Pk.PkX2D[:,<span class="dv">0</span>] <span class="co">#2D cross-P(k) of fields 1 and 2</span>
+Nmodes2D = Pk.Nmodes2D
 
 <span class="co"># 3D P(k)</span>
-k      <span class="op">=</span> Pk.k3D
-Pk0_1  <span class="op">=</span> Pk.Pk[:,<span class="dv">0</span>,<span class="dv">0</span>]  <span class="co">#monopole of field 1</span>
-Pk0_2  <span class="op">=</span> Pk.Pk[:,<span class="dv">0</span>,<span class="dv">1</span>]  <span class="co">#monopole of field 2</span>
-Pk2_1  <span class="op">=</span> Pk.Pk[:,<span class="dv">1</span>,<span class="dv">0</span>]  <span class="co">#quadrupole of field 1</span>
-Pk2_2  <span class="op">=</span> Pk.Pk[:,<span class="dv">1</span>,<span class="dv">1</span>]  <span class="co">#quadrupole of field 2</span>
-Pk4_1  <span class="op">=</span> Pk.Pk[:,<span class="dv">2</span>,<span class="dv">0</span>]  <span class="co">#hexadecapole of field 1</span>
-Pk4_2  <span class="op">=</span> Pk.Pk[:,<span class="dv">2</span>,<span class="dv">1</span>]  <span class="co">#hexadecapole of field 2</span>
-Pk0_X  <span class="op">=</span> Pk.XPk[:,<span class="dv">0</span>,<span class="dv">0</span>] <span class="co">#monopole of 1-2 cross P(k)</span>
-Pk2_X  <span class="op">=</span> Pk.XPk[:,<span class="dv">1</span>,<span class="dv">0</span>] <span class="co">#quadrupole of 1-2 cross P(k)</span>
-Pk4_X  <span class="op">=</span> Pk.XPk[:,<span class="dv">2</span>,<span class="dv">0</span>] <span class="co">#hexadecapole of 1-2 cross P(k)</span>
-Nmodes <span class="op">=</span> Pk.Nmodes3D</code></pre></div>
+k      = Pk.k3D
+Pk0_1  = Pk.Pk[:,<span class="dv">0</span>,<span class="dv">0</span>]  <span class="co">#monopole of field 1</span>
+Pk0_2  = Pk.Pk[:,<span class="dv">0</span>,<span class="dv">1</span>]  <span class="co">#monopole of field 2</span>
+Pk2_1  = Pk.Pk[:,<span class="dv">1</span>,<span class="dv">0</span>]  <span class="co">#quadrupole of field 1</span>
+Pk2_2  = Pk.Pk[:,<span class="dv">1</span>,<span class="dv">1</span>]  <span class="co">#quadrupole of field 2</span>
+Pk4_1  = Pk.Pk[:,<span class="dv">2</span>,<span class="dv">0</span>]  <span class="co">#hexadecapole of field 1</span>
+Pk4_2  = Pk.Pk[:,<span class="dv">2</span>,<span class="dv">1</span>]  <span class="co">#hexadecapole of field 2</span>
+Pk0_X  = Pk.XPk[:,<span class="dv">0</span>,<span class="dv">0</span>] <span class="co">#monopole of 1-2 cross P(k)</span>
+Pk2_X  = Pk.XPk[:,<span class="dv">1</span>,<span class="dv">0</span>] <span class="co">#quadrupole of 1-2 cross P(k)</span>
+Pk4_X  = Pk.XPk[:,<span class="dv">2</span>,<span class="dv">0</span>] <span class="co">#hexadecapole of 1-2 cross P(k)</span>
+Nmodes = Pk.Nmodes3D</code></pre>
 <p>The <code>XPk</code> function can be used for more than two fields, e.g.</p>
-<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">BoxSize <span class="op">=</span> <span class="fl">1000.0</span> <span class="co">#Mpc/h</span>
-axis    <span class="op">=</span> <span class="dv">0</span>
-MAS     <span class="op">=</span> [<span class="st">'CIC'</span>,<span class="st">'NGP'</span>,<span class="st">'TSC'</span>,<span class="st">'None'</span>]
-threads <span class="op">=</span> <span class="dv">16</span>
+<pre class="sourceCode python"><code class="sourceCode python">BoxSize = <span class="fl">1000.0</span> <span class="co">#Mpc/h</span>
+axis    = <span class="dv">0</span>
+MAS     = [<span class="st">'CIC'</span>,<span class="st">'NGP'</span>,<span class="st">'TSC'</span>,<span class="st">'None'</span>]
+threads = <span class="dv">16</span>
 
-Pk <span class="op">=</span> PKL.XPk([delta1,delta2,delta3,delta4], BoxSize, axis, MAS, threads)</code></pre></div>
+Pk = PKL.XPk([delta1,delta2,delta3,delta4], BoxSize, axis, MAS, threads)</code></pre>
 <h4 id="cosmology-1"><a id="Cosmology"></a> Cosmology</h4>
 <p>Pylians provide a set of routines to carry out simple cosmological calculations.</p>
 <p>The comoving distance and the linear growth factor to redshift <code>z</code> can be computed as</p>
-<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> cosmology_library <span class="im">as</span> CL
+<pre class="sourceCode python"><code class="sourceCode python"><span class="ch">import</span> cosmology_library <span class="ch">as</span> CL
 
-z       <span class="op">=</span> <span class="fl">1.0</span>
-Omega_m <span class="op">=</span> <span class="fl">0.3175</span>
-Omega_l <span class="op">=</span> <span class="fl">0.6825</span>
+z       = <span class="fl">1.0</span>
+Omega_m = <span class="fl">0.3175</span>
+Omega_l = <span class="fl">0.6825</span>
 
-r <span class="op">=</span> CL.comoving_distance(z, Omega_m, Omega_l)  <span class="co">#Mpc/h</span>
-D <span class="op">=</span> CL.linear_growth_factor(z, Omega_m, Omega_l) </code></pre></div>
+r = CL.comoving_distance(z, Omega_m, Omega_l)  <span class="co">#Mpc/h</span>
+D = CL.linear_growth_factor(z, Omega_m, Omega_l) </code></pre>
 <p>From a linear power spectrum at z=0, Pylians can find the non-linear matter power spectrum halofit by Takahashi 2012 as</p>
-<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> numpy <span class="im">as</span> np
-<span class="im">import</span> cosmology_library <span class="im">as</span> CL
+<pre class="sourceCode python"><code class="sourceCode python"><span class="ch">import</span> numpy <span class="ch">as</span> np
+<span class="ch">import</span> cosmology_library <span class="ch">as</span> CL
 
-z       <span class="op">=</span> <span class="fl">1.0</span>
-Omega_m <span class="op">=</span> <span class="fl">0.3175</span>
-Omega_l <span class="op">=</span> <span class="fl">0.6825</span>
+z       = <span class="fl">1.0</span>
+Omega_m = <span class="fl">0.3175</span>
+Omega_l = <span class="fl">0.6825</span>
 
-k_lin, Pk_lin <span class="op">=</span> np.loadtxt(<span class="st">'my_Pk_file_z=0.txt'</span>, unpack<span class="op">=</span><span class="va">True</span>)
+k_lin, Pk_lin = np.loadtxt(<span class="st">'my_Pk_file_z=0.txt'</span>, unpack=<span class="ot">True</span>)
 
-Pk_nl <span class="op">=</span> CL.Halofit_12(Omega_m, Omega_l, z, k_lin, Pk_lin) </code></pre></div>
+Pk_nl = CL.Halofit_12(Omega_m, Omega_l, z, k_lin, Pk_lin) </code></pre>
 <h4 id="integrals-1"><a id="Integrals"></a> Integrals</h4>
-<p>Pylians provide routines to carry out numerical integrals in a more efficient way than scipy integrate. The philosophy is that to compute the integral <span class="math inline">∫<sub><em>a</em></sub><sup><em>b</em></sup><em>f</em>(<em>x</em>)<em>d</em><em>x</em></span> the user passes the integrator two arrays, one with some values of x between a and b and another with the values of f(x) at those positions. The integrator will interpolate internally the input data to evaluate the function at an arbitrary position x. Pylians implements in c the fortran odeint function and wrap in python through cython.</p>
-<p>For instance, to compute <span class="math inline">∫<sub>0</sub><sup>5</sup>(3<em>x</em><sup>3</sup> + 2<em>x</em> + 5)<em>d</em><em>x</em></span> one would do</p>
-<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> numpy <span class="im">as</span> np
-<span class="im">import</span> integration_library <span class="im">as</span> IL
+<p>Pylians provide routines to carry out numerical integrals in a more efficient way than scipy integrate. The philosophy is that to compute the integral <span class="math">∫<sub><em>a</em></sub><sup><em>b</em></sup><em>f</em>(<em>x</em>)<em>d</em><em>x</em></span> the user passes the integrator two arrays, one with some values of x between a and b and another with the values of f(x) at those positions. The integrator will interpolate internally the input data to evaluate the function at an arbitrary position x. Pylians implements in c the fortran odeint function and wrap in python through cython.</p>
+<p>For instance, to compute <span class="math">∫<sub>0</sub><sup>5</sup>(3<em>x</em><sup>3</sup> + 2<em>x</em> + 5)<em>d</em><em>x</em></span> one would do</p>
+<pre class="sourceCode python"><code class="sourceCode python"><span class="ch">import</span> numpy <span class="ch">as</span> np
+<span class="ch">import</span> integration_library <span class="ch">as</span> IL
 
 <span class="co"># integral value, its limits and precision parameters</span>
-yinit <span class="op">=</span> np.zeros(<span class="dv">1</span>, dtype<span class="op">=</span>np.float64) 
-x1    <span class="op">=</span> <span class="fl">0.0</span>
-x2    <span class="op">=</span> <span class="fl">5.0</span>
-eps   <span class="op">=</span> <span class="fl">1e-8</span> 
-h1    <span class="op">=</span> <span class="fl">1e-10</span> 
-hmin  <span class="op">=</span> <span class="fl">0.0</span>   
+yinit = np.zeros(<span class="dv">1</span>, dtype=np.float64) 
+x1    = <span class="fl">0.0</span>
+x2    = <span class="fl">5.0</span>
+eps   = <span class="fl">1e-8</span> 
+h1    = <span class="fl">1e-10</span> 
+hmin  = <span class="fl">0.0</span>   
 
 <span class="co"># integral method and integrand function</span>
-function <span class="op">=</span> <span class="st">'linear'</span>
-bins     <span class="op">=</span> <span class="dv">1000</span>
-x        <span class="op">=</span> np.linspace(x1, x2, bins)
-y        <span class="op">=</span> <span class="dv">3</span><span class="op">*</span>x<span class="op">**</span><span class="dv">2</span> <span class="op">+</span> <span class="dv">2</span><span class="op">*</span>x <span class="op">+</span> <span class="dv">5</span>
+function = <span class="st">'linear'</span>
+bins     = <span class="dv">1000</span>
+x        = np.linspace(x1, x2, bins)
+y        = <span class="dv">3</span>*x**<span class="dv">2</span> + <span class="dv">2</span>*x + <span class="dv">5</span>
 
-I <span class="op">=</span> IL.odeint(yinit, x1, x2, eps, h1, hmin, x, y, function, verbose<span class="op">=</span><span class="va">True</span>)[<span class="dv">0</span>]</code></pre></div>
+I = IL.odeint(yinit, x1, x2, eps, h1, hmin, x, y, function, verbose=<span class="ot">True</span>)[<span class="dv">0</span>]</code></pre>
 <p>The value of integral is stored in <code>I</code>. The <code>odeint</code> routine needs the following ingredients:</p>
 <ul>
 <li><code>yinit</code>. The value of the integral is stored in this variable. Should be a 1D double numpy array with one single element equal to 0. If several integrals are being computed sequentially this variable need to be declared for each integral.</li>
@@ -282,29 +260,29 @@ I <span class="op">=</span> IL.odeint(yinit, x1, x2, eps, h1, hmin, x, y, functi
 <li><code>function = 'log'</code>. The function is evaluated by interpolating logaritmically the input values of x and y=f(x).
 <ul>
 <li><code>x</code>. 1D double numpy array containing the input, equally spaced in log, values of log10(x).</li>
-<li><code>y</code>. 1D double numpy array containing the values of log10(y=f(x)) at the <code>x</code> array positions.</li>
+<li><code>y</code>. 1D double numpy array containing the values of y=f(x) at the <code>x</code> array positions.</li>
 </ul></li>
 </ul>
-<p>An example of using the log-interpolation to compute the integral <span class="math inline">∫<sub>1</sub><sup>2</sup><em>e</em><sup><em>x</em></sup><em>d</em><em>x</em></span> is this</p>
-<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> numpy <span class="im">as</span> np
-<span class="im">import</span> integration_library <span class="im">as</span> IL
+<p>An example of using the log-interpolation to compute the integral <span class="math">∫<sub>1</sub><sup>2</sup><em>e</em><sup><em>x</em></sup><em>d</em><em>x</em></span> is this</p>
+<pre class="sourceCode python"><code class="sourceCode python"><span class="ch">import</span> numpy <span class="ch">as</span> np
+<span class="ch">import</span> integration_library <span class="ch">as</span> IL
 
 <span class="co"># integral value, its limits and precision parameters</span>
-yinit <span class="op">=</span> np.zeros(<span class="dv">1</span>, dtype<span class="op">=</span>np.float64) 
-x1    <span class="op">=</span> <span class="fl">1.0</span>
-x2    <span class="op">=</span> <span class="fl">2.0</span>
-eps   <span class="op">=</span> <span class="fl">1e-10</span> 
-h1    <span class="op">=</span> <span class="fl">1e-12</span> 
-hmin  <span class="op">=</span> <span class="fl">0.0</span>   
+yinit = np.zeros(<span class="dv">1</span>, dtype=np.float64) 
+x1    = <span class="fl">1.0</span>
+x2    = <span class="fl">2.0</span>
+eps   = <span class="fl">1e-10</span> 
+h1    = <span class="fl">1e-12</span> 
+hmin  = <span class="fl">0.0</span>   
 
 <span class="co"># integral method and integrand function</span>
-function <span class="op">=</span> <span class="st">'log'</span>
-bins     <span class="op">=</span> <span class="dv">1000</span>
-x        <span class="op">=</span> np.logspace(np.log10(x1), np.log10(x2), bins)
-y        <span class="op">=</span> np.exp(x)
+function = <span class="st">'log'</span>
+bins     = <span class="dv">1000</span>
+x        = np.logspace(np.log10(x1), np.log10(x2), bins)
+y        = np.exp(x)
 
-I <span class="op">=</span> IL.odeint(yinit, x1, x2, eps, h1, hmin, np.log10(x), np.log10(y),
-              function, verbose<span class="op">=</span><span class="va">True</span>)[<span class="dv">0</span>]</code></pre></div>
+I = IL.odeint(yinit, x1, x2, eps, h1, hmin, np.log10(x), y,
+              function, verbose=<span class="ot">True</span>)[<span class="dv">0</span>]</code></pre>
 <p>Be careful when using the log-interpolation since the code will crash if a zero or negative value is encounter.</p>
 <p>The user can create its own function if he/she does not want to evaluate the integrand through interpolations. This function has to be placed in the file library/integration_library/integration_library.pyx (see linear and sigma functions as examples). After that, a new function call has to be created in the function odeint of that file (see linear and log as examples).</p>
 <h2 id="smooth-fields-1"><a id="smooth"></a>Smooth Fields</h2>
@@ -319,17 +297,22 @@ I <span class="op">=</span> IL.odeint(yinit, x1, x2, eps, h1, hmin, np.log10(x),
 <li><code>W_k</code>. This is a 3D complex64 numpy array containing the Fourier-transform of the filter. Notice that when smoothing a discrete field, like the one stored on a regular grid, the Fourier-transform of the filter need to be computed in the same way as the for the field, i.e. through DFT instead of FT.</li>
 </ul>
 <p>An example is this</p>
-<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">import</span> smoothing_library <span class="im">as</span> SL
+<pre class="sourceCode python"><code class="sourceCode python"><span class="ch">import</span> smoothing_library <span class="ch">as</span> SL
 
-BoxSize <span class="op">=</span> <span class="fl">75.0</span> <span class="co">#Mpc/h</span>
-R       <span class="op">=</span> <span class="fl">5.0</span>  <span class="co">#Mpc.h</span>
-grid    <span class="op">=</span> field.shape[<span class="dv">0</span>]
-Filter  <span class="op">=</span> <span class="st">'Top-Hat'</span>
-threads <span class="op">=</span> <span class="dv">28</span>
+BoxSize = <span class="fl">75.0</span> <span class="co">#Mpc/h</span>
+R       = <span class="fl">5.0</span>  <span class="co">#Mpc.h</span>
+grid    = field.shape[<span class="dv">0</span>]
+Filter  = <span class="st">'Top-Hat'</span>
+threads = <span class="dv">28</span>
 
-W_k <span class="op">=</span> SL.FT_filter(BoxSize, R, grid, Filter, threads)
-field_smoothed <span class="op">=</span> SL.field_smoothing(field, W_k, threads)</code></pre></div>
+W_k = SL.FT_filter(BoxSize, R, grid, Filter, threads)
+field_smoothed = SL.field_smoothing(field, W_k, threads)</code></pre>
 <h2 id="contact-1"><a id="Contact"></a>Contact</h2>
-<p>For comments, problems, bugs… etc you can reach me at <a href="mailto:fvillaescusa@flatironinstitute.org">fvillaescusa@flatironinstitute.org</a>.</p>
+<p>For comments, problems, bugs… etc you can reach me at <script type="text/javascript">
+<!--
+h='&#102;&#108;&#x61;&#116;&#x69;&#114;&#x6f;&#110;&#x69;&#110;&#x73;&#116;&#x69;&#116;&#x75;&#116;&#x65;&#46;&#x6f;&#114;&#x67;';a='&#64;';n='&#102;&#118;&#x69;&#108;&#108;&#x61;&#x65;&#x73;&#x63;&#x75;&#x73;&#x61;';e=n+a+h;
+document.write('<a h'+'ref'+'="ma'+'ilto'+':'+e+'">'+e+'<\/'+'a'+'>');
+// -->
+</script><noscript>fvillaescusa at flatironinstitute dot org</noscript>.</p>
 </body>
 </html>

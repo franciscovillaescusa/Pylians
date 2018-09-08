@@ -287,7 +287,7 @@ There are two main methods to carry out the integral, depending on how the inter
  
 - ```function = 'log'```. The function is evaluated by interpolating logaritmically the input values of x and y=f(x).
     - ```x```. 1D double numpy array containing the input, equally spaced in log, values of log10(x). 
-    - ```y```. 1D double numpy array containing the values of log10(y=f(x)) at the ```x``` array positions.
+    - ```y```. 1D double numpy array containing the values of y=f(x) at the ```x``` array positions.
 
 An example of using the log-interpolation to compute the integral $\int_1^2 e^x dx$ is this
 
@@ -309,7 +309,7 @@ bins     = 1000
 x        = np.logspace(np.log10(x1), np.log10(x2), bins)
 y        = np.exp(x)
 
-I = IL.odeint(yinit, x1, x2, eps, h1, hmin, np.log10(x), np.log10(y),
+I = IL.odeint(yinit, x1, x2, eps, h1, hmin, np.log10(x), y,
               function, verbose=True)[0]
 ```
 

@@ -1,6 +1,5 @@
 from mpi4py import MPI
 import numpy as np
-import snapshot as sn
 import readsnapHDF5 as rs
 import HI_library as HIL
 import sys,os,glob,h5py,time
