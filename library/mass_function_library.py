@@ -84,7 +84,7 @@ def sigma(k,Pk,R):
     Pk1 = Pk*W**2*k**2/(2.0*pi**2)
     
     return np.sqrt(IL.odeint(yinit, k[0], k[-1], eps,
-                             h1, hmin, np.log10(k), np.log10(Pk1),
+                             h1, hmin, np.log10(k), Pk1,
                              'sigma', verbose=False)[0])
 
 #this function computes the derivate of sigma(M) wrt M
