@@ -1525,8 +1525,8 @@ def expected_Pk(np.float32_t[:] k_in, np.float32_t[:] Pk_in,
 def Pk_NGenIC_IC_field(f_coordinates, f_amplitudes, float BoxSize):
 
     cdef int i, Nfiles, Nmesh, Nx, middle, kmax
-    cdef int kxx,kyy,kzz,kx,ky,kz,k_index
-    cdef long number_modes
+    cdef int kxx, kyy, kzz, kx, ky, kz, k_index
+    cdef long number_modes, all_modes
     cdef double kF,kmag,delta2
     cdef double[:] k, Pk, Nmodes
     cdef float[:] amplitudes
@@ -1551,6 +1551,7 @@ def Pk_NGenIC_IC_field(f_coordinates, f_amplitudes, float BoxSize):
 
     
     # do a loop over the different number of subfiles
+    all_modes = 0
     for i in xrange(Nfiles):
         f1 = f_coordinates + '.%d'%i
         f2 = f_amplitudes  + '.%d'%i
@@ -1576,6 +1577,7 @@ def Pk_NGenIC_IC_field(f_coordinates, f_amplitudes, float BoxSize):
             raise Exception('Unexpected number of amplitudes')
     
         number_modes = coordinates.shape[0]
+        all_modes += number_modes
 
         # do a loop over all modes
         for i in xrange(number_modes):
@@ -1607,6 +1609,10 @@ def Pk_NGenIC_IC_field(f_coordinates, f_amplitudes, float BoxSize):
             Pk[k_index]     += delta2
             Nmodes[k_index] += 1.0
 
+    #check that all modes are counted
+    if all_modes!=Nmesh*Nmesh*(Nmesh/2+1):
+        raise Exception('Not all modes counted!!!')
+            
     # avoid the fundamental frequency
     for i in xrange(1, k.shape[0]):
         k[i]  = k[i]/Nmodes[i]*kF
