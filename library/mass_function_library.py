@@ -76,7 +76,7 @@ def sigma_old(k,Pk,R):
 
 def sigma(k,Pk,R):
     yinit = np.array([0.0], dtype=np.float64)
-    eps   = 1e-9  #change this for higher/lower accuracy
+    eps   = 1e-13  #change this for higher/lower accuracy
     h1    = 1e-12
     hmin  = 0.0
     

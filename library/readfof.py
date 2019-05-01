@@ -25,8 +25,8 @@ import os, sys
 from struct import unpack
 
 class FoF_catalog:
-    def __init__(self,basedir,snapnum,long_ids=False,swap=False,SFR=False,
-                 read_IDs=True):
+    def __init__(self, basedir, snapnum, long_ids=False, swap=False,
+                 SFR=False, read_IDs=True, prefix='/groups_'):
 
         if long_ids:  format = np.uint64
         else:         format = np.uint32
@@ -37,7 +37,7 @@ class FoF_catalog:
         fnb, skip, Final = 0, 0, False
         dt1 = np.dtype((np.float32,3))
         dt2 = np.dtype((np.float32,6))
-        prefix = basedir+"/groups_" + exts +"/group_tab_"+exts +"."
+        prefix = basedir + prefix + exts + "/group_tab_" + exts + "."
         while not(Final):
             f=open(prefix+str(fnb), 'rb')
             self.Ngroups    = np.fromfile(f, dtype=np.int32,  count=1)[0]
@@ -97,12 +97,12 @@ class FoF_catalog:
             while not(Final):
                 fname=basedir+"/groups_" + exts +"/group_ids_"+exts +"."+str(fnb)
                 f=open(fname,'rb')
-                Ngroups=np.fromfile(f,dtype=np.uint32,count=1)[0]
-                TotNgroups=np.fromfile(f,dtype=np.uint32,count=1)[0]
-                Nids=np.fromfile(f,dtype=np.uint32,count=1)[0]
-                TotNids=np.fromfile(f,dtype=np.uint64,count=1)[0]
-                Nfiles=np.fromfile(f,dtype=np.uint32,count=1)[0]
-                Send_offset=np.fromfile(f,dtype=np.uint32,count=1)[0]
+                Ngroups     = np.fromfile(f,dtype=np.uint32,count=1)[0]
+                TotNgroups  = np.fromfile(f,dtype=np.uint32,count=1)[0]
+                Nids        = np.fromfile(f,dtype=np.uint32,count=1)[0]
+                TotNids     = np.fromfile(f,dtype=np.uint64,count=1)[0]
+                Nfiles      = np.fromfile(f,dtype=np.uint32,count=1)[0]
+                Send_offset = np.fromfile(f,dtype=np.uint32,count=1)[0]
                 if fnb==0:
                     self.GroupIDs=np.zeros(dtype=format,shape=TotNids)
                 if Ngroups>0:
