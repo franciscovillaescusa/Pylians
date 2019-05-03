@@ -1,5 +1,5 @@
 import numpy as np
-import readsnap
+import readsnap,readgadget
 import MAS_library as MASL
 import sys,os
 
@@ -26,7 +26,7 @@ def density_field_name(snapshot_fname, x_min, x_max, y_min, y_max,
 def geometry(snapshot_fname, plane, x_min, x_max, y_min, y_max, z_min, z_max):
 
     # read snapshot head and obtain BoxSize
-    head    = readsnap.snapshot_header(snapshot_fname)
+    head    = readgadget.header(snapshot_fname)
     BoxSize = head.boxsize/1e3 #Mpc/h                    
 
     plane_dict = {'XY':[0,1], 'XZ':[0,2], 'YZ':[1,2]}
@@ -56,7 +56,7 @@ def density_field_2D(snapshot_fname, x_min, x_max, y_min, y_max, z_min, z_max,
     plane_dict = {'XY':[0,1], 'XZ':[0,2], 'YZ':[1,2]}
 
     # read snapshot head and obtain BoxSize, filenum...
-    head     = readsnap.snapshot_header(snapshot_fname)
+    head     = readgadget.header(snapshot_fname)
     BoxSize  = head.boxsize/1e3 #Mpc/h                    
     Nall     = head.nall
     Masses   = head.massarr*1e10 #Msun/h                  
@@ -91,7 +91,7 @@ def density_field_2D(snapshot_fname, x_min, x_max, y_min, y_max, z_min, z_max,
         for ptype in ptypes:
 
             # read the positions of the particles in Mpc/h
-            pos = readsnap.read_block(snap,"POS ",parttype=ptype)/1e3
+            pos = readgadget.read_field(snap,"POS ",ptype)/1e3
 
             if single_specie:  total_mass += len(pos)
 
@@ -109,7 +109,7 @@ def density_field_2D(snapshot_fname, x_min, x_max, y_min, y_max, z_min, z_max,
 
             # read the masses of the particles in Msun/h
             if not(single_specie):
-                mass = readsnap.read_block(snap,"MASS",parttype=ptype)*1e10
+                mass = readgadget.read_field(snap,"MASS",ptype)*1e10
                 total_mass += np.sum(mass, dtype=np.float64)
                 mass = mass[indexes]
                 MASL.MA(pos, overdensity, BoxSize_slice, MAS=MAS, W=mass,
