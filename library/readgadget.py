@@ -1,5 +1,4 @@
-# This library is designed to be able to read Gadget format 1, format 2
-# and hdf5 files
+# This library is designed to read Gadget format I, format II and hdf5 files
 import numpy as np
 import readsnap
 import sys,os,h5py
@@ -76,10 +75,9 @@ def read_field(snapshot, block, ptype):
         elif block=="ID  ":  suffix = "ParticleIDs"
         elif block=="VEL ":  suffix = "Velocities"
         else: raise Exception('block not implemented in readgadget!')
-
         array = f[prefix+suffix][:];  f.close()
-        if block=="VEL ":  array *= np.sqrt(head.time)
 
+        if block=="VEL ":  array *= np.sqrt(head.time)
         if block=="POS " and array.dtype==np.float64:
             array = array.astype(np.float32)
 
@@ -102,33 +100,33 @@ def read_block(snapshot, block, ptype, verbose=False):
         Ntotal += Nall[i]
 
     # find the dtype of the block
-    if   block=='POS ':  dtype=np.dtype((np.float32,3))
-    elif block=='VEL ':  dtype=np.dtype((np.float32,3))
-    elif block=='MASS':  dtype=np.float32
-    elif block=='ID  ':  dtype=read_field(filename, block, ptype[0]).dtype
+    if   block=="POS ":  dtype=np.dtype((np.float32,3))
+    elif block=="VEL ":  dtype=np.dtype((np.float32,3))
+    elif block=="MASS":  dtype=np.float32
+    elif block=="ID  ":  dtype=read_field(filename, block, ptype[0]).dtype
     else: raise Exception('block not implemented in readgadget!')
 
     # define the array containing the data
     array = np.zeros(Ntotal, dtype=dtype)
 
-    # if format is binary, use readsnap.py to read the snapshot
-    if fformat=="binary" or filenum==1:
-        offset = 0
-        for pt in ptype:
-            if fformat=="binary":
-                array[offset:offset+Nall[pt]] = \
-                    readsnap.read_block(snapshot, block, pt, verbose=verbose)    
-            else:
-                array[offset:offset+Nall[pt]] = \
-                    read_field(snapshot, block, pt)    
+
+    # do a loop over the different particle types
+    offset = 0
+    for pt in ptype:
+
+        # format I or format II Gadget files
+        if fformat=="binary":
+            array[offset:offset+Nall[pt]] = \
+                readsnap.read_block(snapshot, block, pt, verbose=verbose)
             offset += Nall[pt]
 
-    # use this to read hdf5 files
-    else:
+        # single files (either binary or hdf5)
+        elif filenum==1:
+            array[offset:offset+Nall[pt]] = read_field(snapshot, block, pt)
+            offset += Nall[pt]
 
-        # do a loop over the different particle types
-        offset = 0
-        for pt in ptype:
+        # multi-file hdf5 snapshot
+        else:
 
             # do a loop over the different files
             for i in xrange(filenum):
@@ -137,9 +135,9 @@ def read_block(snapshot, block, ptype, verbose=False):
                 filename = '%s.%d.hdf5'%(snapshot,i)
 
                 # read number of particles in the file and read the data
-                npart = header(filename).npart
-                array[offset:offset+npart[pt]] = read_field(filename, block, pt)
-                offset += npart[pt]
+                npart = header(filename).npart[pt]
+                array[offset:offset+npart] = read_field(filename, block, pt)
+                offset += npart   
 
     if offset!=Ntotal:  raise Exception('not all particles read!!!!')
             
