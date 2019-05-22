@@ -5,10 +5,10 @@
 * # [Power spectrum](#auto_Pk)
     - ### [Auto-power spectrum](#auto_Pk)
     - ### [Cross-power spectrum](#cross_Pk)
-* # [Voids](#voids)
-* # [Cosmology](#cosmology)
+* # [Voids](#Voids)
+* # [Cosmology](#Cosmology)
 * # [Integrals](#Integrals)
-* # [Smooth fields](#smooth)
+* # [Smooth fields](#Smooth)
 * # [Contact](#Contact)
 
 
@@ -210,7 +210,7 @@ threads = 16
 Pk = PKL.XPk([delta1,delta2,delta3,delta4], BoxSize, axis, MAS, threads)
 ```
 
-#### <a id="voids"></a> Voids
+#### <a id="Voids"></a> Voids
 Pylians can be used to identify voids in a generic density field (e.g. total matter, CDM, gas, halos, neutrinos, CDM+gas, galaxies...etc). The ingredients needed are:
 - ```delta```. This is the overdensity field. It should be a 3 dimensional float numpy array such ```delta = np.zeros((grid, grid, grid), dtype=np.float32)```. See [density field](#density_field) on how to compute  density fields using Pylians.
 - ```BoxSize```. Size of the periodic box. The units of the output power spectrum depend on this.
@@ -352,7 +352,7 @@ Be careful when using the log-interpolation since the code will crash if a zero 
 
 The user can create its own function if he/she does not want to evaluate the integrand through interpolations. This function has to be placed in the file library/integration_library/integration_library.pyx (see linear and sigma functions as examples). After that, a new function call has to be created in the function odeint of that file (see linear and log as examples).
 
-## <a id="smooth"></a>Smooth Fields
+## <a id="Smooth"></a>Smooth Fields
 
 Pylians provide routines to smooth fields with several filters. The ingredients needed are:
 
