@@ -13,21 +13,18 @@ cimport void_openmp_library as VOL
 DEF PI=3.141592653589793
 
 ############################### ROUTINES ####################################
-# V = void_finder(delta, BoxSize, threshold, Rmax, Rmin, bins, Omega_m, 
-#               threads, void_field=False)
+# V = void_finder(delta, BoxSize, threshold, threads, void_field=False)
 # V.void_pos  ----> void positions
-# V.void_mass ----> void masses
 # V.void_radius --> void radii  
 # V.Rbins --------> void mass function (R bins)
-# V.void_mf ------> void mass function (voids/(Volume*log(R)))
+# V.void_vsf -----> void mass function (voids/(Volume*log(R)))
 # V.in_void ------> grid with 0 and 1. 1 is a cell within a void (optional)
 
 # gaussian_smoothing(delta, BoxSize, R, threads)
 
-# V = void_safety_check(delta, void_pos, void_radius, BoxSize, Omega_m)
+# V = void_safety_check(delta, void_pos, void_radius, BoxSize)
 # V.mean_overdensity ----> mean overdensity of the cells in a void
 # V.mean_radius ---------> effective radius of the void from the cells in it
-# V.mean_mass -----------> sum of the cell masses in a void
 
 # V = random_spheres(BoxSize, Rmin, Rmax, Nvoids, dims)
 # V.void_pos ------> array with the positions of the input voids
@@ -36,6 +33,10 @@ DEF PI=3.141592653589793
 #############################################################################
 
 
+# This function sorts the input Radii, from largest to smallest
+def sort_Radii(float[:] Radii):
+    return np.sort(Radii)[::-1]
+
 # The function takes a density field and smooth it with a 3D top-hat filter
 # of radius R:  W = 3/(4*pi*R^3) if r<R;  W = 0  otherwise
 @cython.boundscheck(False)
@@ -43,7 +44,6 @@ DEF PI=3.141592653589793
 @cython.wraparound(False)
 def gaussian_smoothing(delta, float BoxSize, float R, int threads=1):
                        
-    
     cdef int dims = delta.shape[0]
     cdef int middle = dims/2
     cdef float prefact,kR,fact
@@ -87,48 +87,47 @@ def gaussian_smoothing(delta, float BoxSize, float R, int threads=1):
 @cython.wraparound(False)
 class void_finder:
     def __init__(self, np.ndarray[np.float32_t, ndim=3] delta, float BoxSize, 
-        float threshold, float Rmax, float Rmin, int bins, 
-        float Omega_m, int threads, int threads2, void_field=False):
+        float threshold, float[:] Radii,
+        int threads, int threads2, void_field=False):
 
-        cdef float R, dist2, R_grid, R_grid2, rho_crit, mean_rho
+        cdef float R, dist2, R_grid, R_grid2, Rmin
         cdef float dx, dy, dz, middle
         cdef long voids_found, total_voids_found,num
         cdef long max_num_voids,local_voids,ID,dims3
         cdef int i,j,k,p,q,Ncells,l,m,n,i1,j1,k1, nearby_voids
-        cdef int dims, dims2, mode
+        cdef int dims, dims2, mode, bins
         cdef char[:,:,::1] in_void
-        #cdef np.ndarray[np.float32_t, ndim=1] delta_v
-        #cdef np.ndarray[np.int64_t, ndim=1] indexes, IDs
         cdef float[::1] delta_v, delta_v_temp
         cdef long[::1] IDs, indexes, IDs_temp
-        cdef float[:] Radii,mf
+        cdef float[:] vsf, Rmean
         cdef int[::1] Nvoids
         cdef float[:,:,::1] delta_sm
         cdef int[:,::1] void_pos
         cdef float[::1] void_mass
         cdef float[::1] void_radius
         cdef double expected_filling_factor=0.0
-        cdef double time1,time2,dt
+        cdef double time1,time2,dt,time_tot
 
+        time_tot = time.time()
         dims = delta.shape[0];  middle = dims/2
         dims2 = dims**2;  dims3 = dims**3
+        bins = Radii.shape[0]
+
+        # sort the input Radii
+        Radii = sort_Radii(Radii)
 
         # check that Rmin is larger than the grid resolution
+        Rmin = np.min(Radii)
         if Rmin<BoxSize*1.0/dims:
             raise Exception("Rmin=%.3f Mpc/h below grid resolution=%.3f Mpc/h"\
                             %(Rmin, BoxSize*1.0/dims))
-
-        # find the value of the mean matter density of the Universe
-        rho_crit = (UL.units()).rho_crit #h^2 Msun/Mpc^3
-        mean_rho = rho_crit*Omega_m
 
         # find the maximum possible number of voids
         max_num_voids = int(BoxSize**3/(4.0*PI/3.0*Rmin**3))
         print 'maximum number of voids = %d\n'%max_num_voids
 
-        # define list containing void positions, radii and masses
+        # define arrays containing void positions and radii
         void_pos    = np.zeros((max_num_voids, 3), dtype=np.int32)
-        void_mass   = np.zeros(max_num_voids,      dtype=np.float32)
         void_radius = np.zeros(max_num_voids,      dtype=np.float32)
         
         # define the in_void and delta_v array
@@ -136,10 +135,10 @@ class void_finder:
         delta_v = np.zeros(dims3,            dtype=np.float32)
         IDs     = np.zeros(dims3,            dtype=np.int64)
 
-        Radii = np.logspace(np.log10(Rmax),np.log10(Rmin), bins, 
-                dtype=np.float32)
+        # define the arrays needed to compute the VSF
         Nvoids = np.zeros(bins,   dtype=np.int32)
-        mf     = np.zeros(bins-1, dtype=np.float32)
+        vsf    = np.zeros(bins-1, dtype=np.float32)
+        Rmean  = np.zeros(bins-1, dtype=np.float32)
 
         total_voids_found = 0
         for q in xrange(bins):
@@ -183,15 +182,13 @@ class void_finder:
                 delta_v[i] = delta_v_temp[i]
             del delta_v_temp
 
-            IDs_temp = np.empty(local_voids, dtype=np.int64)
+            IDs_temp = np.empty(local_voids, dtype=np.int64) 
             for i in xrange(local_voids):
                 IDs_temp[i] = IDs[indexes[i]]
             for i in xrange(local_voids):
                 IDs[i] = IDs_temp[i]
             del IDs_temp
 
-            #delta_v[:local_voids] = delta_v[:local_voids][indexes]
-            #IDs[:local_voids] = IDs[:local_voids][indexes]
             print 'Sorting took %.3f seconds'%(time.time()-start)
 
             # do a loop over all underdense cells and identify voids
@@ -204,7 +201,7 @@ class void_finder:
             else:                                  mode = 1
             time1 = 0.0
             time2 = 0.0
-            if Ncells<12:  threads2 = 1 #empirically this is the best
+            if Ncells<12:  threads2 = 1 #empirically this seems to be the best
             print 'Mode = %d    :   Ncells = %d   :   threads = %d'%(mode,Ncells,threads2)
             for p in xrange(local_voids):
 
@@ -277,8 +274,8 @@ class void_finder:
                     void_pos[total_voids_found, 0] = i
                     void_pos[total_voids_found, 1] = j
                     void_pos[total_voids_found, 2] = k
-                    void_radius[total_voids_found] = R_grid
-                    void_mass[total_voids_found]   = 4.0/3.0*PI*R**3*(1.0+threshold)*mean_rho
+                    void_radius[total_voids_found] = R
+
                     voids_found += 1;  total_voids_found += 1 
                     in_void[i,j,k] = 1
                     
@@ -301,7 +298,8 @@ class void_finder:
                                 if dist2<R_grid2:  in_void[i1,j1,k1] = 1
                     """
 
-            print 'Found %06d voids with radius R=%.3f Mpc/h'%(voids_found, R)
+            print 'Found %06d voids with radius R =%.3f Mpc/h'%(voids_found, R)
+            print 'Found %06d voids with radius R>=%.3f Mpc/h'%(total_voids_found,R)
             print 'Void volume filling fraction = %.3e'\
                 %(np.sum(in_void, dtype=np.int64)*1.0/dims3)
             expected_filling_factor += voids_found*4.0*np.pi/3.0*R**3/BoxSize**3
@@ -313,18 +311,19 @@ class void_finder:
 
         print 'Void volume filling fraction = %.3f'\
             %(np.sum(in_void, dtype=np.int64)*1.0/dims3)
-        print 'Found a total of %d voids\n'%total_voids_found
+        print 'Found a total of %d voids'%total_voids_found
+        print 'Total time take %.3f seconds\n'%(time.time()-time_tot)
 
         # compute the void mass function (voids/Volume/dR)
         for i in xrange(bins-1):
-            mf[i] = Nvoids[i]/(BoxSize**3*(Radii[i]-Radii[i+1]))
+            vsf[i]   = Nvoids[i]/(BoxSize**3*(Radii[i]-Radii[i+1]))
+            Rmean[i] = 0.5*(Radii[i]+Radii[i+1])
 
         if void_field:   self.in_void = np.asarray(in_void)
-        self.void_pos    = np.asarray(void_pos[:total_voids_found])
-        self.void_mass   = np.asarray(void_mass[:total_voids_found])
+        self.void_pos    = np.asarray(void_pos[:total_voids_found])*(BoxSize/dims)
         self.void_radius = np.asarray(void_radius[:total_voids_found])
-        self.Rbins       = np.asarray(Radii[:bins-1], dtype=np.float32)
-        self.void_mf     = np.asarray(mf)
+        self.Rbins       = np.asarray(Rmean)
+        self.void_vsf    = np.asarray(vsf)
 
 # This routine takes the density field, the void positions and radii
 # and finds the cells inside each void. From those cells it computes
@@ -334,12 +333,12 @@ class void_finder:
 @cython.wraparound(False)
 class void_safety_check:
     def __init__(self, float[:,:,:] delta, float[:,:] void_pos, 
-        float[:] void_radius, float BoxSize, float Omega_m):
+        float[:] void_radius, float BoxSize):
 
         cdef long number_of_voids, p
         cdef int dims, i, j, k, Nshells, ii, jj, kk, i1, j1, k1
-        cdef float dist, R_void, prefact, ratio, V_cell, mean_rho
-        cdef double[:] mean_overdensity, mean_mass, mean_radius
+        cdef float dist, R_void, prefact, ratio, V_cell
+        cdef double[:] mean_overdensity, mean_radius
         cdef long[:] cells
 
         # find the number of voids and the number of cells in the field
@@ -348,16 +347,11 @@ class void_safety_check:
 
         # define the array containing the mean overdensities
         mean_overdensity = np.zeros(number_of_voids, dtype=np.float64)
-        mean_mass        = np.zeros(number_of_voids, dtype=np.float64)
         mean_radius      = np.zeros(number_of_voids, dtype=np.float64)
         cells            = np.zeros(number_of_voids, dtype=np.int64)
 
-        # compute the mean matter density
-        mean_rho = Omega_m*(UL.units()).rho_crit #h^2 Msun/Mpc^3
-
         prefact = dims*1.0/BoxSize
         V_cell  = (BoxSize*1.0/dims)**3
-
 
         # do a loop over all the voids
         for p in xrange(number_of_voids):
@@ -389,13 +383,9 @@ class void_safety_check:
             # compute volume occupied by cells in void and effective radius
             mean_radius[p] = (3.0*cells[p]*V_cell/(4.0*PI))**(1.0/3.0)
 
-            # compute the mean mass of the void
-            mean_mass[p] = (1.0+mean_overdensity[p])*cells[p]*V_cell*mean_rho
-
 
         self.mean_overdensity = np.asarray(mean_overdensity, dtype=np.float32)
         self.mean_radius      = np.asarray(mean_radius,      dtype=np.float32)
-        self.mean_mass        = np.asarray(mean_mass,        dtype=np.float32)
 
 
 # This routine creates a density field filled with 0. It then places random
@@ -407,8 +397,7 @@ class void_safety_check:
 @cython.cdivision(True)
 @cython.wraparound(False)
 class random_spheres:
-    def __init__(self, float BoxSize, float Rmin, float Rmax, int Nvoids,
-        int dims):
+    def __init__(self, float BoxSize, float Rmin, float Rmax, int Nvoids, int dims):
 
         cdef int new_void
         cdef int i, j, l, m, n, Nshells, ii, i1, jj, j1, kk, k1
