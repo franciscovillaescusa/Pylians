@@ -5,49 +5,46 @@ import readsnap
 import MAS_library as MASL
 
 ################################# INPUT ######################################
-snapshot_fname = '../snapdir_003/snap_003'
+#snapshot = '../snapdir_003/snap_003'
+snapshot = '/simons/scratch/fvillaescusa/pdf_information/fiducial/0/snapdir_004/snap_004'
 
 # density field parameters
-dims = 768
+grid = 768
 MAS  = 'PCS'
 
 # void finder parameters
-threshold = -0.7
-Rmax      = 45.0
-Rmin      = 8.0
-bins      = 50
-threads   = 28
+Radii      = np.array([5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27,
+                       29, 31, 33, 35, 37, 39, 41], dtype=np.float32)
+threshold  = -0.7
+threads1   = 16
+threads2   = 4
+void_field = True
 ##############################################################################
 
 # read snapshot head and obtain BoxSize, Omega_m and Omega_L
-head     = readsnap.snapshot_header(snapshot_fname)
-BoxSize  = head.boxsize/1e3  #Mpc/h                      
-Nall     = head.nall
-Masses   = head.massarr*1e10 #Msun/h              
-Omega_m  = head.omega_m
-Omega_l  = head.omega_l
-redshift = head.redshift
+head    = readsnap.snapshot_header(snapshot)
+BoxSize = head.boxsize/1e3  #Mpc/h                      
+
+Radii = Radii*BoxSize/grid
 
 # read particle positions
-pos = readsnap.read_block(snapshot_fname,"POS ",parttype=1)/1e3 #Mpc/h
+pos = readsnap.read_block(snapshot,"POS ",parttype=1)/1e3 #Mpc/h
 
 # compute density field
-delta = np.zeros((dims, dims, dims), dtype=np.float32)
+delta = np.zeros((grid, grid, grid), dtype=np.float32)
 MASL.MA(pos, delta, BoxSize, MAS)
 delta /= np.mean(delta, dtype=np.float64);  delta -= 1.0
 
-V = VL.void_finder(delta, BoxSize, threshold, Rmax, Rmin, bins, Omega_m, 
-    threads, void_field=True)
+# find the void
+V = VL.void_finder(delta, BoxSize, threshold, Radii, 
+                   threads1, threads2, void_field=void_field)
 
 # void properties
-void_pos    = V.void_pos
-void_radius = V.void_radius
-void_mass   = V.void_mass
-delta_void  = V.in_void  #array with 0. Cells belonging to voids have 1
-
-# void mass function
-Rvoid  = V.Rbins    # bins in radius
-MFvoid = V.void_mf  # void mass function
-
+void_pos    = V.void_pos     #Mpc/h
+void_radius = V.void_radius  #Mpc/h
+VSF_R       = V.Rbins        #VSF bins in radius
+VSF         = V.void_vsf     #VSF
+if void_field:  
+    void_field = V.void_field  #array with 0. Cells belonging to voids have 1
 
 

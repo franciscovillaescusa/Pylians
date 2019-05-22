@@ -155,7 +155,8 @@ class void_finder:
                 print 'No cells with delta < %.2f\n'%threshold
                 continue
 
-            # find cells with delta<threshold and not belonging to existing voids
+            ######### find underdense cells ##########
+            # cells with delta<threshold and not in existing voids
             start = time.time()
             local_voids = 0
             for i in xrange(dims):
@@ -168,13 +169,14 @@ class void_finder:
                             local_voids += 1
             print 'Searching underdense cells took %.3f seconds'%(time.time()-start)
             print 'Found %08d cells below threshold'%(local_voids)
+            ##########################################
 
-
-            # sort the cell underdensities
+            ######## sort cell underdensities ########
+            # sort cells by their underdensity
             start = time.time()
             indexes = np.argsort(delta_v[:local_voids])
 
-
+            # this is just delta_v = delta_v[indexes]
             delta_v_temp = np.empty(local_voids, dtype=np.float32)
             for i in xrange(local_voids):
                 delta_v_temp[i] = delta_v[indexes[i]]
@@ -182,6 +184,7 @@ class void_finder:
                 delta_v[i] = delta_v_temp[i]
             del delta_v_temp
 
+            # this is just IDs = IDs[indexes]
             IDs_temp = np.empty(local_voids, dtype=np.int64) 
             for i in xrange(local_voids):
                 IDs_temp[i] = IDs[indexes[i]]
@@ -190,6 +193,7 @@ class void_finder:
             del IDs_temp
 
             print 'Sorting took %.3f seconds'%(time.time()-start)
+            ##########################################
 
             # do a loop over all underdense cells and identify voids
             start   = time.time()
@@ -199,8 +203,7 @@ class void_finder:
 
             if total_voids_found<(2*Ncells+1)**3:  mode = 0
             else:                                  mode = 1
-            time1 = 0.0
-            time2 = 0.0
+            time1, time2 = 0.0, 0.0
             if Ncells<12:  threads2 = 1 #empirically this seems to be the best
             print 'Mode = %d    :   Ncells = %d   :   threads = %d'%(mode,Ncells,threads2)
             for p in xrange(local_voids):
@@ -274,7 +277,7 @@ class void_finder:
                     void_pos[total_voids_found, 0] = i
                     void_pos[total_voids_found, 1] = j
                     void_pos[total_voids_found, 2] = k
-                    void_radius[total_voids_found] = R
+                    void_radius[total_voids_found] = R_grid
 
                     voids_found += 1;  total_voids_found += 1 
                     in_void[i,j,k] = 1
@@ -286,17 +289,6 @@ class void_finder:
                                          i, j, k, threads=1)
                     time2 += (time.time()-dt)
 
-                    """
-                    for l in prange(-Ncells, Ncells+1, nogil=True):
-                        i1 = (i+l+dims)%dims
-                        for m in xrange(-Ncells, Ncells+1):
-                            j1 = (j+m+dims)%dims
-                            for n in xrange(-Ncells, Ncells+1):
-                                k1 = (k+n+dims)%dims
-                                
-                                dist2 = l*l + m*m + n*n
-                                if dist2<R_grid2:  in_void[i1,j1,k1] = 1
-                    """
 
             print 'Found %06d voids with radius R =%.3f Mpc/h'%(voids_found, R)
             print 'Found %06d voids with radius R>=%.3f Mpc/h'%(total_voids_found,R)
@@ -314,16 +306,17 @@ class void_finder:
         print 'Found a total of %d voids'%total_voids_found
         print 'Total time take %.3f seconds\n'%(time.time()-time_tot)
 
-        # compute the void mass function (voids/Volume/dR)
+        # compute the void size function (# of voids/Volume/dR)
         for i in xrange(bins-1):
             vsf[i]   = Nvoids[i]/(BoxSize**3*(Radii[i]-Radii[i+1]))
             Rmean[i] = 0.5*(Radii[i]+Radii[i+1])
 
-        if void_field:   self.in_void = np.asarray(in_void)
+        # finish by setting the class fields
         self.void_pos    = np.asarray(void_pos[:total_voids_found])*(BoxSize/dims)
-        self.void_radius = np.asarray(void_radius[:total_voids_found])
+        self.void_radius = np.asarray(void_radius[:total_voids_found])*(BoxSize/dims)
         self.Rbins       = np.asarray(Rmean)
         self.void_vsf    = np.asarray(vsf)
+        if void_field:   self.in_void = np.asarray(in_void)
 
 # This routine takes the density field, the void positions and radii
 # and finds the cells inside each void. From those cells it computes
