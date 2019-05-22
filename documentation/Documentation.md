@@ -210,7 +210,7 @@ threads = 16
 Pk = PKL.XPk([delta1,delta2,delta3,delta4], BoxSize, axis, MAS, threads)
 ```
 
-#### <a id="Voids"></a> Voids
+#### <a id="voids"></a> Voids
 Pylians can be used to identify voids in a generic density field (e.g. total matter, CDM, gas, halos, neutrinos, CDM+gas, galaxies...etc). The ingredients needed are:
 - ```delta```. This is the overdensity field. It should be a 3 dimensional float numpy array such ```delta = np.zeros((grid, grid, grid), dtype=np.float32)```. See [density field](#density_field) on how to compute  density fields using Pylians.
 - ```BoxSize```. Size of the periodic box. The units of the output power spectrum depend on this.
@@ -230,7 +230,7 @@ import void_library as VL
 BoxSize    = 1000.0 #Mpc/h
 threshold  = -0.7
 Radii      = np.array([5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31,
-					33, 35, 37, 39, 41, 44, 47, 50, 53, 56], dtype=np.float32) #Mpc/h
+		       33, 35, 37, 39, 41, 44, 47, 50, 53, 56], dtype=np.float32) #Mpc/h
 threads1   = 16
 threads2   = 4
 void_field = False
