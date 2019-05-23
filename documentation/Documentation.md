@@ -5,6 +5,7 @@
 * # [Power spectrum](#auto_Pk)
     - ### [Auto-power spectrum](#auto_Pk)
     - ### [Cross-power spectrum](#cross_Pk)
+* # [Correlation function](#CF)
 * # [Voids](#Voids)
 * # [Cosmology](#Cosmology)
 * # [Integrals](#Integrals)
@@ -123,7 +124,7 @@ The ingredients needed to compute the power spectrum are:
 - ```delta```. This is the density or overdensity field. It should be a 3 dimensional float numpy array such ```delta = np.zeros((grid, grid, grid), dtype=np.float32)```. See [density field](#density_field) on how to compute  density fields using Pylians.
 - ```BoxSize```. Size of the periodic box. The units of the output power spectrum depend on this.
 - ```axis```. Axis along which compute the quadrupole, hexadecapole and the 2D power spectrum. If the field is in real-space set ```axis=0```. If the field is in redshift-space set ```axis=0```, ```axis=1``` or ```axis=2``` if the redshift-space distortions have been placed along the x-axis, y-axis or z-axis, respectively. 
-- ```MAS```. Mass-assignment scheme used to generate the density field, if any. Possible options are ```'NGP'```, ```'CIC'```, ```'TSC'```, ```'PCS'```.  If the density field has not been generated with any of these set it ```'None'```.
+- ```MAS```. Mass-assignment scheme used to generate the density field, if any. Possible options are ```'NGP'```, ```'CIC'```, ```'TSC'```, ```'PCS'```.  If the density field has not been generated with any of these set it to ```'None'```.
 - ```threads```. Number of openmp threads to be used.
 
 
@@ -209,6 +210,31 @@ threads = 16
 
 Pk = PKL.XPk([delta1,delta2,delta3,delta4], BoxSize, axis, MAS, threads)
 ```
+
+#### <a id="CF"></a> Correlation function
+Pylians can be used to efficiently compute correlation functions of a generic field (e.g. total matter, CDM, gas, halos, neutrinos, CDM+gas, galaxies...etc). The ingredients needed are:
+- ```delta```. This is the overdensity field. It should be a 3 dimensional float numpy array such ```delta = np.zeros((grid, grid, grid), dtype=np.float32)```. See [density field](#density_field) on how to compute  density fields using Pylians.
+- ```BoxSize```. Size of the periodic box. The units of the output power spectrum depend on this.
+- ```MAS```. Mass-assignment scheme used to generate the density field, if any. Possible options are ```'NGP'```, ```'CIC'```, ```'TSC'```, ```'PCS'```.  If the density field has not been generated with any of these set it to ```'None'```.
+- ```threads```. This routine is openmp parallelized. Set this to the maximum number of cores per node available in your machine.
+
+An example on how to use the routine is this:
+```python
+import numpy as np
+import Pk_library as PKL
+
+# CF parameters
+BoxSize = 1000.0 #Mpc/h
+MAS     = 'CIC'
+threads = 16
+
+# compute the correlation function
+CF = PKL.Xi(delta, BoxSize, MAS, threads)
+r  = CF.r3D #radii in Mpc/h
+xi = CF.xi  #correlation function
+```
+
+This routine uses a FFT approach that allows a very computationally efficient calculation of the correlation function. However, if the number density of the tracers is very low (i.e. the density field is very sparse) this function may produce strange results. In this case it is better to use the traditional Landy-Szalay routine also available in Pylians.
 
 #### <a id="Voids"></a> Voids
 Pylians can be used to identify voids in a generic density field (e.g. total matter, CDM, gas, halos, neutrinos, CDM+gas, galaxies...etc). The ingredients needed are:
