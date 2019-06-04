@@ -1632,12 +1632,12 @@ def Pk_NGenIC_IC_field(f_coordinates, f_amplitudes, float BoxSize):
 @cython.cdivision(True)
 @cython.wraparound(False)
 class Xi:
-    def __init__(self, delta, float BoxSize, MAS='CIC',threads=1):
+    def __init__(self, delta, float BoxSize, MAS='CIC',int axis=2,threads=1):
 
         start = time.time()
         cdef int kxx, kyy, kzz, kx, ky, kz,dims, middle, k_index, MAS_index
-        cdef int kmax, i
-        cdef double k, prefact
+        cdef int kmax, i, k_par, k_per
+        cdef double k, prefact, mu, mu2
         cdef double MAS_corr[3]
         ####### change this for double precision ######
         cdef float real, imag
@@ -1645,8 +1645,8 @@ class Xi:
         cdef np.complex64_t[:,:,::1] delta_k
         cdef float[:,:,::1] delta_xi
         ###############################################
-        cdef double[::1] r3D, xi3D, Nmodes3D
-
+        cdef double[::1] r3D, Nmodes3D
+        cdef double[:,::1] xi3D
 
         # find dimensions of delta: we assume is a (dims,dims,dims) array
         # determine the different frequencies and the MAS_index
@@ -1690,9 +1690,9 @@ class Xi:
 
         # define arrays containing r3D, xi3D and Nmodes3D. We need kmax+1
         # bins since the mode (middle,middle, middle) has an index = kmax
-        r3D      = np.zeros(kmax+1, dtype=np.float64)
-        xi3D     = np.zeros(kmax+1, dtype=np.float64)
-        Nmodes3D = np.zeros(kmax+1, dtype=np.float64)
+        r3D      = np.zeros(kmax+1,     dtype=np.float64)
+        xi3D     = np.zeros((kmax+1,3), dtype=np.float64)
+        Nmodes3D = np.zeros(kmax+1,     dtype=np.float64)
 
         # do a loop over the independent modes.
         # compute k,k_par,k_per, mu for each mode. k's are in kF units
@@ -1710,17 +1710,39 @@ class Xi:
                     k       = sqrt(kx*kx + ky*ky + kz*kz)
                     k_index = <int>k
 
+                    # compute the value of k_par and k_perp
+                    if axis==0:   
+                        k_par, k_per = kx, <int>sqrt(ky*ky + kz*kz)
+                    elif axis==1: 
+                        k_par, k_per = ky, <int>sqrt(kx*kx + kz*kz)
+                    else:         
+                        k_par, k_per = kz, <int>sqrt(kx*kx + ky*ky)
+
+                    # find the value of mu
+                    if k==0:  mu = 0.0
+                    else:     mu = k_par/k
+                    mu2 = mu*mu
+
+                    # take the absolute value of k_par
+                    if k_par<0: k_par = -k_par
+
                     # Xi3D
                     r3D[k_index]      += k
-                    xi3D[k_index]     += delta_xi[kxx,kyy,kzz]
+                    xi3D[k_index,0]   +=  delta_xi[kxx,kyy,kzz]
+                    xi3D[k_index,1]   += (delta_xi[kxx,kyy,kzz]*(3.0*mu2-1.0)/2.0)
+                    xi3D[k_index,2]   += (delta_xi[kxx,kyy,kzz]*(35.0*mu2*mu2 - 30.0*mu2 + 3.0)/8.0)
                     Nmodes3D[k_index] += 1.0
+
+
         print 'Time to complete loop = %.2f'%(time.time()-start2)
 
         # Xi3D. Discard DC mode bin and give units
-        r3D  = r3D[1:];  Nmodes3D = Nmodes3D[1:];  xi3D = xi3D[1:]
+        r3D  = r3D[1:];  Nmodes3D = Nmodes3D[1:];  xi3D = xi3D[1:,:]
         for i in xrange(r3D.shape[0]):
-            r3D[i]  = (r3D[i]/Nmodes3D[i])*(BoxSize*1.0/dims)
-            xi3D[i] = (xi3D[i]/Nmodes3D[i])*(1.0/dims**3)
+            r3D[i]    = (r3D[i]/Nmodes3D[i])*(BoxSize*1.0/dims)
+            xi3D[i,0] = (xi3D[i,0]/Nmodes3D[i])*(1.0/dims**3)
+            xi3D[i,1] = (xi3D[i,1]*5.0/Nmodes3D[i])*(1.0/dims**3)
+            xi3D[i,2] = (xi3D[i,2]*9.0/Nmodes3D[i])*(1.0/dims**3)
         self.r3D = np.asarray(r3D);  self.Nmodes3D = np.asarray(Nmodes3D)
         self.xi = np.asarray(xi3D)
 
