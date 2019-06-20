@@ -5,7 +5,7 @@ import scipy.integrate as si
 cimport numpy as np
 cimport cython
 #from cython.parallel import prange
-from libc.math cimport sqrt,pow,sin,log10,abs
+from libc.math cimport sqrt,pow,sin,log10,abs,atan2
 from libc.stdlib cimport malloc, free
 from cpython cimport bool
 
@@ -174,13 +174,13 @@ class Pk:
         start = time.time()
         cdef int kxx, kyy, kzz, kx, ky, kz,dims, middle, k_index, MAS_index
         cdef int kmax_par, kmax_per, kmax, k_par, k_per, index_2D, i
-        cdef double k, delta2, prefact, mu, mu2, real, imag, kmaxper
+        cdef double k, delta2, prefact, mu, mu2, real, imag, kmaxper, phase
         cdef double MAS_corr[3]
         ####### change this for double precision ######
         cdef float MAS_factor
         cdef np.complex64_t[:,:,::1] delta_k
         ###############################################
-        cdef np.float64_t[::1] k1D, kpar, kper, k3D, Pk1D, Pk2D
+        cdef np.float64_t[::1] k1D, kpar, kper, k3D, Pk1D, Pk2D, Pkphase
         cdef np.float64_t[::1] Nmodes1D, Nmodes2D, Nmodes3D
         cdef np.float64_t[:,::1] Pk3D 
 
@@ -209,6 +209,7 @@ class Pk:
         # bins since the mode (middle,middle, middle) has an index = kmax
         k3D      = np.zeros(kmax+1,     dtype=np.float64)
         Pk3D     = np.zeros((kmax+1,3), dtype=np.float64)
+        Pkphase  = np.zeros(kmax+1,     dtype=np.float64)
         Nmodes3D = np.zeros(kmax+1,     dtype=np.float64)
 
 
@@ -262,6 +263,7 @@ class Pk:
                     real = delta_k[kxx,kyy,kzz].real
                     imag = delta_k[kxx,kyy,kzz].imag
                     delta2 = real*real + imag*imag
+                    phase  = atan2(real, sqrt(delta2)) 
 
                     # Pk1D: only consider modes with |k|<kF
                     if k<=middle:
@@ -280,6 +282,7 @@ class Pk:
                     Pk3D[k_index,0]   += delta2
                     Pk3D[k_index,1]   += (delta2*(3.0*mu2-1.0)/2.0)
                     Pk3D[k_index,2]   += (delta2*(35.0*mu2*mu2 - 30.0*mu2 + 3.0)/8.0)
+                    Pkphase[k_index]  += (phase*phase)
                     Nmodes3D[k_index] += 1.0
         print 'Time to complete loop = %.2f'%(time.time()-start2)
 
@@ -312,13 +315,15 @@ class Pk:
         # we need to multiply the multipoles by (2*ell + 1)
         check_number_modes(Nmodes3D,dims)
         k3D  = k3D[1:];  Nmodes3D = Nmodes3D[1:];  Pk3D = Pk3D[1:,:]
+        Pkphase = Pkphase[1:]
         for i in xrange(len(k3D)):
-            k3D[i]    = (k3D[i]/Nmodes3D[i])*kF
-            Pk3D[i,0] = (Pk3D[i,0]/Nmodes3D[i])*(BoxSize/dims**2)**3
-            Pk3D[i,1] = (Pk3D[i,1]*5.0/Nmodes3D[i])*(BoxSize/dims**2)**3
-            Pk3D[i,2] = (Pk3D[i,2]*9.0/Nmodes3D[i])*(BoxSize/dims**2)**3
+            k3D[i]     = (k3D[i]/Nmodes3D[i])*kF
+            Pk3D[i,0]  = (Pk3D[i,0]/Nmodes3D[i])*(BoxSize/dims**2)**3
+            Pk3D[i,1]  = (Pk3D[i,1]*5.0/Nmodes3D[i])*(BoxSize/dims**2)**3
+            Pk3D[i,2]  = (Pk3D[i,2]*9.0/Nmodes3D[i])*(BoxSize/dims**2)**3
+            Pkphase[i] = (Pkphase[i]/Nmodes3D[i])*(BoxSize/dims**2)**3
         self.k3D = np.asarray(k3D);  self.Nmodes3D = np.asarray(Nmodes3D)
-        self.Pk = np.asarray(Pk3D)
+        self.Pk = np.asarray(Pk3D);  self.Pkphase = Pkphase
 
         print 'Time taken = %.2f seconds'%(time.time()-start)
 ################################################################################
