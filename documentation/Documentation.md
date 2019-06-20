@@ -151,11 +151,12 @@ Pk2D     = Pk.Pk2D
 Nmodes2D = Pk.Nmodes2D
 
 # 3D P(k)
-k      = Pk.k3D
-Pk0    = Pk.Pk[:,0] #monopole
-Pk2    = Pk.Pk[:,1] #quadrupole
-Pk4    = Pk.Pk[:,2] #hexadecapole
-Nmodes = Pk.Nmodes3D
+k       = Pk.k3D
+Pk0     = Pk.Pk[:,0] #monopole
+Pk2     = Pk.Pk[:,1] #quadrupole
+Pk4     = Pk.Pk[:,2] #hexadecapole
+Pkphase = Pk.Pkphase #power spectrum of the phases
+Nmodes  = Pk.Nmodes3D
 ```
 
 #### <a id="cross_Pk"></a> Cross-power spectrum
