@@ -20,6 +20,9 @@ from cpython cimport bool
 #   2D: kpar[k] kper[k]         Pk2D[k,field]    PkX2D[k,field]  Nmodes2D[k]
 #   3D: k3D[k]  Pk[k,ell,field] XPk[k,ell,field] Nmodes3D[k]
 
+# Pk_plane(delta,BoxSize,MAS='CIC',threads=1)
+#  k, Pk, Nmodes
+
 # Pk_theta(Vx,Vy,Vz,BoxSize,axis=2,MAS='CIC',threads=1)
 #   [k,Pk_theta,Nmodes]
 
@@ -43,6 +46,8 @@ from cpython cimport bool
 
 # Pk_NGenIC_IC_field(f_coordinates, f_amplitudes, BoxSize)
 #   [k,Pk,Nmodes]
+
+# test_number_modes_2D(grid)
 ##############################################################################
 
 # This function determines the fundamental (kF) and Nyquist (kN) frequencies
@@ -53,6 +58,14 @@ def frequencies(BoxSize,dims):
     kmax_par = middle
     kmax_per = int(np.sqrt(middle**2 + middle**2))
     kmax     = int(np.sqrt(middle**2 + middle**2 + middle**2))
+    return kF,kN,kmax_par,kmax_per,kmax
+
+# same as frequencies but in 2D
+def frequencies_2D(BoxSize,dims):
+    kF = 2.0*np.pi/BoxSize;  middle = dims/2;  kN = middle*kF
+    kmax_par = middle
+    kmax_per = middle
+    kmax     = int(np.sqrt(middle**2 + middle**2))
     return kF,kN,kmax_par,kmax_per,kmax
     
 # This function finds the MAS correction index and return the array used
@@ -76,6 +89,21 @@ def check_number_modes(Nmodes,dims):
     if dims%2==1:  own_modes = 1 
     # (0,0,0),(0,0,n),(0,n,0),(n,0,0),(n,n,0),(n,0,n),(0,n,n),(n,n,n)
     else:          own_modes = 8 
+    repeated_modes = (dims**3 - own_modes)/2  
+    indep_modes    = repeated_modes + own_modes
+
+    if int(np.sum(Nmodes))!=indep_modes:
+        print 'WARNING: Not all modes counted'
+        print 'Counted  %d independent modes'%(int(np.sum(Nmodes)))
+        print 'Expected %d independent modes'%indep_modes
+        sys.exit() 
+
+# This function checks that all independent modes have been counted
+def check_number_modes_2D(Nmodes,dims):
+    # (0,0) own antivector, while (n,n) has (-n,-n) for dims odd
+    if dims%2==1:  own_modes = 1 
+    # (0,0),(0,n),(0,n),(n,0),(n,n)
+    else:          own_modes = 4
     repeated_modes = (dims**3 - own_modes)/2  
     indep_modes    = repeated_modes + own_modes
 
@@ -140,6 +168,70 @@ def IFFT3Dr_d(np.complex128_t[:,:,::1] a, int threads):
     dims  = len(a)
     a_in  = pyfftw.empty_aligned((dims,dims,dims/2+1),dtype='complex128')
     a_out = pyfftw.empty_aligned((dims,dims,dims),    dtype='float64')
+
+    # plan FFTW
+    fftw_plan = pyfftw.FFTW(a_in,a_out,axes=(0,1,2),
+                            flags=('FFTW_ESTIMATE',),
+                            direction='FFTW_BACKWARD',threads=threads)
+                            
+    # put input array into delta_r and perform FFTW
+    a_in [:] = a;  fftw_plan(a_in,a_out);  return a_out
+
+# This function performs the 2D FFT of a field in single precision
+def FFT2Dr_f(np.float32_t[:,:] a, int threads):
+
+    # align arrays
+    grid  = len(a)
+    a_in  = pyfftw.empty_aligned((grid,grid),    dtype='float32')
+    a_out = pyfftw.empty_aligned((grid,grid/2+1),dtype='complex64')
+
+    # plan FFTW
+    fftw_plan = pyfftw.FFTW(a_in, a_out, axes=(0,1,2),
+                            flags=('FFTW_ESTIMATE',),
+                            direction='FFTW_FORWARD', threads=threads)
+                            
+    # put input array into delta_r and perform FFTW
+    a_in [:] = a;  fftw_plan(a_in,a_out);  return a_out
+
+# This function performs the 2D FFT of a field in double precision
+def FFT2Dr_d(np.float64_t[:,:] a, int threads):
+
+    # align arrays
+    grid  = len(a)
+    a_in  = pyfftw.empty_aligned((grid,grid),    dtype='float64')
+    a_out = pyfftw.empty_aligned((grid,grid/2+1),dtype='complex128')
+
+    # plan FFTW
+    fftw_plan = pyfftw.FFTW(a_in,a_out,axes=(0,1,2),
+                            flags=('FFTW_ESTIMATE',),
+                            direction='FFTW_FORWARD',threads=threads)
+                            
+    # put input array into delta_r and perform FFTW
+    a_in [:] = a;  fftw_plan(a_in,a_out);  return a_out
+
+# This function performs the 2D FFT of a field in single precision
+def IFFT2Dr_f(np.complex64_t[:,:] a, int threads):
+
+    # align arrays
+    grid  = len(a)
+    a_in  = pyfftw.empty_aligned((grid,grid/2+1),dtype='complex64')
+    a_out = pyfftw.empty_aligned((grid,grid),    dtype='float32')
+
+    # plan FFTW
+    fftw_plan = pyfftw.FFTW(a_in, a_out, axes=(0,1,2),
+                            flags=('FFTW_ESTIMATE',),
+                            direction='FFTW_BACKWARD', threads=threads)
+                            
+    # put input array into delta_r and perform FFTW
+    a_in [:] = a;  fftw_plan(a_in,a_out);  return a_out
+
+# This function performs the 2D FFT of a field in double precision
+def IFFT2Dr_d(np.complex128_t[:,:] a, int threads):
+
+    # align arrays
+    grid  = len(a)
+    a_in  = pyfftw.empty_aligned((grid,grid/2+1),dtype='complex128')
+    a_out = pyfftw.empty_aligned((grid,grid),    dtype='float64')
 
     # plan FFTW
     fftw_plan = pyfftw.FFTW(a_in,a_out,axes=(0,1,2),
@@ -324,6 +416,97 @@ class Pk:
             Pkphase[i] = (Pkphase[i]/Nmodes3D[i])*(BoxSize/dims**2)**3
         self.k3D = np.asarray(k3D);  self.Nmodes3D = np.asarray(Nmodes3D)
         self.Pk = np.asarray(Pk3D);  self.Pkphase = Pkphase
+
+        print 'Time taken = %.2f seconds'%(time.time()-start)
+################################################################################
+################################################################################
+
+################################################################################
+################################################################################
+# This routine computes the P(k) of a 2D density field (e.g weak lensing maps)
+# delta -------> 2D density field: (grid,grid) numpy array
+# BoxSize -----> size of the cubic density field
+# MAS ---------> mass assignment scheme used to compute density field
+#                needed to correct modes amplitude
+# threads -----> number of threads (OMP) used to make the FFTW
+@cython.boundscheck(False)
+@cython.cdivision(False)
+@cython.wraparound(False)
+class Pk_plane:
+    def __init__(self,delta,BoxSize,MAS='CIC',threads=1):
+
+        start = time.time()
+        cdef int kxx, kyy, kx, ky, grid, middle, k_index, MAS_index
+        cdef int kmax_par, kmax_per, kmax, i
+        cdef double k, delta2, prefact, real, imag
+        cdef double MAS_corr[2]
+        ####### change this for double precision ######
+        cdef float MAS_factor
+        cdef np.complex64_t[:,::1] delta_k
+        ###############################################
+        cdef np.float64_t[::1] k2D, Nmodes, Pk2D
+
+        # find dimensions of delta: we assume is a (grid,grid) array
+        # determine the different frequencies and the MAS_index
+        print '\nComputing power spectrum of the field...'
+        grid = len(delta);  middle = grid/2
+        kF,kN,kmax_par,kmax_per,kmax = frequencies_2D(BoxSize,grid)
+        MAS_index = MAS_function(MAS)
+
+        ## compute FFT of the field (change this for double precision) ##
+        delta_k = FFT2Dr_f(delta,threads)
+        #################################
+
+        # define arrays containing k3D, Pk3D and Nmodes3D. We need kmax+1
+        # bins since the mode (middle,middle, middle) has an index = kmax
+        k2D    = np.zeros(kmax+1, dtype=np.float64)
+        Pk2D   = np.zeros(kmax+1, dtype=np.float64)
+        Nmodes = np.zeros(kmax+1, dtype=np.float64)
+
+
+        # do a loop over the independent modes.
+        # compute k,k_par,k_per, mu for each mode. k's are in kF units
+        start2 = time.time();  prefact = np.pi/grid
+        for kxx in xrange(grid):
+            kx = (kxx-grid if (kxx>middle) else kxx)
+            MAS_corr[0] = MAS_correction(prefact*kx,MAS_index)
+        
+            for kyy in xrange(middle+1): #kyy=[0,1,..,middle] --> ky>0
+                ky = (kyy-grid if (kyy>middle) else kyy)
+                MAS_corr[1] = MAS_correction(prefact*ky,MAS_index)  
+
+                # ky=0 & ky=middle are special (modes with (kx<0, ky=0) are not
+                # independent of (kx>0, ky=0): delta(-k)=delta*(+k))
+                if ky==0 or (ky==middle and grid%2==0):
+                    if kx<0:  continue
+
+                # compute |k| of the mode and its integer part
+                k       = sqrt(kx*kx + ky*ky)
+                k_index = <int>k
+
+                # correct modes amplitude for MAS
+                MAS_factor = MAS_corr[0]*MAS_corr[1]
+                delta_k[kxx,kyy] = delta_k[kxx,kyy]*MAS_factor
+
+                # compute |delta_k|^2 of the mode
+                real = delta_k[kxx,kyy].real
+                imag = delta_k[kxx,kyy].imag
+                delta2 = real*real + imag*imag
+
+                # Pk
+                k2D[k_index]    += k
+                Pk2D[k_index]   += delta2
+                Nmodes[k_index] += 1.0
+        print 'Time to complete loop = %.2f'%(time.time()-start2)
+
+        # Pk2D. Check modes, discard DC mode bin and give units
+        check_number_modes_2D(Nmodes,grid)
+        k2D  = k2D[1:];  Nmodes = Nmodes[1:];  Pk2D = Pk2D[1:]
+        for i in xrange(len(k2D)):
+            k2D[i]  = (k2D[i]/Nmodes[i])*kF
+            Pk2D[i] = (Pk2D[i]/Nmodes[i])*(BoxSize/grid**2)**2
+        self.k  = np.asarray(k2D);  self.Nmodes = np.asarray(Nmodes)
+        self.Pk = np.asarray(Pk2D)
 
         print 'Time taken = %.2f seconds'%(time.time()-start)
 ################################################################################
@@ -1128,6 +1311,71 @@ cdef double func_1D(double y, double x, log10_k, Pk, double k_par):
     log10_kmod = log10(sqrt(x*x + k_par*k_par))
     Pk_3D = np.interp(log10_kmod,log10_k,Pk)
     return x*Pk_3D
+
+################################################################################
+################################################################################
+# This routine computes the number of independent modes using three different
+# ways. It is mainly use to make sure that we are not loosing modes in the 
+# main routine
+@cython.boundscheck(False)
+@cython.cdivision(False)
+@cython.wraparound(False)
+def test_number_modes_2D(int grid):
+    cdef int middle, count, kxx, kyy, kx, ky, Pylians_count, brute_force_count
+    cdef int i, indep, kxi, kyi, kxj, kyj
+    cdef int[:,:] modes
+
+    # theory expectation
+    if grid%2==1:  own_modes = 1 
+    else:          own_modes = 4
+    repeated_modes = (grid**2 - own_modes)/2  
+    theory_count   = repeated_modes + own_modes
+
+    # define the array containing all 2D modes
+    middle = grid/2
+    modes  = np.zeros((grid*(middle+1),2), dtype=np.int32)
+
+    # count modes as Pylians
+    count = 0
+    Pylians_count = 0
+    for kxx in xrange(grid):
+        kx = (kxx-grid if (kxx>middle) else kxx)
+        
+        for kyy in xrange(middle+1): #kyy=[0,1,..,middle] --> ky>0
+            ky = (kyy-grid if (kyy>middle) else kyy)
+
+            modes[count,0] = kx
+            modes[count,1] = ky
+            count += 1
+
+            if (ky==0) or (ky==middle and grid%2==0):
+                if kx<0:   continue
+
+            Pylians_count +=1
+
+    # count modes by bruce force
+    brute_force_count = 0
+    for i in xrange(count):
+        indep = 1
+        kxi,kyi = modes[i,0], modes[i,1]
+        for j in xrange(i+1,count):
+            kxj,kyj = -modes[j,0], -modes[j,1]
+            if (grid%2==0) and kxj==-middle:  kxj=middle
+            if (grid%2==0) and kyj==-middle:  kyj=middle
+            if kxi==kxj and kyi==kyj:  indep = 0
+        if indep==1:  brute_force_count += 1
+
+    # print results
+    print 'Theory      modes = %d'%theory_count
+    print 'Pylians     modes = %d'%Pylians_count
+    print 'Brute force modes = %d'%brute_force_count
+    if theory_count!=Pylians_count or theory_count!=brute_force_count \
+       or Pylians_count!=brute_force_count:
+        raise Exception('Number of modes differ!!!')
+################################################################################
+################################################################################
+
+
 
 """
 # This routines computes first the 3D P(k) and then computes the 1D P(k) using
