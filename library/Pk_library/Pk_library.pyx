@@ -104,7 +104,7 @@ def check_number_modes_2D(Nmodes,dims):
     if dims%2==1:  own_modes = 1 
     # (0,0),(0,n),(0,n),(n,0),(n,n)
     else:          own_modes = 4
-    repeated_modes = (dims**3 - own_modes)/2  
+    repeated_modes = (dims**2 - own_modes)/2  
     indep_modes    = repeated_modes + own_modes
 
     if int(np.sum(Nmodes))!=indep_modes:
@@ -186,7 +186,7 @@ def FFT2Dr_f(np.float32_t[:,:] a, int threads):
     a_out = pyfftw.empty_aligned((grid,grid/2+1),dtype='complex64')
 
     # plan FFTW
-    fftw_plan = pyfftw.FFTW(a_in, a_out, axes=(0,1,2),
+    fftw_plan = pyfftw.FFTW(a_in, a_out, axes=(0,1),
                             flags=('FFTW_ESTIMATE',),
                             direction='FFTW_FORWARD', threads=threads)
                             
@@ -202,7 +202,7 @@ def FFT2Dr_d(np.float64_t[:,:] a, int threads):
     a_out = pyfftw.empty_aligned((grid,grid/2+1),dtype='complex128')
 
     # plan FFTW
-    fftw_plan = pyfftw.FFTW(a_in,a_out,axes=(0,1,2),
+    fftw_plan = pyfftw.FFTW(a_in,a_out,axes=(0,1),
                             flags=('FFTW_ESTIMATE',),
                             direction='FFTW_FORWARD',threads=threads)
                             
@@ -218,7 +218,7 @@ def IFFT2Dr_f(np.complex64_t[:,:] a, int threads):
     a_out = pyfftw.empty_aligned((grid,grid),    dtype='float32')
 
     # plan FFTW
-    fftw_plan = pyfftw.FFTW(a_in, a_out, axes=(0,1,2),
+    fftw_plan = pyfftw.FFTW(a_in, a_out, axes=(0,1),
                             flags=('FFTW_ESTIMATE',),
                             direction='FFTW_BACKWARD', threads=threads)
                             
@@ -234,7 +234,7 @@ def IFFT2Dr_d(np.complex128_t[:,:] a, int threads):
     a_out = pyfftw.empty_aligned((grid,grid),    dtype='float64')
 
     # plan FFTW
-    fftw_plan = pyfftw.FFTW(a_in,a_out,axes=(0,1,2),
+    fftw_plan = pyfftw.FFTW(a_in,a_out,axes=(0,1),
                             flags=('FFTW_ESTIMATE',),
                             direction='FFTW_BACKWARD',threads=threads)
                             
