@@ -1,5 +1,5 @@
 import numpy as np
-import readsnap
+import readgadget
 import redshift_space_library as RSL
 import MAS_library as MASL
 import units_library as UL
@@ -35,7 +35,7 @@ def Pk_comp(snapshot_fname,ptype,dims,do_RSD,axis,cpus,folder_out):
 
     # read relevant paramaters on the header
     print 'Computing power spectrum...'
-    head     = readsnap.snapshot_header(snapshot_fname)
+    head     = readgadget.header(snapshot_fname)
     BoxSize  = head.boxsize/1e3 #Mpc/h
     Masses   = head.massarr*1e10 #Msun/h
     Nall     = head.nall;  Ntotal = np.sum(Nall,dtype=np.int64)
@@ -51,7 +51,7 @@ def Pk_comp(snapshot_fname,ptype,dims,do_RSD,axis,cpus,folder_out):
     else:       fout +=                           ('_z=' + z + '.dat')
 
     # read the positions of the particles
-    pos = readsnap.read_block(snapshot_fname,"POS ",parttype=ptype)/1e3 #Mpc/h
+    pos = readgadget.read_block(snapshot_fname,"POS ",[ptype])/1e3 #Mpc/h
     print '%.3f < X [Mpc/h] < %.3f'%(np.min(pos[:,0]),np.max(pos[:,0]))
     print '%.3f < Y [Mpc/h] < %.3f'%(np.min(pos[:,1]),np.max(pos[:,1]))
     print '%.3f < Z [Mpc/h] < %.3f\n'%(np.min(pos[:,2]),np.max(pos[:,2]))
@@ -59,7 +59,7 @@ def Pk_comp(snapshot_fname,ptype,dims,do_RSD,axis,cpus,folder_out):
     # read the velocities of the particles
     if do_RSD:
         print 'moving particles to redshift-space...'
-        vel = readsnap.read_block(snapshot_fname,"VEL ",parttype=ptype) #km/s
+        vel = readgadget.read_block(snapshot_fname,"VEL ",[ptype]) #km/s
         RSL.pos_redshift_space(pos,vel,BoxSize,Hubble,redshift,axis)
         del vel;  print 'done'
 
@@ -75,7 +75,7 @@ def Pk_comp(snapshot_fname,ptype,dims,do_RSD,axis,cpus,folder_out):
                 M[offset:offset+Nall[ptype]] = Masses[ptype]
                 offset += Nall[ptype]
         else:
-            M = readsnap.read_block(snapshot_fname,"MASS",parttype=-1)*1e10
+            M = readgadget.read_block(snapshot_fname,"MASS",ptype=[-1])*1e10
         
         mean = np.sum(M,dtype=np.float64)/dims**3
         MASL.MA(pos,delta,BoxSize,'CIC',M); del pos,M
@@ -118,7 +118,7 @@ def Pk_Gadget(snapshot_fname,dims,particle_type,do_RSD,axis,cpus,
 
     # read snapshot head and obtain BoxSize, Omega_m and Omega_L
     print '\nREADING SNAPSHOTS PROPERTIES'
-    head     = readsnap.snapshot_header(snapshot_fname)
+    head     = readgadget.header(snapshot_fname)
     BoxSize  = head.boxsize/1e3  #Mpc/h
     Nall     = head.nall
     Masses   = head.massarr*1e10 #Msun/h
@@ -140,9 +140,9 @@ def Pk_Gadget(snapshot_fname,dims,particle_type,do_RSD,axis,cpus,
             Omega_s = Masses[4]*Nall[4]/BoxSize**3/rho_crit
         else:    
             # mass in Msun/h
-            mass = readsnap.read_block(snapshot_fname,"MASS",parttype=0)*1e10 
+            mass = readgadget.read_block(snapshot_fname,"MASS",ptype=[0])*1e10 
             Omega_g = np.sum(mass,dtype=np.float64)/BoxSize**3/rho_crit
-            mass = readsnap.read_block(snapshot_fname,"MASS",parttype=4)*1e10
+            mass = readgadget.read_block(snapshot_fname,"MASS",ptype=[4])*1e10
             Omega_s = np.sum(mass,dtype=np.float64)/BoxSize**3/rho_crit
             del mass
 
@@ -174,11 +174,11 @@ def Pk_Gadget(snapshot_fname,dims,particle_type,do_RSD,axis,cpus,
     for ptype in particle_type:
     
         # read particle positions in #Mpc/h
-        pos = readsnap.read_block(snapshot_fname,"POS ",parttype=ptype)/1e3 
+        pos = readgadget.read_block(snapshot_fname,"POS ",[ptype])/1e3 
 
         # move particle positions to redshift-space
         if do_RSD:
-            vel = readsnap.read_block(snapshot_fname,"VEL ",parttype=ptype)#km/s
+            vel = readgadget.read_block(snapshot_fname,"VEL ",[ptype])#km/s
             RSL.pos_redshift_space(pos,vel,BoxSize,Hubble,redshift,axis)
             del vel
 
