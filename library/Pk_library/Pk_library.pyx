@@ -261,7 +261,7 @@ def IFFT2Dr_d(np.complex128_t[:,:] a, int threads):
 @cython.cdivision(False)
 @cython.wraparound(False)
 class Pk:
-    def __init__(self,delta,BoxSize,int axis=2,MAS='CIC',threads=1):
+    def __init__(self,delta,BoxSize,int axis=2,MAS='CIC',threads=1,keep_deltak=False):
 
         start = time.time()
         cdef int kxx, kyy, kzz, kx, ky, kz,dims, middle, k_index, MAS_index
@@ -416,6 +416,8 @@ class Pk:
             Pkphase[i] = (Pkphase[i]/Nmodes3D[i])*(BoxSize/dims**2)**3
         self.k3D = np.asarray(k3D);  self.Nmodes3D = np.asarray(Nmodes3D)
         self.Pk = np.asarray(Pk3D);  self.Pkphase = Pkphase
+
+        if keep_deltak:  self.delta_k = np.asarray(delta_k)
 
         print 'Time taken = %.2f seconds'%(time.time()-start)
 ################################################################################
