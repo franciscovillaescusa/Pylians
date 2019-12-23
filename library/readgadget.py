@@ -79,7 +79,7 @@ def read_field(snapshot, block, ptype):
         elif block=="VEL ":  suffix = "Velocities"
         else: raise Exception('block not implemented in readgadget!')
 
-        if '%s%s'%(prefix,suffix) not in f.keys():
+        if '%s%s'%(prefix,suffix) not in f:
             if Masses[ptype] != 0.0:
                 array = np.ones(Npart[ptype], np.float32)*Masses[ptype]
             else:
@@ -119,7 +119,6 @@ def read_block(snapshot, block, ptype, verbose=False):
 
     # define the array containing the data
     array = np.zeros(Ntotal, dtype=dtype)
-
 
     # do a loop over the different particle types
     offset = 0
