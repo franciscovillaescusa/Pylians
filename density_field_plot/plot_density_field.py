@@ -53,7 +53,7 @@ print '\nCreating the figure...'
 fig = figure()    #create the figure
 ax1 = fig.add_subplot(111) 
 
-ax1.set_xlim([off_x, off_y+len_x])  #set the range for the x-axis
+ax1.set_xlim([off_x, off_x+len_x])  #set the range for the x-axis
 ax1.set_ylim([off_y, off_y+len_y])  #set the range for the y-axis
 
 ax1.set_xlabel(r'$h^{-1}{\rm Mpc}$',fontsize=18)  #x-axis label
